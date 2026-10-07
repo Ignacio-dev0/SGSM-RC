@@ -199,3 +199,70 @@ return <>…{dialogoConfirmacion}</>;
 - El estado del estudio se muestra con `ChipEstadoEstudio` (`paginas/estudios/TarjetasEstudios.tsx`),
   con la misma regla que `ChipEstado` (Programado con contorno neutro; Realizado y Cancelado con
   relleno neutro) pero fuera de `ESTADOS_CHIP`, porque es propio de los estudios.
+
+## Gráficos con "Ver como tabla" y descargas de archivos (E6)
+
+Nacieron en Reportes ([docs/reportes.md](reportes.md#interfaz-t605t607)) y viven en
+[`paginas/reportes/`](../frontend/src/paginas/reportes/); cualquier pantalla con un gráfico o un
+archivo para bajar los reutiliza.
+
+### `GraficoConTabla`
+
+```tsx
+<GraficoConTabla
+  titulo="Insumos más usados" // h2 (o `nivel="h3"`); también nombra la sección y la tabla
+  descripcion="Los 10 que se usaron en más suministros del período, de más a menos."
+  columnas={COLUMNAS} // las de `Tabla`
+  filas={insumos}
+  claveFila={(i) => i.insumoId}
+>
+  <BarChart {...props} height={300} xAxis={[{ label: 'Suministros (cantidad)' }]} … />
+</GraficoConTabla>
+```
+
+- Es una `<section>` con borde y título; abajo, "Ver como tabla" (botón `texto` con
+  `aria-expanded`/`aria-controls`) despliega los **mismos datos** en una `Tabla` llamada
+  "{titulo} (tabla)" (tarjetas en teléfono) y pasa a decir "Ocultar la tabla".
+- El gráfico va **sin ancho fijo** (toma el del contenedor: nada de scroll horizontal) y con un
+  `height`.
+- Reglas de los gráficos: ejes con su unidad ("Suministros (cantidad)", "Día"); letra de los ejes de
+  14 px y el eje de abajo con `height: 56` (si no, la biblioteca oculta las marcas); cada serie con
+  nombre en la leyenda o un número junto a la barra; nunca solo el color (en las líneas, además la
+  forma del punto y el trazo); números con `numero()`/`porcentaje()` de `paginas/reportes/formato.ts`
+  (coma decimal, sin separador de miles).
+- Colores: `useColoresGrafico()` ([`usarGraficos.ts`](../frontend/src/paginas/reportes/usarGraficos.ts))
+  devuelve `primario`, `secundario`, `aviso` e `info` **del esquema activo** (claro u oscuro), ya
+  resueltos, porque `@mui/x-charts` pinta con atributos SVG. Nunca `success` ni `error`.
+- Movimiento: `skipAnimation={useSinAnimacion()}` (verdadero con `prefers-reduced-motion`).
+
+### Descargar un archivo de la API
+
+```tsx
+// api: el archivo con el nombre de Content-Disposition, o ErrorApi como cualquier pedido
+const archivo = await descargar(
+  '/api/reportes/suministros/exportar',
+  { formato: 'pdf', ...p },
+  'reporte.pdf',
+);
+
+// pantalla: botones "Descargar PDF" / "Descargar Excel" y el aviso de cómo terminó
+const { botones, aviso } = useDescarga((formato) => reportesApi.exportarSuministros(formato, p));
+return (
+  <>
+    {puedeExportar && botones}
+    {aviso}
+  </>
+);
+```
+
+- [`descargar`](../frontend/src/api/cliente.ts) usa la cookie de sesión y el mismo manejo de errores
+  que `api.get` (403, error interno explicado, sin conexión, sesión vencida); el nombre sale de
+  `filename*` o `filename`, y si no viene, del de respaldo.
+- [`useDescarga`](../frontend/src/paginas/reportes/Descargas.tsx): botones `secundario` (la descarga
+  no es la acción llena), "Preparando el archivo…" con `cargando` mientras el servidor lo arma (y
+  anunciado a los lectores de pantalla), uno a la vez, y después `Alerta` de éxito ("Se descargó
+  …") o de error ("No se pudo descargar el PDF. {motivo}").
+- `bajarArchivo(archivo)` lo entrega con un enlace temporal (`URL.createObjectURL`) y libera la
+  memoria a los 10 s.
+- En las pruebas, `simularDescargas()` ([`datosReportes.ts`](../frontend/src/pruebas/datosReportes.ts))
+  anota los enlaces que se tocan (`href` y `download`) en lugar de bajar nada.

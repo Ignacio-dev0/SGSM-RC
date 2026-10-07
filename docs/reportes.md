@@ -438,3 +438,132 @@ Continúan las de [estudios.md](estudios.md) (D26–D35). Tomadas al implementar
 - [`esquema.test.ts`](../backend/tests/integracion/esquema.test.ts): el índice de
   `suministros(fecha_hora)`; [`semillas.test.ts`](../backend/tests/integracion/semillas.test.ts):
   los permisos de E6 por rol.
+
+## Interfaz (T605–T607)
+
+Frontend en [`paginas/reportes/`](../frontend/src/paginas/reportes/) y
+[`paginas/auditoria/`](../frontend/src/paginas/auditoria/); API tipada en
+[`api/reportes.ts`](../frontend/src/api/reportes.ts) y [`api/auditoria.ts`](../frontend/src/api/auditoria.ts),
+con los tipos de este contrato.
+
+### Pantallas y permisos
+
+| Ruta         | Menú                         | Permiso             | Qué hay                                                               |
+| ------------ | ---------------------------- | ------------------- | --------------------------------------------------------------------- |
+| `/reportes`  | "Reportes", tras Suministros | `reportes.ver`      | Pestañas **Suministros** y **Estadísticas** con los mismos parámetros |
+| (descargas)  | —                            | `reportes.exportar` | "Descargar PDF" y "Descargar Excel" en las dos pestañas               |
+| `/auditoria` | "Auditoría", al final        | `auditoria.ver`     | Registros filtrables y paginados, con el detalle Antes/Después        |
+
+El Inicio suma la tarea "Ver reportes" (con `reportes.ver`) al final de las clínicas. Una ruta sin
+permiso muestra "No tiene permiso para ver esta pantalla" (el backend igual responde 403).
+
+### Parámetros en la URL
+
+| Pantalla  | Parámetro                                                                  | Por defecto (no se escribe) |
+| --------- | -------------------------------------------------------------------------- | --------------------------- |
+| Reportes  | `pestana` (`estadisticas`)                                                 | `suministros`               |
+| Reportes  | `periodo` (`hoy`, `7`, `30`): atajo contado desde hoy                      | `7`                         |
+| Reportes  | `desde`, `hasta` (días `AAAA-MM-DD`): mandan sobre el atajo                | —                           |
+| Reportes  | `salaId`, `tipo` (`MEDICAMENTO`/`INSUMO`), `agruparPor`                    | todas, todos, `paciente`    |
+| Auditoría | `desde`, `hasta`, `usuarioId`, `pacienteId`, `accion`, `entidad`, `pagina` | todo, página 1              |
+
+Un enlace como `/reportes?periodo=30&tipo=INSUMO&agruparPor=insumo` abre siempre los últimos 30 días
+de ese momento. Cambiar de pestaña conserva los parámetros (las estadísticas no se agrupan, pero
+`agruparPor` queda para volver). "Quitar filtros" vuelve al período por defecto, todas las salas y
+todos los tipos, sin tocar la agrupación.
+
+### Reporte de suministros
+
+- Tabla (tarjetas en teléfono) con la etiqueta del grupo, **Suministros** y **Unidades**; por
+  insumo, además el **Tipo** y la unidad junto al número ("1000 mg", "5 unidad"). La última fila es
+  **Total**, con el total del servidor (suministros distintos, D43).
+- Por insumo el total de unidades se escribe **por unidad** ("5 unidad, 1 comprimido, 1000 mg"),
+  nunca sumado (D42). Por paciente, personal o día la columna es el volumen que da el servidor y una
+  nota lo aclara.
+- Arriba de la tabla, el período, la sala y el tipo **que devolvió el servidor** (normalizados) y,
+  con `reportes.exportar`, las descargas.
+
+### Estadísticas
+
+- **Indicadores** grandes: Suministros, Con medicamentos, Con insumos, Pacientes atendidos y
+  Recordatorios atendidos (porcentaje y "41 de 44"; "—" si no hay recordatorios medibles).
+- **Gráficos** de `@mui/x-charts`, cada uno con título `h2`, descripción y "Ver como tabla"
+  (`GraficoConTabla`, ver [componentes.md](componentes.md)); ejes con letra de 14 px:
+  - Insumos más usados: barras horizontales con el número junto a cada barra; eje "Suministros
+    (cantidad)".
+  - Consumo por tipo: torta con la leyenda "Medicamentos: 27 (41,5 %)".
+  - Evolución diaria: tres líneas (Suministros, Con medicamentos, Con insumos) que se distinguen por
+    color, forma del punto y trazo (continuo, rayado, punteado); ejes "Día" y "Suministros por día".
+  - Recordatorios del período: barra apilada A tiempo / Tarde / No administrados / Vencidos sin
+    atender, con los números en la leyenda (dentro de la barra no tendrían contraste).
+- Sin suministros en el período, en lugar de gráficos vacíos: "No hay suministros el 07/10/2026.
+  Amplíe el período." (y lo mismo para los recordatorios).
+- Con `prefers-reduced-motion` los gráficos se dibujan sin animación (`skipAnimation`).
+
+### Descargas
+
+`descargar(ruta, query, nombreDeRespaldo)` en [`api/cliente.ts`](../frontend/src/api/cliente.ts)
+pide el archivo con la cookie de sesión; si el servidor responde un error, es el mismo `ErrorApi`
+que en cualquier pedido (403, 500, sin conexión, sesión vencida). La pantalla lo entrega con un
+enlace temporal (`URL.createObjectURL`) con el nombre de `Content-Disposition` y libera la memoria
+después. Mientras se arma, el botón dice "Preparando el archivo…" con su indicador (también para
+lectores de pantalla) y el otro formato espera; al terminar, "Se descargó
+reporte-suministros-20261007.pdf." o "No se pudo descargar el PDF. {motivo}". Los botones son
+secundarios: la pantalla no tiene una acción llena.
+
+### Auditoría
+
+- Filtros: Desde, Hasta, Usuario, Paciente, Acción y Entidad. Acciones y entidades son las de
+  `/api/auditoria/opciones`, **en palabras**
+  ([`palabras.ts`](../frontend/src/paginas/auditoria/palabras.ts): `TRASLADAR` → "Trasladó",
+  `EGRESAR` → "Dio de alta", `Prescripcion` → "Prescripción"…); un código que todavía no tiene
+  nombre se muestra tal cual.
+- Tabla de a 50 (la paginación de `Tabla`: "1–50 de 120"): Fecha y hora (24 h, Argentina), Usuario
+  ("Sistema" si no hubo), Acción, Registro ("Paciente n.º 12", "Reporte: suministros") y Paciente
+  con DNI.
+- Al abrir una fila (toque, clic, Enter o Espacio), un diálogo (pantalla completa en teléfono) con
+  fecha, usuario, paciente y detalle, y **Antes y después** campo por campo: "Cambiaron 2 de 4
+  campos.", los que cambiaron con ícono, el texto "Cambió" y fondo tenue; `[oculto]` tal cual; lo
+  anidado como pares "Valor: 500"; "Sin valor" donde no había. Sin valores anteriores (lo que se
+  creó con la acción) no se marca nada y se dice.
+
+### Estados
+
+Cargando, error con Reintentar ("No se pudo cargar el reporte de suministros. {motivo}") y vacío con
+lo que se usó y "Quitar filtros". Un 400 o un 404 dicen qué corregir sin Reintentar ("No se pudo
+armar el reporte de suministros. La sala no existe."); un 400 sobre las fechas además marca el campo.
+
+### Decisiones de la interfaz
+
+| #   | Decisión                                                                                                                                                                                                                                                                                                                                     | Por qué                                                                                                                |
+| --- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| D63 | El atajo del período va en la URL (`periodo`) y se cuenta desde el hoy de Argentina al dibujar; elegir una fecha fija las dos. Con una sola fecha se completa como el servidor. El período se valida en el cliente con los mensajes del esquema real (la prueba los compara) y, si es inválido, no se pide nada ni se muestran datos viejos. | Un enlace "últimos 30 días" sirve mañana; el error que se ve es el mismo que daría el 400.                             |
+| D64 | Los colores de los gráficos salen del esquema activo (`useColorScheme`) ya resueltos, no como variables CSS, porque la biblioteca pinta con atributos SVG. Medicamentos `primary`, insumos `secondary`, totales `info`, vencidos sin atender `warning`; nunca `success` ni `error`. Toda serie se nombra con texto.                          | Siguen al tema claro y oscuro sin depender del soporte de `var()` en atributos; ningún color es la única señal.        |
+| D65 | Las descargas se ocultan si no hay datos o si lo que se ve es el resultado anterior mientras llega el nuevo; una sola a la vez. El archivo se libera 10 s después de entregarlo.                                                                                                                                                             | El archivo siempre corresponde a lo que está a la vista; liberarlo enseguida corta la descarga en algunos navegadores. |
+| D66 | En la auditoría, el filtro de usuario usa `/api/usuarios` (pide `usuarios.gestionar`): sin ese permiso no se ofrece. El de paciente lista todos (también los egresados), hasta 100. Un valor elegido que no esté en la lista se agrega como opción.                                                                                          | La auditoría es de toda la historia; un enlace guardado no deja el selector en blanco.                                 |
+| D67 | Un campo "cambió" si los dos lados tienen valores y difieren por contenido (sin importar el orden de las claves); también si aparece o desaparece. Sin valores anteriores no se marca nada.                                                                                                                                                  | Marcar todo lo creado como "cambió" sería ruido; lo que importa es lo modificado.                                      |
+| D68 | Los reportes leen `meta` con `api.lista` (tipado en `api/reportes.ts`); el cliente solo suma `descargar`, que reutiliza el manejo de errores de los demás pedidos.                                                                                                                                                                           | Un solo lugar decide cómo se explica un error, también en las descargas.                                               |
+
+### Pruebas de la interfaz
+
+- [`reportes.test.tsx`](../frontend/src/paginas/reportes/reportes.test.tsx): período por defecto,
+  atajos (pedido, fechas y URL), parámetros desde la URL, validación del período, 400/404 del
+  servidor, las cuatro agrupaciones, unidades por insumo sin sumar, total, vacío con "Quitar
+  filtros", error con Reintentar, permisos (médico sin descargas, enfermería sin menú) y teléfono.
+- [`estadisticas.test.tsx`](../frontend/src/paginas/reportes/estadisticas.test.tsx): indicadores,
+  títulos, "Ver como tabla" con los mismos números, leyendas con texto, pestañas que conservan los
+  parámetros, vacío, error y teléfono;
+  [`graficos.test.tsx`](../frontend/src/paginas/reportes/graficos.test.tsx): `skipAnimation` con
+  movimiento reducido y colores del tema claro y oscuro.
+- [`descargas.test.tsx`](../frontend/src/paginas/reportes/descargas.test.tsx): ruta y parámetros
+  del pedido, "Preparando el archivo…", enlace con el nombre del servidor, liberación de la memoria
+  y errores 403 y 500; [`cliente.test.ts`](../frontend/src/api/cliente.test.ts): `descargar`.
+- [`periodo.test.ts`](../frontend/src/paginas/reportes/periodo.test.ts): días de Argentina, atajos
+  y la validación comparada con `esquemaReporteSuministros`.
+- [`auditoria.test.tsx`](../frontend/src/paginas/auditoria/auditoria.test.tsx),
+  [`comparacion.test.ts`](../frontend/src/paginas/auditoria/comparacion.test.ts) y
+  [`palabras.test.ts`](../frontend/src/paginas/auditoria/palabras.test.ts): columnas, acciones en
+  palabras (y el código si no hay), filtros en el pedido y la URL, paginación, vacío, error,
+  validación, detalle Antes/Después (también con teclado y en teléfono) y permisos.
+- [`menu.test.tsx`](../frontend/src/navegacion/menu.test.tsx) e
+  [`inicio.test.tsx`](../frontend/src/paginas/inicio.test.tsx): menú y tarea por rol.
