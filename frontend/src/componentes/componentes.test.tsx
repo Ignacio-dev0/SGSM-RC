@@ -159,6 +159,65 @@ describe('ModalConfirmacion', () => {
     );
   });
 
+  describe('máximo del motivo (como el esquema del servidor)', () => {
+    const conMotivo = (extra: { maxMotivo?: number } = {}) =>
+      render(
+        <ModalConfirmacion
+          abierto
+          titulo="Corregir"
+          mensaje="Indique el motivo"
+          textoConfirmar="Confirmar"
+          pedirMotivo
+          ayudaMotivo="Por ejemplo: error de carga"
+          alConfirmar={() => {}}
+          alCancelar={() => {}}
+          {...extra}
+        />,
+      );
+
+    it('por defecto acepta hasta 255 caracteres: no deja escribir más', async () => {
+      conMotivo();
+      const motivo = screen.getByLabelText(/Motivo/);
+      expect(motivo).toHaveAttribute('maxlength', '255');
+
+      await userEvent.click(motivo);
+      await userEvent.paste('a'.repeat(300));
+
+      expect(motivo).toHaveValue('a'.repeat(255));
+    });
+
+    it('el contador N/255 aparece al acercarse al máximo, sin molestar antes', async () => {
+      conMotivo();
+      const motivo = screen.getByLabelText(/Motivo/);
+      await userEvent.click(motivo);
+      await userEvent.paste('a'.repeat(203));
+      expect(screen.queryByText(/\/255$/)).not.toBeInTheDocument();
+      expect(motivo).toHaveAccessibleDescription('Por ejemplo: error de carga (mínimo 3 letras)');
+
+      await userEvent.type(motivo, 'b');
+
+      expect(screen.getByText('204/255')).toBeVisible();
+      // Va en la ayuda del campo: el lector de pantalla también lo oye.
+      expect(motivo).toHaveAccessibleDescription(
+        'Por ejemplo: error de carga (mínimo 3 letras) 204/255',
+      );
+      await userEvent.paste('c'.repeat(100));
+      expect(screen.getByText('255/255')).toBeVisible();
+    });
+
+    it('el máximo se puede cambiar con maxMotivo', async () => {
+      conMotivo({ maxMotivo: 100 });
+      const motivo = screen.getByLabelText(/Motivo/);
+      expect(motivo).toHaveAttribute('maxlength', '100');
+
+      await userEvent.click(motivo);
+      await userEvent.paste('a'.repeat(150));
+
+      expect(motivo).toHaveValue('a'.repeat(100));
+      expect(screen.getByText('100/100')).toBeVisible();
+    });
+  });
+
   it('el texto del botón que descarta se puede cambiar (por ejemplo, "Seguir editando")', async () => {
     const alCancelar = vi.fn();
     render(
