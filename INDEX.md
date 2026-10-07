@@ -112,21 +112,22 @@ Las pruebas de cada módulo están junto a su código (`*.test.ts`).
 
 ## Documentación (`docs/`)
 
-| Archivo                                       | Contenido                                                                                                |
-| --------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
-| [arquitectura.md](docs/arquitectura.md)       | Componentes y flujo de un pedido                                                                         |
-| [api.md](docs/api.md)                         | Convención de la API (T011)                                                                              |
-| [endpoints.md](docs/endpoints.md)             | Endpoints por módulo                                                                                     |
-| [modelo-de-datos.md](docs/modelo-de-datos.md) | DER, tablas y restricciones                                                                              |
-| [seguridad.md](docs/seguridad.md)             | Sesión, bloqueo, permisos por rol, auditoría                                                             |
-| [diseno-visual.md](docs/diseno-visual.md)     | Tema para tablet (T009)                                                                                  |
-| [componentes.md](docs/componentes.md)         | Guía de componentes (T010)                                                                               |
-| [entorno.md](docs/entorno.md)                 | Variables de entorno                                                                                     |
-| [pruebas.md](docs/pruebas.md)                 | Estrategia y ejecución de pruebas                                                                        |
-| [supuestos.md](docs/supuestos.md)             | Supuestos de dominio y decisiones técnicas                                                               |
-| [biometria.md](docs/biometria.md)             | Reconocimiento facial, modo demostración, prueba de concepto y limitaciones                              |
-| [suministros.md](docs/suministros.md)         | Reglas de registro y corrección de suministros                                                           |
-| [diseno-e5.md](docs/diseno-e5.md)             | Diseño aprobado de E5 (recordatorios y estudios): alcance, supuestos S9–S16, decisiones D9–D14 y riesgos |
-| [recordatorios.md](docs/recordatorios.md)     | Contrato de E5: recordatorios, prioridad, vencimiento, API, tiempo real y códigos de cierre              |
-| [despliegue.md](docs/despliegue.md)           | Entornos: desarrollo y completo en Docker                                                                |
-| [trazabilidad.md](docs/trazabilidad.md)       | Tareas del plan → código → pruebas                                                                       |
+| Archivo                                       | Contenido                                                                                                       |
+| --------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| [arquitectura.md](docs/arquitectura.md)       | Componentes y flujo de un pedido                                                                                |
+| [api.md](docs/api.md)                         | Convención de la API (T011)                                                                                     |
+| [endpoints.md](docs/endpoints.md)             | Endpoints por módulo                                                                                            |
+| [modelo-de-datos.md](docs/modelo-de-datos.md) | DER, tablas y restricciones                                                                                     |
+| [seguridad.md](docs/seguridad.md)             | Sesión, bloqueo, permisos por rol, auditoría                                                                    |
+| [diseno-visual.md](docs/diseno-visual.md)     | Tema para tablet (T009)                                                                                         |
+| [componentes.md](docs/componentes.md)         | Guía de componentes (T010)                                                                                      |
+| [entorno.md](docs/entorno.md)                 | Variables de entorno                                                                                            |
+| [pruebas.md](docs/pruebas.md)                 | Estrategia y ejecución de pruebas                                                                               |
+| [supuestos.md](docs/supuestos.md)             | Supuestos de dominio S1–S20 y decisiones técnicas                                                               |
+| [biometria.md](docs/biometria.md)             | Reconocimiento facial, modo demostración, prueba de concepto y limitaciones                                     |
+| [suministros.md](docs/suministros.md)         | Reglas de registro y corrección de suministros                                                                  |
+| [diseno-e5.md](docs/diseno-e5.md)             | Diseño aprobado de E5 (recordatorios y estudios): alcance, supuestos S9–S16, decisiones D9–D14 y riesgos        |
+| [recordatorios.md](docs/recordatorios.md)     | Contrato de E5: recordatorios, prioridad, vencimiento, API, tiempo real y códigos de cierre                     |
+| [diseno-e6.md](docs/diseno-e6.md)             | Diseño de E6 (reportes, estadísticas, exportación y auditoría): alcance, permisos, endpoints, supuestos S17–S20 |
+| [despliegue.md](docs/despliegue.md)           | Entornos: desarrollo y completo en Docker                                                                       |
+| [trazabilidad.md](docs/trazabilidad.md)       | Tareas del plan → código → pruebas                                                                              |

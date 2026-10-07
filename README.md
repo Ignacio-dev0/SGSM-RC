@@ -109,6 +109,7 @@ El mapa archivo por archivo está en [INDEX.md](INDEX.md).
 | [docs/biometria.md](docs/biometria.md)             | Reconocimiento facial                |
 | [docs/suministros.md](docs/suministros.md)         | Registro y corrección de suministros |
 | [docs/recordatorios.md](docs/recordatorios.md)     | Recordatorios y tiempo real (E5)     |
+| [docs/diseno-e6.md](docs/diseno-e6.md)             | Diseño de reportes y auditoría (E6)  |
 | [docs/despliegue.md](docs/despliegue.md)           | Entornos y despliegue                |
 | [docs/trazabilidad.md](docs/trazabilidad.md)       | Tareas del plan → código → pruebas   |
 
