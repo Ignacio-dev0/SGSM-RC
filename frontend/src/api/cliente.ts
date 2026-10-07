@@ -54,21 +54,32 @@ function armarUrl(ruta: string, query?: Query) {
   return url;
 }
 
+const SIN_CONEXION = 'No hay conexión con el servidor. Revise el Wi-Fi e intente de nuevo.';
+
+/** Toda falla de red (al pedir o mientras llega el cuerpo) es el mismo error, que dice qué revisar. */
+const errorSinConexion = () => new ErrorApi(0, 'SIN_CONEXION', SIN_CONEXION);
+
+/** Quien pidió el archivo lo canceló: no es una falla de la red ni del servidor. */
+const errorCancelado = () => new ErrorApi(0, 'CANCELADO', 'Se canceló la descarga.');
+
 /** Hace el pedido con la cookie de sesión; sin red, un error que dice qué revisar. */
-async function enviar(metodo: Metodo, ruta: string, cuerpo?: unknown, query?: Query) {
+async function enviar(
+  metodo: Metodo,
+  ruta: string,
+  cuerpo?: unknown,
+  query?: Query,
+  senal?: AbortSignal,
+) {
   try {
     return await fetch(armarUrl(ruta, query), {
       method: metodo,
       credentials: 'same-origin',
       headers: cuerpo === undefined ? {} : { 'Content-Type': 'application/json' },
       body: cuerpo === undefined ? null : JSON.stringify(cuerpo),
+      ...(senal && { signal: senal }),
     });
   } catch {
-    throw new ErrorApi(
-      0,
-      'SIN_CONEXION',
-      'No hay conexión con el servidor. Revise el Wi-Fi e intente de nuevo.',
-    );
+    throw senal?.aborted ? errorCancelado() : errorSinConexion();
   }
 }
 
@@ -126,13 +137,25 @@ function nombreDeArchivo(encabezado: string | null, respaldo: string) {
 
 /**
  * Baja un archivo de la API con la cookie de sesión. Si falla, el error es el de cualquier otro
- * pedido (`ErrorApi` con el mensaje del servidor); si sale bien, el archivo y su nombre.
+ * pedido (`ErrorApi` con el mensaje del servidor; sin red, también si se corta mientras llega el
+ * archivo); si sale bien, el archivo y su nombre. Con `senal` se puede cancelar (`CANCELADO`).
  */
-export async function descargar(ruta: string, query?: Query, nombreDeRespaldo = 'archivo') {
-  const respuesta = await enviar('GET', ruta, undefined, query);
+export async function descargar(
+  ruta: string,
+  query?: Query,
+  nombreDeRespaldo = 'archivo',
+  senal?: AbortSignal,
+) {
+  const respuesta = await enviar('GET', ruta, undefined, query, senal);
   if (!respuesta.ok) throw errorDeRespuesta(respuesta, await leerJson(respuesta));
+  let blob: Blob;
+  try {
+    blob = await respuesta.blob();
+  } catch {
+    throw senal?.aborted ? errorCancelado() : errorSinConexion();
+  }
   return {
-    blob: await respuesta.blob(),
+    blob,
     nombre: nombreDeArchivo(respuesta.headers.get('Content-Disposition'), nombreDeRespaldo),
   } satisfies Archivo;
 }
@@ -152,8 +175,13 @@ export const api = {
   },
 };
 
-/** Mensaje para mostrar al usuario a partir de cualquier error. */
-export const mensajeDeError = (e: unknown) => (e instanceof Error ? e.message : FALLA_INESPERADA);
+/**
+ * Mensaje para mostrar a la persona a partir de cualquier error. Solo el de un `ErrorApi` está
+ * escrito para ella; el de cualquier otro error es técnico ("Failed to fetch"), y se cambia por
+ * la falla inesperada, que dice qué hacer.
+ */
+export const mensajeDeError = (e: unknown) =>
+  e instanceof ErrorApi ? e.message : FALLA_INESPERADA;
 
 /** Errores de validación por campo que devuelve el backend (`detalles`). */
 export function erroresPorCampo(e: unknown): Record<string, string> {

@@ -1,6 +1,7 @@
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useState } from 'react';
+import { ErrorApi } from '../api/cliente';
 import { Alerta } from './Alerta';
 import { Boton } from './Boton';
 import { CampoTexto } from './CampoTexto';
@@ -407,7 +408,7 @@ describe('estados de carga', () => {
     render(
       <ErrorDeCarga
         que="la ficha del paciente"
-        error={new Error('No hay conexión con el servidor.')}
+        error={new ErrorApi(0, 'SIN_CONEXION', 'No hay conexión con el servidor.')}
         alReintentar={alReintentar}
       />,
     );

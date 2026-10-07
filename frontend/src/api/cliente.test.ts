@@ -123,11 +123,16 @@ describe('mensajes de error genéricos (F60)', () => {
     });
   });
 
-  it('mensajeDeError usa el mensaje del error y, si no es un error, un texto con la acción a seguir', () => {
-    expect(mensajeDeError(new Error('No hay conexión'))).toBe('No hay conexión');
-    expect(mensajeDeError('algo')).toBe(
-      'Ocurrió un problema inesperado. Intente de nuevo; si sigue, avise al área de sistemas.',
+  it('mensajeDeError muestra el mensaje solo de un ErrorApi; cualquier otra cosa, el texto con la acción a seguir', () => {
+    const inesperada =
+      'Ocurrió un problema inesperado. Intente de nuevo; si sigue, avise al área de sistemas.';
+    expect(mensajeDeError(new ErrorApi(0, 'SIN_CONEXION', 'No hay conexión'))).toBe(
+      'No hay conexión',
     );
+    expect(mensajeDeError('algo')).toBe(inesperada);
+    // Un Error común trae texto técnico (en inglés, de la biblioteca): no se le muestra a nadie.
+    expect(mensajeDeError(new TypeError('Failed to fetch'))).toBe(inesperada);
+    expect(mensajeDeError(new Error('body stream already read'))).toBe(inesperada);
   });
 });
 
@@ -222,6 +227,45 @@ describe('descarga de archivos', () => {
     await expect(descargar('/api/archivo/sin-red')).rejects.toMatchObject({
       codigo: 'SIN_CONEXION',
     });
+  });
+
+  // E6-06 · E5-15 (F76): la red puede cortarse mientras llega el cuerpo, no solo al pedir.
+  afterEach(() => vi.restoreAllMocks());
+
+  it('si se corta la conexión mientras llega el archivo, es el mismo error de "sin conexión"', async () => {
+    const cortado = new Response('%PDF', { status: 200 });
+    vi.spyOn(cortado, 'blob').mockRejectedValue(new TypeError('terminated'));
+    const espia = vi.spyOn(globalThis, 'fetch').mockResolvedValue(cortado);
+
+    const error = await descargar('/api/archivo/cortado').catch((e: unknown) => e);
+
+    expect(error).toBeInstanceOf(ErrorApi);
+    expect(error).toMatchObject({
+      estado: 0,
+      codigo: 'SIN_CONEXION',
+      message: 'No hay conexión con el servidor. Revise el Wi-Fi e intente de nuevo.',
+    });
+    expect(espia).toHaveBeenCalled();
+  });
+
+  it('una descarga cancelada no es un error de conexión: dice que se canceló', async () => {
+    const control = new AbortController();
+    const espia = vi.spyOn(globalThis, 'fetch').mockImplementation(
+      (_url, init) =>
+        new Promise((_resolver, rechazar) => {
+          init?.signal?.addEventListener('abort', () =>
+            rechazar(new DOMException('Aborted', 'AbortError')),
+          );
+        }),
+    );
+
+    const pedido = descargar('/api/archivo/lento', undefined, 'x.pdf', control.signal).catch(
+      (e: unknown) => e,
+    );
+    control.abort();
+
+    expect(await pedido).toMatchObject({ estado: 0, codigo: 'CANCELADO' });
+    expect(espia.mock.calls[0]?.[1]?.signal).toBe(control.signal);
   });
 
   it('avisa si la sesión venció mientras se pedía el archivo', async () => {
