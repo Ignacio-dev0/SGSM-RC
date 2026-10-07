@@ -458,10 +458,11 @@ script hace antes un respaldo:
    `git pull`, o una etiqueta: `git checkout v1.2.0`).
 2. `bash scripts/actualizar.sh`: respaldo `-antes-de-actualizar`, `docker compose build --pull`
    (incluye las actualizaciones de seguridad de las imágenes de node y nginx),
-   `docker compose up -d --wait` (recrea lo que cambió y espera a que esté sano) y el estado.
-3. `docker compose run --rm -T backend node dist/scripts/instalar.js`: suma los permisos y tipos de
-   estudio nuevos de la versión y deja los roles con los permisos de esta versión (la API no los
-   carga sola: así llegaron los de reportes y auditoría de E6). No toca nada más (D106).
+   `docker compose up -d --wait` (recrea lo que cambió y espera a que esté sano), el instalador
+   y el estado. El instalador (`docker compose run --rm -T backend node dist/scripts/instalar.js`)
+   suma los permisos y tipos de estudio nuevos de la versión y deja los roles con los permisos de
+   esta versión (la API no los carga sola: así llegaron los de reportes y auditoría de E6). No toca
+   nada más (D106); se puede correr a mano en cualquier momento.
 
 Si se quiere ver las migraciones antes de aplicarlas:
 `docker compose run --rm --no-deps backend npx prisma migrate status`.
