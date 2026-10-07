@@ -18,6 +18,7 @@ import { Alerta } from '../../componentes/Alerta';
 import { Boton } from '../../componentes/Boton';
 import { CampoTexto } from '../../componentes/CampoTexto';
 import { EncabezadoPagina } from '../../componentes/EncabezadoPagina';
+import { ModalConfirmacion } from '../../componentes/ModalConfirmacion';
 import { Selector } from '../../componentes/Selector';
 import { Tabla, type Columna } from '../../componentes/Tabla';
 import { useRetardo } from '../../utilidades/useRetardo';
@@ -58,6 +59,7 @@ interface PropsDialogo {
 function DialogoInsumo({ insumo, abierto, alCerrar, alTerminar }: PropsDialogo) {
   const [datos, setDatos] = useState<DatosInsumo>(VACIO);
   const [errores, setErrores] = useState<Partial<Record<keyof DatosInsumo, string>>>({});
+  const [confirmandoBaja, setConfirmandoBaja] = useState(false);
   const { ref: refFormulario, enfocarPrimerError } = useFocoEnPrimerError<HTMLDivElement>();
 
   useEffect(() => {
@@ -163,7 +165,7 @@ function DialogoInsumo({ insumo, abierto, alCerrar, alTerminar }: PropsDialogo) 
           <Boton
             variante={insumo.activo ? 'peligro' : 'secundario'}
             cargando={cambiarEstado.isPending}
-            onClick={() => cambiarEstado.mutate()}
+            onClick={() => (insumo.activo ? setConfirmandoBaja(true) : cambiarEstado.mutate())}
             sx={{ mr: 'auto' }}
           >
             {insumo.activo ? 'Dar de baja' : 'Reactivar'}
@@ -176,6 +178,18 @@ function DialogoInsumo({ insumo, abierto, alCerrar, alTerminar }: PropsDialogo) 
           Guardar
         </Boton>
       </DialogActions>
+      {insumo && (
+        <ModalConfirmacion
+          abierto={confirmandoBaja}
+          titulo={`Dar de baja ${insumo.nombre}`}
+          mensaje="Deja de aparecer para prescribir y para registrar suministros. Las prescripciones y los registros que ya lo usan no cambian, y se puede reactivar desde el catálogo."
+          textoConfirmar="Dar de baja"
+          peligroso
+          cargando={cambiarEstado.isPending}
+          alConfirmar={() => cambiarEstado.mutate()}
+          alCancelar={() => setConfirmandoBaja(false)}
+        />
+      )}
     </Dialog>
   );
 }

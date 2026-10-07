@@ -115,6 +115,15 @@ export function FormularioUsuario() {
     onError: mostrarErrorDelServidor,
   });
 
+  const reactivar = useMutation({
+    mutationFn: () => usuariosApi.reactivar(usuarioId),
+    onSuccess: (r) => {
+      clienteQuery.setQueryData(['usuario', usuarioId], r);
+      void clienteQuery.invalidateQueries({ queryKey: ['usuarios'] });
+      setAviso('El usuario se reactivó y puede volver a ingresar al sistema');
+    },
+  });
+
   const darDeBaja = useMutation({
     mutationFn: () => usuariosApi.darDeBaja(usuarioId),
     onSuccess: async (u) => {
@@ -167,11 +176,21 @@ export function FormularioUsuario() {
                   Dar de baja
                 </Boton>
               )}
+              {!u.activo && (
+                <Boton
+                  variante="secundario"
+                  cargando={reactivar.isPending}
+                  onClick={() => reactivar.mutate()}
+                >
+                  Reactivar
+                </Boton>
+              )}
             </>
           )
         }
       />
 
+      {reactivar.isError && <Alerta tipo="error">{mensajeDeError(reactivar.error)}</Alerta>}
       {aviso && (
         <Alerta tipo="exito" alCerrar={() => setAviso(null)}>
           {aviso}
@@ -288,7 +307,7 @@ export function FormularioUsuario() {
       <ModalConfirmacion
         abierto={confirmandoBaja}
         titulo="Dar de baja al usuario"
-        mensaje={`${u?.nombre ?? ''} ${u?.apellido ?? ''} ya no podrá ingresar al sistema. Sus registros anteriores se conservan.`}
+        mensaje={`${u?.nombre ?? ''} ${u?.apellido ?? ''} (${u?.nombreUsuario ?? ''}) ya no podrá ingresar al sistema. Sus registros anteriores se conservan y se puede reactivar desde esta misma pantalla.`}
         textoConfirmar="Dar de baja"
         peligroso
         cargando={darDeBaja.isPending}

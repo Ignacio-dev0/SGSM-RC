@@ -139,7 +139,8 @@ export function DetallePrescripcion() {
           transiciones.map((estado) => (
             <Boton
               key={estado}
-              variante={estado === 'VIGENTE' ? 'secundario' : 'peligro'}
+              // Solo finalizar es irreversible; suspender se puede reanudar.
+              variante={estado === 'FINALIZADA' ? 'peligro' : 'secundario'}
               onClick={() => setCambioEstado(estado)}
             >
               {ACCIONES[estado as keyof typeof ACCIONES].boton}
@@ -334,7 +335,7 @@ export function DetallePrescripcion() {
             `${p.medicamento.nombre} ${resumenPrescripcion(p)} de ${nombreConCama(paciente.data)}`,
           )}
           textoConfirmar={ACCIONES[cambioEstado as keyof typeof ACCIONES].boton}
-          peligroso={cambioEstado !== 'VIGENTE'}
+          peligroso={cambioEstado === 'FINALIZADA'}
           pedirMotivo
           cargando={cambiarEstado.isPending}
           alConfirmar={(motivo) =>

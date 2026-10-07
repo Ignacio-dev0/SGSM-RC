@@ -305,6 +305,18 @@ describe('modificación de prescripción (T306 · CU19)', () => {
     expect(filas[2]).toHaveTextContent(/Frecuencia\s*cada 8 h\s*cada 12 h/);
   });
 
+  it('suspender (se puede reanudar) no se ve tan grave como finalizar (no se puede)', async () => {
+    servidor.use(
+      http.get('*/api/prescripciones/40', () => HttpResponse.json({ data: prescripcion() })),
+    );
+    renderizarApp('/prescripciones/40', MEDICO);
+
+    const suspender = await screen.findByRole('button', { name: 'Suspender' });
+    const finalizar = screen.getByRole('button', { name: 'Finalizar' });
+    expect(suspender).not.toHaveClass('MuiButton-colorError');
+    expect(finalizar).toHaveClass('MuiButton-colorError');
+  });
+
   it('al suspender nombra el medicamento y el paciente', async () => {
     servidor.use(
       http.get('*/api/prescripciones/40', () => HttpResponse.json({ data: prescripcion() })),

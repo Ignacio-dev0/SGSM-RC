@@ -205,10 +205,32 @@ describe('gestión de usuarios (T110 · CU01–CU04)', () => {
 
     await userEvent.click(await screen.findByRole('button', { name: 'Dar de baja' }));
     const dialogo = screen.getByRole('dialog', { name: /Dar de baja/ });
+    expect(dialogo).toHaveTextContent(/Lucía Gómez \(lgomez\)/);
+    expect(dialogo).toHaveTextContent(/se puede reactivar/);
     await userEvent.click(within(dialogo).getByRole('button', { name: 'Dar de baja' }));
 
     expect(await screen.findByText(/dado de baja/)).toBeInTheDocument();
     expect(baja).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('reactivación de un usuario dado de baja', () => {
+  it('ofrece Reactivar en lugar de Dar de baja y lo vuelve a activar', async () => {
+    const reactivar = vi.fn(() => HttpResponse.json({ data: usuario({ activo: true }) }));
+    servidor.use(
+      http.get('*/api/usuarios/10', () =>
+        HttpResponse.json({ data: usuario({ activo: false, fechaBaja: '2026-10-01T12:00:00Z' }) }),
+      ),
+      http.post('*/api/usuarios/10/reactivar', reactivar),
+    );
+    renderizarApp('/usuarios/10', ADMIN);
+
+    expect(await screen.findByRole('button', { name: 'Reactivar' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Dar de baja' })).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Reactivar' }));
+
+    expect(await screen.findByRole('status')).toHaveTextContent(/puede volver a ingresar/);
+    expect(reactivar).toHaveBeenCalledTimes(1);
   });
 });
 

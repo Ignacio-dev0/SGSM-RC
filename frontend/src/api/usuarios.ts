@@ -26,6 +26,7 @@ export const usuariosApi = {
   crear: (d: DatosUsuario) => api.post<Usuario>('/api/usuarios', d),
   modificar: (id: number, d: Partial<DatosUsuario>) => api.patch<Usuario>(`/api/usuarios/${id}`, d),
   darDeBaja: (id: number) => api.delete<Usuario>(`/api/usuarios/${id}`),
+  reactivar: (id: number) => api.post<Usuario>(`/api/usuarios/${id}/reactivar`),
   asignarPermisos: (id: number, permisos: string[]) =>
     api.put<Usuario>(`/api/usuarios/${id}/permisos-adicionales`, { permisos }),
 };

@@ -95,6 +95,11 @@ describe('catálogo de insumos y medicamentos (T303)', () => {
     await userEvent.click(await screen.findByText('Paracetamol'));
     const dialogo = screen.getByRole('dialog', { name: 'Editar medicamento' });
     await userEvent.click(within(dialogo).getByRole('button', { name: 'Dar de baja' }));
+    // Pide confirmación nombrando qué se da de baja y si se puede deshacer.
+    const confirmacion = screen.getByRole('dialog', { name: /Dar de baja Paracetamol/ });
+    expect(confirmacion).toHaveTextContent(/se puede reactivar/);
+    expect(baja).not.toHaveBeenCalled();
+    await userEvent.click(within(confirmacion).getByRole('button', { name: 'Dar de baja' }));
 
     expect(await screen.findByRole('status')).toHaveTextContent(/dado de baja/);
     expect(baja).toHaveBeenCalled();
