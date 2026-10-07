@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { hoyEnArgentina } from '../../comun/fechas';
 import { esquemaPaginacion } from '../../comun/paginacion';
 import { esquemaDni } from '../usuarios/usuarios.esquemas';
 
@@ -10,15 +11,16 @@ const textoOpcional = (max: number) =>
     .nullish()
     .transform((v) => (v ? v : null));
 
-const hoy = () => new Date().toISOString().slice(0, 10);
-
 const camposPaciente = {
   dni: esquemaDni,
   nombre: z.string().trim().min(2, 'Ingrese el nombre').max(80),
   apellido: z.string().trim().min(2, 'Ingrese el apellido').max(80),
   fechaNacimiento: z.iso
     .date('Ingrese la fecha de nacimiento (AAAA-MM-DD)')
-    .refine((f) => f >= '1900-01-01' && f <= hoy(), 'La fecha de nacimiento no es válida'),
+    .refine(
+      (f) => f >= '1900-01-01' && f <= hoyEnArgentina(),
+      'La fecha de nacimiento no es válida',
+    ),
   sexo: z.enum(['FEMENINO', 'MASCULINO', 'OTRO'], { error: 'Elija el sexo' }),
   obraSocial: textoOpcional(80),
   numeroAfiliado: textoOpcional(40),
