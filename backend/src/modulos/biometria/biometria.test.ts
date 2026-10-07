@@ -54,6 +54,21 @@ describe('API de datos biométricos (T403 · CU07–CU09)', () => {
     expect(JSON.stringify(registros)).not.toMatch(/0\.05|base64/);
   });
 
+  it('informa el estado biométrico de un usuario con sus datos', async () => {
+    const { agente: admin } = await agenteConRol('ADMINISTRADOR');
+    const enfermero = await crearUsuario('ENFERMERO', { nombreUsuario: 'sacosta' });
+
+    const res = await admin.get(`/api/biometria/usuarios/${enfermero.id}`);
+
+    expect(res.body.data).toMatchObject({
+      usuarioId: enfermero.id,
+      nombreUsuario: 'sacosta',
+      rol: 'Enfermero',
+      registrado: false,
+      actualizadoEn: null,
+    });
+  });
+
   it('devuelve la foto de referencia', async () => {
     const { agente: admin } = await agenteConRol('ADMINISTRADOR');
     const enfermero = await crearUsuario('ENFERMERO');

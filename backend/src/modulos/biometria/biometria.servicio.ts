@@ -52,12 +52,20 @@ export async function listarPersonal() {
 }
 
 export async function estadoBiometrico(usuarioId: number) {
-  await usuarioExistente(usuarioId);
-  const dato = await prisma.datoBiometrico.findUnique({
-    where: { usuarioId },
-    select: { actualizadoEn: true },
+  const u = await prisma.usuario.findUnique({
+    where: { id: usuarioId },
+    include: { rol: true, datoBiometrico: { select: { actualizadoEn: true } } },
   });
-  return { usuarioId, registrado: dato !== null, actualizadoEn: dato?.actualizadoEn ?? null };
+  if (!u) throw noEncontrado('El usuario no existe');
+  return {
+    usuarioId,
+    nombreUsuario: u.nombreUsuario,
+    nombre: u.nombre,
+    apellido: u.apellido,
+    rol: u.rol.nombre,
+    registrado: u.datoBiometrico !== null,
+    actualizadoEn: u.datoBiometrico?.actualizadoEn ?? null,
+  };
 }
 
 /** Registra (CU07) o actualiza (CU08) el patrón y la foto de referencia del usuario. */
