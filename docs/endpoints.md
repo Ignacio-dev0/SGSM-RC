@@ -75,3 +75,42 @@ los recordatorios `PENDIENTE`. Cada cambio queda auditado.
 Acciones de auditoría del módulo: `CREAR`, `MODIFICAR`, `REINGRESAR`, `TRASLADAR`, `EGRESAR`
 (Paciente), `ASIGNAR_CAMA`, `LIBERAR_CAMA` (AsignacionCama), `SUSPENDER` (Prescripcion),
 `CANCELAR` (Estudio, Recordatorio).
+
+## Catálogo de insumos y medicamentos — T303
+
+| Método | Ruta                             | Permiso              | Descripción                                                             |
+| ------ | -------------------------------- | -------------------- | ----------------------------------------------------------------------- |
+| GET    | `/api/insumos?texto&tipo&activo` | `catalogo.ver`       | Catálogo completo, sin paginar (es chico). `activo` por defecto `true`  |
+| GET    | `/api/insumos/:id`               | `catalogo.ver`       | Un insumo                                                               |
+| POST   | `/api/insumos`                   | `catalogo.gestionar` | Alta: `nombre, tipo (MEDICAMENTO / INSUMO), unidadMedida, presentacion` |
+| PATCH  | `/api/insumos/:id`               | `catalogo.gestionar` | Modificación (incluye `activo: true` para reactivar)                    |
+| DELETE | `/api/insumos/:id`               | `catalogo.gestionar` | Baja lógica                                                             |
+
+Errores: `409 INSUMO_DUPLICADO` (mismo nombre y presentación).
+
+## Prescripciones — T301, T302, T307 · CU17–CU19
+
+| Método | Ruta                                       | Permiso                    | Descripción                                                                                                             |
+| ------ | ------------------------------------------ | -------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| GET    | `/api/pacientes/:id/prescripciones?estado` | `prescripciones.ver`       | Prescripciones del paciente, vigentes primero, con `proximaToma` y `ultimasAdministraciones`                            |
+| POST   | `/api/pacientes/:id/prescripciones`        | `prescripciones.gestionar` | Alta: `insumoId, dosis, unidadDosis, frecuenciaHoras, via, fechaInicio, fechaFin?, observaciones?, confirmarDuplicada?` |
+| GET    | `/api/prescripciones/:id`                  | `prescripciones.ver`       | Detalle con `agenda` (tomas de las próximas 24 h)                                                                       |
+| PATCH  | `/api/prescripciones/:id`                  | `prescripciones.gestionar` | Modificación de una vigente: dosis, unidad, frecuencia, vía, fin, observaciones + `motivo` obligatorio                  |
+| POST   | `/api/prescripciones/:id/estado`           | `prescripciones.gestionar` | `{ estado, motivo }`: VIGENTE → SUSPENDIDA o FINALIZADA; SUSPENDIDA → VIGENTE o FINALIZADA                              |
+
+Errores: `409 PACIENTE_NO_INTERNADO`, `422 NO_ES_MEDICAMENTO`, `422 MEDICAMENTO_NO_DISPONIBLE`,
+`409 PRESCRIPCION_DUPLICADA` (`detalles.prescripciones`: las vigentes del mismo medicamento; se
+vuelve a enviar con `confirmarDuplicada: true` para cargarla igual), `409 PRESCRIPCION_NO_VIGENTE`,
+`409 TRANSICION_INVALIDA`, `422 FECHA_FIN_INVALIDA`.
+
+**Horarios (T302).** La toma _k_ es `fechaInicio + k × frecuenciaHoras` (k ≥ 0) mientras no pase
+`fechaFin`. `proximaToma` es la primera toma desde ahora (incluida la que corresponde justo
+ahora) y solo existe si la prescripción está vigente. Código:
+[`agenda.ts`](../backend/src/modulos/prescripciones/agenda.ts).
+
+**Efecto sobre los recordatorios (E5).** Cuando la prescripción deja de estar vigente, o cambian
+su frecuencia o su fin, los recordatorios pendientes se cancelan (el temporizador de E5 los
+volverá a generar con la agenda nueva).
+
+Acciones de auditoría: `CREAR`, `MODIFICAR` (con el motivo en `detalle`), `SUSPENDER`,
+`REANUDAR`, `FINALIZAR` (Prescripcion); `CREAR`, `MODIFICAR`, `BAJA` (Insumo).
