@@ -1,4 +1,5 @@
 import { ErrorApi } from '../../comun/errores';
+import { horaArgentina } from '../../comun/fechas';
 import { reloj } from '../../comun/reloj';
 import { config } from '../../config';
 import { prisma } from '../../db';
@@ -8,13 +9,6 @@ import { verificarContrasena } from './contrasenas';
 
 const credencialesInvalidas = () =>
   new ErrorApi(401, 'CREDENCIALES_INVALIDAS', 'Usuario o contraseña incorrectos');
-
-const horaArgentina = (fecha: Date) =>
-  fecha.toLocaleTimeString('es-AR', {
-    hour: '2-digit',
-    minute: '2-digit',
-    timeZone: 'America/Argentina/Buenos_Aires',
-  });
 
 const cuentaBloqueada = (hasta: Date) =>
   new ErrorApi(
