@@ -219,7 +219,8 @@ describe('ficha del paciente: modificación, traslado y baja (T207 · T208 · CU
 
     expect(await screen.findByRole('heading', { name: 'Benítez, Rosa' })).toBeInTheDocument();
     expect(screen.getByText(/DNI 30111222/)).toBeInTheDocument();
-    expect(screen.getAllByText(/A-01/).length).toBeGreaterThan(0);
+    // La cama lleva un guion que no permite cortar el renglón (F28): se busca con ".".
+    expect(screen.getAllByText(/A.01/).length).toBeGreaterThan(0);
     expect(screen.getByText('ACV isquémico')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Trasladar' })).not.toBeInTheDocument();
   });
@@ -358,7 +359,7 @@ describe('ficha del paciente: modificación, traslado y baja (T207 · T208 · CU
     renderizarApp('/pacientes/7', ENFERMERO);
 
     expect(
-      await screen.findByText('Cama A-01 · Sala A – Neurorrehabilitación'),
+      await screen.findByText(/^Cama A.01 · Sala A – Neurorrehabilitación$/),
     ).toBeInTheDocument();
   });
 
@@ -437,7 +438,7 @@ describe('historial del paciente (T209 · CU16)', () => {
 
     await userEvent.click(await screen.findByRole('tab', { name: 'Historial' }));
 
-    expect(await screen.findByText(/Sala B – Traumatología · B-01/)).toBeInTheDocument();
+    expect(await screen.findByText(/Sala B – Traumatología · B.01/)).toBeInTheDocument();
     await userEvent.click(screen.getByRole('tab', { name: /Modificaciones/ }));
     expect(await screen.findByText(/IOMA/)).toBeInTheDocument();
     expect(screen.getByText(/PAMI/)).toBeInTheDocument();

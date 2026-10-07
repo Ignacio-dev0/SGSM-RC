@@ -38,3 +38,31 @@ export function edad(fechaNacimiento: string, hoy = new Date()) {
   if (hoy.getMonth() + 1 < m || (hoy.getMonth() + 1 === m && hoy.getDate() < d)) anios--;
   return anios;
 }
+
+/** "07/10 08:00": día, mes y hora, para nombrar un registro sin repetir el año. */
+export const formatearFechaHoraCorta = (iso: string | null | undefined) =>
+  iso ? formatearFechaHora(iso).replace(/\/\d{4}/, '') : '—';
+
+/** Espacio no separable: el renglón no se parte ahí. */
+const ESPACIO_NO_SEPARABLE = String.fromCharCode(160);
+
+/**
+ * Une con espacios no separables el número y su unidad, para que un renglón no deje "500" en
+ * una línea y "mg" en la otra: "Comprimidos 500 mg", "Gasa estéril 10 x 10 cm", "Paquete x 10".
+ * El resto de los espacios quedan como están: el texto largo sigue pudiendo cortar.
+ */
+export const sinCortes = (texto: string) =>
+  texto
+    // Número + unidad ("500 mg", "0,9 %") y el número que le sigue a una "x" ("x 10").
+    .replace(/(\d) +(?=[\p{L}%])/gu, `$1${ESPACIO_NO_SEPARABLE}`)
+    .replace(/(^|\s)([xX×]) +(?=\d)/gu, `$1$2${ESPACIO_NO_SEPARABLE}`);
+
+/** "AAAA-MM-DD" (de los campos de fecha) → "entre el 01/10/2026 y el 05/10/2026". */
+export function rangoDeFechas(desde: string, hasta: string) {
+  if (desde && hasta) {
+    return `entre el ${formatearFechaSinZona(desde)} y el ${formatearFechaSinZona(hasta)}`;
+  }
+  if (desde) return `desde el ${formatearFechaSinZona(desde)}`;
+  if (hasta) return `hasta el ${formatearFechaSinZona(hasta)}`;
+  return '';
+}
