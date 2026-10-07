@@ -73,6 +73,10 @@ línea 1.3 para que un nombre de medicamento largo en dos renglones no se separe
 - **Número y unidad nunca se cortan**: la dosis y la frecuencia (`cada 8 h`) llevan espacio no
   separable; la cama (`A‑01`) lleva guion no separable. Una toma ya dada se informa con hora
   absoluta (`Ya se dio a las 08:05`), que se puede cotejar con el historial.
+- **Campos de fecha y hora** (`datetime-local`): siempre en hora de Argentina, como el resto de la
+  pantalla, aunque la tablet tenga otra zona (`utilidades/campoFechaHora.ts`). El campo nativo
+  puede mostrarla con otro formato (a. m./p. m., mes primero): debajo se repite con el de la app
+  antes de confirmar ("Quedará para el 08/10/2026 10:00").
 
 ## Radios
 
@@ -108,7 +112,9 @@ porque están por encima de todo.
 - **Franja de modo demostración**: aviso permanente de borde a borde, fijo bajo la barra superior
   mientras se desplaza el contenido. Fondo opaco con tinte `warning` al 14 %, borde inferior
   `warning`, texto `text.primary` en negrita ("Modo demostración: la validación facial se simula.
-  No usar con pacientes reales."). Los diálogos que la tapan repiten el aviso adentro.
+  No usar con pacientes reales."). Los diálogos que la tapan repiten el aviso adentro. En la misma
+  franja aparece el **aviso de recordatorios nuevos** (ver Recordatorios); si están los dos, los
+  separa una línea `warning`.
 - **Contenido**: márgenes de 16 px en teléfono y 24 px desde `md`. Primer elemento enfocable:
   "Saltar al contenido".
 
@@ -162,6 +168,42 @@ Una sola regla, en `ESTADOS_CHIP` (`componentes/estadosChip.ts`), aplicada por `
   la dosis. El rojo queda para errores y acciones de peligro, nunca para un estado.
 - El estado nunca se dice solo con el color: la etiqueta dice de qué se trata (y la toma dada
   suma el ícono).
+
+## Recordatorios
+
+**Chip de urgencia** (`paginas/recordatorios/urgencia.ts`), en cada tarjeta del panel; mismo
+tamaño que `ChipEstado` (28 px, 14 px, negrita) y siempre con ícono:
+
+| Nivel      | Chip (toma / estudio)   | Aspecto                                              | Cuándo                                                   |
+| ---------- | ----------------------- | ---------------------------------------------------- | -------------------------------------------------------- |
+| Vencida    | Vencida / Vencido       | Relleno `warning`, reloj de arena; tarjeta con borde | Pasaron 60 min sin atenderse (`VENCIDO`)                 |
+| Urgente    | Urgente                 | Relleno `warning`, triángulo; tarjeta con borde      | Prioridad `ALTA`, o pendiente que ya pasó su hora        |
+| Pronto     | Pronto                  | Contorno `primary`, despertador                      | Prioridad `MEDIA` (un estudio, mientras no pasa su hora) |
+| Programada | Programada / Programado | Contorno neutro, reloj                               | Prioridad `BAJA` (falta más de 15 min)                   |
+
+- Lo urgente y lo vencido llevan además la **tarjeta con borde `warning` de 2 px**. Nunca verde ni
+  rojo, como el resto de los estados.
+- "Pendiente que ya pasó su hora" se calcula en la tablet con la hora del servidor: el servidor
+  deja un estudio siempre en `MEDIA` y recalcula la prioridad una vez por minuto.
+- El texto de al lado de la hora grande dice el tiempo, no otro estado: "Faltan 12 min", "Toca
+  ahora", "Atrasada 8 min" (pendiente; "Atrasado" en un estudio) y, si venció, **"Hace 45 min"**:
+  el chip ya dice "Vencida", y "Atrasada" al lado se leería como un segundo estado.
+- La insignia de la barra y el resumen del panel cuentan como urgentes los mismos que van
+  rellenos.
+
+**Aviso de recordatorios nuevos** (solo a quien atiende): en la franja fija bajo la barra (la del
+modo demostración), así no tapa los botones de abajo; los diálogos quedan por encima. Despertador
+`warning`, el texto ("2 recordatorios nuevos", 17 px), "Ver recordatorios" (`texto`, salvo en el
+panel) y cerrar (ícono). Suena un tono corto y vibra si la tablet no los apagó.
+
+- Se cierra solo a los 15 s; el tiempo no corre mientras el puntero o el foco están adentro ni
+  mientras un diálogo lo tapa (al volver cuenta 15 s de nuevo). Con urgentes o vencidos sin
+  atender queda hasta cerrarlo, y el tono se repite cada 5 min.
+- El lector de pantalla lo oye por una región `aria-live` aparte, fuera de la aplicación (o dentro
+  del diálogo abierto): MUI oculta todo lo que queda al lado de un diálogo.
+- **Sin tiempo real**: el panel muestra una franja con el ícono de sin señal (tinte `warning` al
+  14 %, borde `warning`) y la insignia de la barra lleva el mismo ícono abajo a la izquierda, en un
+  círculo con fondo propio (se lee en la barra clara y en la oscura).
 
 ## Listados
 

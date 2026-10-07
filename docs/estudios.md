@@ -231,23 +231,37 @@ Pestaña **Estudios** de la ficha del paciente (`/pacientes/:id?pestana=estudios
 - **Programar** (`DialogoProgramarEstudio`): tipo con el selector nativo, fecha y hora
   (`datetime-local`, revisada mientras se elige: "entre 5 min atrás y 90 días adelante"), nombre y
   preparación precargados del tipo (al cambiar de tipo se reemplaza lo precargado, no lo escrito a
-  mano; preparación borrada = sin preparación) y observaciones. Foco en el primer error.
+  mano; preparación borrada = sin preparación) y observaciones. Foco en el primer error; un error
+  que no es de un campo (paciente egresado, sin conexión) va en un aviso arriba que se lleva a la
+  vista y toma el foco (E5-10). Reintentar, al lado del tipo, solo si la lista de tipos no cargó
+  (no con "Elija el tipo de estudio", E5-07).
+- **Fecha y hora en hora de Argentina** (E5-16): el campo trae y manda la hora de Argentina aunque
+  la tablet tenga otra zona (`utilidades/campoFechaHora.ts`, la misma de las prescripciones), y con
+  una fecha válida la ayuda dice cómo quedará con el formato de la app: "Quedará para el
+  08/10/2026 10:00" (el campo nativo puede mostrar a. m./p. m. o el mes primero).
 - **Reprogramar**: `ModalConfirmacion` con la fecha actual cargada; no se confirma hasta elegir
-  otra. **Cancelar**: `ModalConfirmacion` peligroso con motivo obligatorio y "Volver" (no
-  "Cancelar", que se confundiría con la acción).
+  otra, y la ayuda dice "Quedará para el …". **Cancelar**: `ModalConfirmacion` peligroso con
+  motivo obligatorio y "Volver" (no "Cancelar", que se confundiría con la acción).
 - **Confirmar** (`useConfirmacionEstudio`, reutilizable desde el panel de recordatorios): pide el
   estudio por id (estado actual), muestra qué se confirma y al paciente (nombre, DNI y cama), pide
-  el rostro con `useValidacionFacial` como en suministros y manda el comprobante.
+  el rostro con `useValidacionFacial` como en suministros y manda el comprobante. Un error (por
+  ejemplo, la validación venció) va en un aviso que toma el foco (E5-10). El aviso de éxito nombra
+  al paciente: "Se confirmó que se realizó Rx de tórax a Benítez, Rosa (…)" (E5-14).
+- **El aviso del resultado toma el foco** (E5-09), también el de éxito, como en el panel: el
+  botón que abrió el diálogo suele desaparecer (el estudio pasa a "Realizados y cancelados") y el
+  foco caería en la página.
 - **Errores en palabras**: `PACIENTE_NO_INTERNADO`, `TIPO_ESTUDIO_NO_DISPONIBLE` (en el campo, y se
   vuelve a pedir la lista de tipos), `FECHA_ESTUDIO_INVALIDA` y `SIN_CAMBIOS` (en el campo de la
   fecha), `VALIDACION_FACIAL_REQUERIDA` ("La validación del rostro venció o no corresponde; vuelva
-  a validarla") y `409 ESTUDIO_NO_PROGRAMADO` ("Este estudio ya fue confirmado o cancelado por otra
-  persona": cierra el diálogo, avisa y recarga).
+  a validarla") y `409 ESTUDIO_NO_PROGRAMADO` ("Este estudio ya estaba confirmado o cancelado (por
+  usted o por otra persona). Revise el historial.": cierra el diálogo, avisa y recarga; pudo ser la
+  misma persona desde otra tablet, E5-14).
 - Después de cada acción se renuevan `['estudios']`, `['estudio', id]`, `['historial', pacienteId]`
   y `['recordatorios']` (`useRefrescarEstudios`).
 - Pruebas: [`lista.test.tsx`](../frontend/src/paginas/estudios/lista.test.tsx) (orden, datos,
   chips, carga, error, vacío, permisos de los tres roles, objetivos táctiles),
-  [`programar.test.tsx`](../frontend/src/paginas/estudios/programar.test.tsx),
+  [`programar.test.tsx`](../frontend/src/paginas/estudios/programar.test.tsx) (también la hora de
+  Argentina con la tablet en otra zona),
   [`acciones.test.tsx`](../frontend/src/paginas/estudios/acciones.test.tsx) (reprogramar, cancelar,
   confirmar con el rostro, 403 y 409) y
   [`confirmacionEstudio.test.tsx`](../frontend/src/paginas/estudios/confirmacionEstudio.test.tsx)

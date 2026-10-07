@@ -13,7 +13,7 @@ tamaño táctil, los textos y la accesibilidad sean iguales en todo el sistema.
 | -------------------- | ----------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `Boton`              | Cualquier acción                                            | `variante` (`principal`, `secundario`, `peligro`, `peligroConfirmar`, `texto`), `cargando`                                                          |
 | `CampoTexto`         | Entrada de texto con error en línea                         | `etiqueta`, `valor`, `alCambiar`, `error`, `ayuda` (texto, o texto con un contador)                                                                 |
-| `Selector`           | Elegir una opción (usa el selector nativo de la tablet)     | `etiqueta`, `valor`, `opciones`, `alCambiar`, `textoVacio`, `alReintentar`, `reintentando`                                                          |
+| `Selector`           | Elegir una opción (usa el selector nativo de la tablet)     | `etiqueta`, `valor`, `opciones`, `alCambiar`, `textoVacio`, `alReintentar`, `errorDeCarga`, `reintentando`                                          |
 | `Tabla`              | Listados con estado vacío, carga y paginación               | `titulo`, `columnas`, `filas`, `claveFila`, `alTocarFila`, `paginacion`                                                                             |
 | `ModalConfirmacion`  | Confirmar acciones que modifican o eliminan                 | `abierto`, `titulo`, `mensaje`, `textoConfirmar`, `textoCancelar`, `peligroso`, `pedirMotivo`, `ayudaMotivo`, `maxMotivo`, `confirmarDeshabilitado` |
 | `Alerta`             | Cartel de error, advertencia, éxito o info                  | `tipo`, `titulo`, `alCerrar`, `accion`, `enfocar`                                                                                                   |
@@ -44,13 +44,22 @@ tamaño táctil, los textos y la accesibilidad sean iguales en todo el sistema.
   pantalla también lo oye. Antes no aparece, para no distraer en un motivo corto.
 - `ModalConfirmacion` **no se cierra tocando afuera** (se perdería el motivo escrito): se sale
   con Cancelar o Escape.
+- **El mensaje describe el diálogo** (E5-13): `ModalConfirmacion` lo enlaza con `aria-describedby`
+  (sea texto o varios párrafos), así el lector de pantalla lee sobre qué se actúa y si se puede
+  deshacer al abrirse, no solo el título.
 - **Ninguna pantalla en blanco**: mientras carga, `Cargando`; si falla, `ErrorDeCarga` (un
   error nunca se muestra como "no hay datos"). Los selectores que dependen de una lista dicen
   en su texto de ayuda si la lista no se pudo cargar o está vacía.
 - **Una lista que no carga se puede reintentar ahí mismo** (F60): los selectores que dependen de
-  una lista del servidor (pacientes, medicamentos, camas) reciben `alReintentar` (y `reintentando`).
-  Si hay error, aparece "Reintentar" al lado del selector y el error dice la causa
-  (`No se pudo cargar la lista de X. {mensajeDeError(error)}`). Nunca "vuelva a entrar a esta pantalla".
+  una lista del servidor (pacientes, medicamentos, camas, tipos de estudio, salas) reciben
+  `alReintentar` (y `reintentando`). Si la lista no cargó, aparece "Reintentar" al lado del
+  selector y el error dice la causa (`No se pudo cargar la lista de X. {mensajeDeError(error)}`).
+  Nunca "vuelva a entrar a esta pantalla".
+- **Reintentar solo cuando el error es de la carga** (E5-07): si el mismo selector puede mostrar
+  un error de validación ("Elija la cama"), se le pasa `errorDeCarga={consulta.isError}`: con un
+  error de validación no aparece Reintentar (la lista sí está). Sin `errorDeCarga`, Reintentar
+  acompaña a cualquier `error` (para los selectores cuyo único error es el de la carga). La
+  estructura no cambia con o sin el botón: el campo no se vuelve a montar ni pierde el foco.
 - **Los errores del servidor dicen qué hacer** (F60): un error interno o una respuesta sin el formato
   de la API se muestra como "El servidor tuvo un problema. Intente de nuevo en unos minutos; si
   sigue, avise al área de sistemas." (lo arma `api/cliente.ts`; las pantallas solo muestran
@@ -168,6 +177,24 @@ también, apilados con 8 px entre sí (el principal abajo, donde llega el pulgar
 />
 ```
 
+## Campos de fecha y hora
+
+Los campos `datetime-local` muestran y devuelven "AAAA-MM-DDTHH:mm" sin zona. Se leen y se
+escriben **en hora de Argentina**, como todas las horas de la app (E5-16), con
+[`utilidades/campoFechaHora.ts`](../frontend/src/utilidades/campoFechaHora.ts):
+
+```ts
+campoFechaHora(e.fechaHora); // ISO → "2026-10-08T10:00" para el campo
+isoDeCampoFechaHora(valor); // lo elegido → ISO en UTC para la API ('' si no es una fecha)
+msDeCampoFechaHora(valor); // para comparar o validar (NaN si no es una fecha)
+```
+
+- Nunca `new Date(valor)` con el valor del campo: lo leería con la zona de la tablet.
+- Donde se programa o cambia una hora que importa (programar y reprogramar un estudio), la ayuda
+  del campo repite lo elegido con el formato de la app: "Quedará para el 08/10/2026 10:00".
+- Lo usan la carga y la edición de prescripciones y los diálogos de estudios. El egreso del
+  paciente (`DialogosPaciente`) todavía arma su valor inicial con la zona de la tablet.
+
 ## Confirmar un estudio con el rostro
 
 [`useConfirmacionEstudio`](../frontend/src/paginas/estudios/ConfirmacionEstudio.tsx) confirma que
@@ -191,9 +218,11 @@ return <>…{dialogoConfirmacion}</>;
   el mismo flujo que en suministros). Si ya no está programado, lo dice y solo ofrece Cerrar.
 - Con el estudio a mano (`abrirConfirmacion(id, { estudio, paciente })`) se muestra enseguida
   mientras llega el estado actual.
-- `403 VALIDACION_FACIAL_REQUERIDA` queda en el diálogo para volver a validar;
-  `409 ESTUDIO_NO_PROGRAMADO` cierra y llega a `alTerminar` como advertencia ("Este estudio ya
-  fue confirmado o cancelado por otra persona…").
+- `403 VALIDACION_FACIAL_REQUERIDA` queda en el diálogo para volver a validar (el aviso toma el
+  foco); `409 ESTUDIO_NO_PROGRAMADO` cierra y llega a `alTerminar` como advertencia ("Este estudio
+  ya estaba confirmado o cancelado (por usted o por otra persona). Revise el historial.").
+- El aviso de éxito nombra el estudio y al paciente ("Se confirmó que se realizó Rx de tórax a
+  Benítez, Rosa (07/10/2026 12:00).").
 - Al terminar renueva solo las consultas de estudios, del historial del paciente y
   `['recordatorios']`: la pantalla que lo usa no tiene que invalidar nada.
 - El estado del estudio se muestra con `ChipEstadoEstudio` (`paginas/estudios/TarjetasEstudios.tsx`),
