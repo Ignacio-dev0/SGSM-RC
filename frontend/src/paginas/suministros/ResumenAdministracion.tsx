@@ -51,7 +51,8 @@ export function ResumenAdministracion({
   const distinta = cantidad !== prescripcion.dosis;
   return (
     <Box component="section" aria-labelledby={titulo}>
-      <Typography id={titulo} variant="h6" component="h3" sx={{ mb: 1 }}>
+      {/* h2: cuelga del título de la pantalla (h1); un h3 saltaría un nivel. */}
+      <Typography id={titulo} variant="h6" component="h2" sx={{ mb: 1 }}>
         Revise antes de confirmar
       </Typography>
       <Box

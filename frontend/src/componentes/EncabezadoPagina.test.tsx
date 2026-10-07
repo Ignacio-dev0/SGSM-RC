@@ -1,6 +1,8 @@
 import { ThemeProvider } from '@mui/material';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
+import { simularFocoVisible } from '../pruebas/focoVisible';
 import { tema } from '../tema';
 import { EncabezadoPagina } from './EncabezadoPagina';
 
@@ -132,5 +134,66 @@ describe('título del documento y foco al cambiar de pantalla (UX-14 · WCAG 2.4
     render(envolver(<EncabezadoPagina titulo="Pacientes" />));
 
     expect(estilosGenerados()).toMatch(/:focus,\.css-[^{,]+:focus-visible\{outline:none/);
+  });
+});
+
+describe('ayuda de la flecha para volver (UX-23 · tooltips)', () => {
+  let restaurarFoco: () => void;
+  beforeEach(() => {
+    restaurarFoco = simularFocoVisible();
+  });
+  afterEach(() => restaurarFoco());
+
+  const flecha = () => screen.getByRole('link', { name: 'Volver' });
+
+  it('aparece con el foco del teclado y es la descripción del enlace, no su nombre', async () => {
+    render(envolver(<EncabezadoPagina titulo="Nuevo paciente" volverA="/pacientes" />));
+    // Al abrirse la pantalla el foco va al título, que está después de la flecha: Mayús+Tab llega a ella.
+    await userEvent.tab({ shift: true });
+
+    expect(flecha()).toHaveFocus();
+    expect(await screen.findByRole('tooltip')).toHaveTextContent('Volver a Pacientes');
+    expect(flecha()).toHaveAccessibleName('Volver');
+    expect(flecha()).toHaveAccessibleDescription('Volver a Pacientes');
+  });
+
+  it('se cierra con Escape sin mover el foco', async () => {
+    render(envolver(<EncabezadoPagina titulo="Nuevo paciente" volverA="/pacientes" />));
+    await userEvent.tab({ shift: true });
+    await screen.findByRole('tooltip');
+
+    await userEvent.keyboard('{Escape}');
+
+    await waitFor(() => expect(screen.queryByRole('tooltip')).not.toBeInTheDocument());
+    expect(flecha()).toHaveFocus();
+  });
+
+  it('aparece al pasar el puntero', async () => {
+    render(envolver(<EncabezadoPagina titulo="Nuevo paciente" volverA="/pacientes" />));
+
+    await userEvent.hover(flecha());
+
+    expect(await screen.findByRole('tooltip')).toHaveTextContent('Volver a Pacientes');
+  });
+
+  it.each([
+    ['/', 'Volver al inicio'],
+    ['/pacientes', 'Volver a Pacientes'],
+    // La búsqueda conserva sus filtros en la dirección: igual se vuelve a la lista.
+    ['/pacientes?texto=beni&estado=INTERNADO', 'Volver a Pacientes'],
+    ['/pacientes/7', 'Volver a la ficha del paciente'],
+    ['/pacientes/7?pestana=prescripciones', 'Volver a la ficha del paciente'],
+    ['/suministros', 'Volver a Suministros'],
+    ['/biometria', 'Volver a Biometría'],
+    ['/usuarios', 'Volver a Usuarios'],
+    ['/usuarios/3', 'Volver al usuario'],
+    // Un destino que no se reconoce no inventa un nombre.
+    ['/otra/cosa', 'Volver'],
+  ])('si vuelve a %s dice "%s"', async (destino, texto) => {
+    render(envolver(<EncabezadoPagina titulo="Pantalla" volverA={destino} />));
+
+    await userEvent.hover(flecha());
+
+    expect(await screen.findByRole('tooltip')).toHaveTextContent(new RegExp(`^${texto}$`));
   });
 });

@@ -1,4 +1,4 @@
-import { Navigate, Outlet, Route, Routes } from 'react-router-dom';
+import { Outlet, Route, Routes } from 'react-router-dom';
 import { ConPermiso, RutaProtegida } from './auth/RutaProtegida';
 import { Disposicion } from './navegacion/Disposicion';
 import { Ingreso } from './paginas/Ingreso';
@@ -7,6 +7,7 @@ import { PruebaReconocimiento } from './paginas/biometria/PruebaReconocimiento';
 import { RostroUsuario } from './paginas/biometria/RostroUsuario';
 import { CatalogoInsumos } from './paginas/catalogo/CatalogoInsumos';
 import { Inicio } from './paginas/Inicio';
+import { NoEncontrada } from './paginas/NoEncontrada';
 import { CargaPrescripcion } from './paginas/prescripciones/CargaPrescripcion';
 import { DetallePrescripcion } from './paginas/prescripciones/DetallePrescripcion';
 import { AdministracionMedicamento } from './paginas/suministros/AdministracionMedicamento';
@@ -135,7 +136,8 @@ export function RutasApp() {
           <Route path=":id" element={<FormularioUsuario key="edicion" />} />
           <Route path=":id/permisos" element={<PermisosUsuario />} />
         </Route>
-        <Route path="*" element={<Navigate to="/" replace />} />
+        {/* Dentro de la disposición: con sesión se ve el menú; sin sesión, RutaProtegida lleva al ingreso. */}
+        <Route path="*" element={<NoEncontrada />} />
       </Route>
     </Routes>
   );

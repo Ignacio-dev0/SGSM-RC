@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { Box, IconButton, Typography } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import { Link as EnlaceRouter } from 'react-router-dom';
+import { AyudaFlotante } from './AyudaFlotante';
 import { ESTILO_TITULO_ENFOCABLE, useEncabezadoDePantalla } from './useEncabezadoDePantalla';
 
 interface Props {
@@ -10,6 +11,24 @@ interface Props {
   /** Ruta a la que vuelve la flecha; sin ella no se muestra. */
   volverA?: string;
   acciones?: ReactNode;
+}
+
+/** A qué pantalla vuelve la flecha, según la ruta de destino (sin la búsqueda ni el hash). */
+const DESTINOS: [RegExp, string][] = [
+  [/^\/$/, 'Volver al inicio'],
+  [/^\/pacientes$/, 'Volver a Pacientes'],
+  [/^\/pacientes\/\d+$/, 'Volver a la ficha del paciente'],
+  [/^\/suministros$/, 'Volver a Suministros'],
+  [/^\/catalogo$/, 'Volver a Catálogo'],
+  [/^\/biometria$/, 'Volver a Biometría'],
+  [/^\/usuarios$/, 'Volver a Usuarios'],
+  [/^\/usuarios\/\d+$/, 'Volver al usuario'],
+];
+
+/** Texto de la ayuda de la flecha: el destino si se reconoce; si no, solo "Volver". */
+function textoVolver(destino: string) {
+  const ruta = destino.split(/[?#]/)[0]!.replace(/(.)\/+$/, '$1');
+  return DESTINOS.find(([patron]) => patron.test(ruta))?.[1] ?? 'Volver';
 }
 
 /**
@@ -30,9 +49,12 @@ export function EncabezadoPagina({ titulo, subtitulo, volverA, acciones }: Props
       }}
     >
       {volverA && (
-        <IconButton component={EnlaceRouter} to={volverA} aria-label="Volver" edge="start">
-          <ArrowBackIcon />
-        </IconButton>
+        // El nombre accesible es "Volver"; la ayuda agrega a dónde lleva.
+        <AyudaFlotante texto={textoVolver(volverA)}>
+          <IconButton component={EnlaceRouter} to={volverA} aria-label="Volver" edge="start">
+            <ArrowBackIcon />
+          </IconButton>
+        </AyudaFlotante>
       )}
       {/* Sin ancho propio en teléfono para quedar junto a la flecha; en tablet, al menos 200 px. */}
       <Box sx={{ flex: '1 1 0', minWidth: { xs: 0, sm: 200 } }}>

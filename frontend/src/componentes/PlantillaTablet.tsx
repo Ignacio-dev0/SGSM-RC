@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import { useRef, useState, type MouseEvent, type ReactNode } from 'react';
 import {
   AppBar,
   Box,
@@ -16,7 +16,7 @@ import {
 } from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
 import { NavLink } from 'react-router-dom';
-import { tinte } from '../tema';
+import { TAMANO_TACTIL_MINIMO, tinte } from '../tema';
 
 export interface OpcionMenu {
   ruta: string;
@@ -38,6 +38,9 @@ interface Props {
 
 const ANCHO_MENU = 264;
 const ANCHO_RIEL = 96;
+
+/** Identificador del contenido principal: destino del enlace "Saltar al contenido". */
+const ID_CONTENIDO = 'contenido';
 
 type Estilos = { [clave: string]: unknown };
 
@@ -118,10 +121,48 @@ export function PlantillaTablet({ opciones, acciones, aviso, children }: Props) 
   const telefono = useMediaQuery(tema.breakpoints.down('sm'));
   const riel = useMediaQuery(tema.breakpoints.down('md'));
   const [abierto, setAbierto] = useState(false);
+  const refContenido = useRef<HTMLElement>(null);
   const anchoMenu = riel ? ANCHO_RIEL : ANCHO_MENU;
+
+  // Lleva el foco al contenido sin tocar la dirección: un salto de hash agregaría una entrada al
+  // historial con el estado de navegación vacío (por ejemplo, a qué búsqueda vuelve la flecha).
+  const saltarAlContenido = (e: MouseEvent) => {
+    e.preventDefault();
+    refContenido.current?.focus();
+  };
 
   return (
     <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: 'background.default' }}>
+      {/* Primer elemento enfocable: quien usa teclado o lector evita recorrer el menú en cada pantalla. */}
+      <Box
+        component="a"
+        href={`#${ID_CONTENIDO}`}
+        onClick={saltarAlContenido}
+        sx={(t) => ({
+          position: 'fixed',
+          top: 8,
+          left: 8,
+          // Por encima de la barra superior y del cajón del menú.
+          zIndex: t.zIndex.drawer + 2,
+          display: 'inline-flex',
+          alignItems: 'center',
+          minHeight: TAMANO_TACTIL_MINIMO,
+          px: 3,
+          borderRadius: 2,
+          border: 2,
+          borderColor: 'primary.main',
+          bgcolor: 'background.paper',
+          color: 'text.primary',
+          fontWeight: 700,
+          fontSize: '1.05rem',
+          textDecoration: 'none',
+          // Fuera de la vista hasta recibir el foco; sin animación (movimiento reducido).
+          transform: 'translateY(-200%)',
+          '&:focus, &:focus-visible': { transform: 'none' },
+        })}
+      >
+        Saltar al contenido
+      </Box>
       <AppBar position="fixed" elevation={0} sx={{ zIndex: (t) => t.zIndex.drawer + 1 }}>
         <Toolbar sx={{ gap: { xs: 0.5, sm: 2 } }}>
           {telefono && (
@@ -181,7 +222,14 @@ export function PlantillaTablet({ opciones, acciones, aviso, children }: Props) 
         </Drawer>
       )}
 
-      <Box component="main" sx={{ flexGrow: 1, minWidth: 0 }}>
+      <Box
+        component="main"
+        id={ID_CONTENIDO}
+        ref={refContenido}
+        tabIndex={-1}
+        // El contenido no es un control: al recibir el foco por el enlace no lleva recuadro.
+        sx={{ flexGrow: 1, minWidth: 0, '&:focus, &:focus-visible': { outline: 'none' } }}
+      >
         <Toolbar />
         {aviso && (
           <Box

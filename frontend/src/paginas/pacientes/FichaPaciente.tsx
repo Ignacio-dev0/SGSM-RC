@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import { useId, useState, type ReactNode } from 'react';
 import { Box, Chip, Paper, Tab, Tabs, Typography } from '@mui/material';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import InventoryOutlinedIcon from '@mui/icons-material/Inventory2Outlined';
@@ -67,6 +67,12 @@ function DatosDelPaciente({ p }: { p: Paciente }) {
 const PESTANAS = ['datos', 'prescripciones', 'historial'] as const;
 type Pestana = (typeof PESTANAS)[number];
 
+const ETIQUETAS_PESTANA: Record<Pestana, string> = {
+  datos: 'Datos',
+  prescripciones: 'Prescripciones',
+  historial: 'Historial',
+};
+
 /**
  * Ficha del paciente: datos, cama actual y acciones (editar T207, trasladar T207, dar de alta
  * T208), con las pestañas de prescripciones (T305) e historial (T209).
@@ -89,6 +95,16 @@ export function FichaPaciente() {
   const [dialogo, setDialogo] = useState<'traslado' | 'egreso' | null>(null);
   const paciente = usePaciente(id);
   const p = paciente.data;
+  // Cada pestaña y su panel se refieren entre sí (WAI-ARIA tabs).
+  const base = useId();
+  const idPestana = (v: Pestana) => `${base}-pestana-${v}`;
+  const idPanel = (v: Pestana) => `${base}-panel-${v}`;
+  const propiedadesPestana = (v: Pestana) => ({
+    value: v,
+    label: ETIQUETAS_PESTANA[v],
+    id: idPestana(v),
+    'aria-controls': idPanel(v),
+  });
 
   const alTerminar = (actualizado: Paciente, mensaje: string) => {
     clienteQuery.setQueryData(['paciente', id], actualizado);
@@ -185,22 +201,24 @@ export function FichaPaciente() {
 
       <Tabs
         value={pestana}
+        aria-label="Secciones de la ficha"
         // Cambiar de pestaña conserva el estado (a qué búsqueda vuelve la flecha).
         onChange={(_e, v: Pestana) =>
           setParametros({ pestana: v }, { replace: true, state: ubicacion.state })
         }
         sx={{ mb: 2, borderBottom: 1, borderColor: 'divider' }}
       >
-        <Tab value="datos" label="Datos" />
-        {tienePermiso('prescripciones.ver') && (
-          <Tab value="prescripciones" label="Prescripciones" />
-        )}
-        <Tab value="historial" label="Historial" />
+        <Tab {...propiedadesPestana('datos')} />
+        {tienePermiso('prescripciones.ver') && <Tab {...propiedadesPestana('prescripciones')} />}
+        <Tab {...propiedadesPestana('historial')} />
       </Tabs>
 
-      {pestana === 'datos' && <DatosDelPaciente p={p} />}
-      {pestana === 'prescripciones' && <PrescripcionesPaciente paciente={p} />}
-      {pestana === 'historial' && <HistorialPaciente pacienteId={id} />}
+      {/* Solo el panel de la pestaña activa está en la página: las otras secciones no cargan datos. */}
+      <Box role="tabpanel" id={idPanel(pestana)} aria-labelledby={idPestana(pestana)}>
+        {pestana === 'datos' && <DatosDelPaciente p={p} />}
+        {pestana === 'prescripciones' && <PrescripcionesPaciente paciente={p} />}
+        {pestana === 'historial' && <HistorialPaciente pacienteId={id} />}
+      </Box>
 
       <DialogoTraslado
         paciente={p}

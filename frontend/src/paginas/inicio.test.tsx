@@ -14,7 +14,9 @@ describe('inicio por rol: las tareas del día con las palabras de quien las hace
     renderizarApp('/', ENFERMERO);
     await screen.findByRole('heading', { name: /Hola, Sofía/ });
 
-    const enInicio = tareas().filter((t) => t && !/^(Inicio|Pacientes|Suministros)$/.test(t));
+    const enInicio = tareas().filter(
+      (t) => t && !/^(Saltar al contenido|Inicio|Pacientes|Suministros)$/.test(t),
+    );
     expect(enInicio.slice(0, 3)).toEqual([
       expect.stringMatching(/^Administrar medicamento/),
       expect.stringMatching(/^Registrar insumos/),

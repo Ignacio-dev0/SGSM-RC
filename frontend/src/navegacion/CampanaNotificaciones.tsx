@@ -15,6 +15,7 @@ import NotificationsOutlinedIcon from '@mui/icons-material/NotificationsOutlined
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../api/cliente';
 import type { Notificacion } from '../api/tipos';
+import { AyudaFlotante } from '../componentes/AyudaFlotante';
 import { Boton } from '../componentes/Boton';
 import { Cargando, ErrorDeCarga } from '../componentes/EstadoDeCarga';
 import { formatearFechaHora } from '../utilidades/formato';
@@ -47,15 +48,17 @@ export function CampanaNotificaciones() {
 
   return (
     <>
-      <IconButton
-        color="inherit"
-        aria-label={noLeidas > 0 ? `Notificaciones: ${noLeidas} sin leer` : 'Notificaciones'}
-        onClick={() => setAbierta(true)}
-      >
-        <Badge badgeContent={noLeidas} color="error">
-          <NotificationsOutlinedIcon />
-        </Badge>
-      </IconButton>
+      <AyudaFlotante texto="Notificaciones">
+        <IconButton
+          color="inherit"
+          aria-label={noLeidas > 0 ? `Notificaciones: ${noLeidas} sin leer` : 'Notificaciones'}
+          onClick={() => setAbierta(true)}
+        >
+          <Badge badgeContent={noLeidas} color="error">
+            <NotificationsOutlinedIcon />
+          </Badge>
+        </IconButton>
+      </AyudaFlotante>
       <Dialog
         open={abierta}
         onClose={() => setAbierta(false)}

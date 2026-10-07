@@ -11,6 +11,7 @@ import CheckIcon from '@mui/icons-material/Check';
 import DarkModeOutlinedIcon from '@mui/icons-material/DarkModeOutlined';
 import LightModeOutlinedIcon from '@mui/icons-material/LightModeOutlined';
 import SettingsBrightnessOutlinedIcon from '@mui/icons-material/SettingsBrightnessOutlined';
+import { AyudaFlotante } from './AyudaFlotante';
 
 type Modo = 'system' | 'light' | 'dark';
 
@@ -32,15 +33,18 @@ export function SelectorTema() {
 
   return (
     <>
-      <IconButton
-        color="inherit"
-        aria-label={`Tema de la pantalla: ${actual.etiqueta}`}
-        aria-haspopup="menu"
-        aria-expanded={Boolean(ancla)}
-        onClick={(e) => setAncla(e.currentTarget)}
-      >
-        <Icono />
-      </IconButton>
+      {/* El ícono muestra el estado; la ayuda dice la acción (el nombre accesible no cambia). */}
+      <AyudaFlotante texto={`Cambiar el tema (ahora: ${actual.etiqueta})`}>
+        <IconButton
+          color="inherit"
+          aria-label={`Tema de la pantalla: ${actual.etiqueta}`}
+          aria-haspopup="menu"
+          aria-expanded={Boolean(ancla)}
+          onClick={(e) => setAncla(e.currentTarget)}
+        >
+          <Icono />
+        </IconButton>
+      </AyudaFlotante>
       <Menu anchorEl={ancla} open={Boolean(ancla)} onClose={() => setAncla(null)}>
         {OPCIONES.map((o) => (
           <MenuItem
