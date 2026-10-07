@@ -259,7 +259,7 @@ Código: [`api/recordatorios.ts`](../frontend/src/api/recordatorios.ts) (tipos y
 ### Pantalla Recordatorios (`/recordatorios`, `recordatorios.ver`)
 
 Se llega desde el menú (después de Inicio), la insignia de la barra y, para quien atiende, la
-primera tarea del inicio ("Tomas para dar ahora").
+primera tarea del inicio ("Tomas y estudios para atender").
 
 - **Tarjetas en el orden del servidor** (ya vienen por urgencia), tomas y estudios mezclados: una
   columna en teléfono; en tablet y PC, tantas columnas de al menos 300 px como entren. Cada una:

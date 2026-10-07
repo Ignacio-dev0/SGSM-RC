@@ -29,8 +29,8 @@ export interface Tarea {
 export const TAREAS: Tarea[] = [
   {
     ruta: '/recordatorios',
-    etiqueta: 'Tomas para dar ahora',
-    descripcion: 'Las atrasadas y las de la próxima media hora, de la más urgente a la menos',
+    etiqueta: 'Tomas y estudios para atender',
+    descripcion: 'Lo atrasado y lo de la próxima media hora, de lo más urgente a lo menos',
     icono: <AlarmOutlinedIcon />,
     permiso: 'recordatorios.atender',
   },

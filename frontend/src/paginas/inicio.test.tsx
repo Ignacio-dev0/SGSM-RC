@@ -15,7 +15,7 @@ describe('inicio por rol: las tareas del día con las palabras de quien las hace
 
     const enInicio = tareasDeLaPantalla();
     expect(enInicio.slice(0, 4)).toEqual([
-      expect.stringMatching(/^Tomas para dar ahora/),
+      expect.stringMatching(/^Tomas y estudios para atender/),
       expect.stringMatching(/^Administrar medicamento/),
       expect.stringMatching(/^Registrar insumos/),
       expect.stringMatching(/^Buscar paciente/),
@@ -43,7 +43,9 @@ describe('inicio por rol: las tareas del día con las palabras de quien las hace
     simularRecordatorios([]);
     renderizarApp('/', ENFERMERO);
 
-    await userEvent.click(await screen.findByRole('link', { name: /Tomas para dar ahora/ }));
+    await userEvent.click(
+      await screen.findByRole('link', { name: /Tomas y estudios para atender/ }),
+    );
     expect(
       await screen.findByRole('heading', { name: 'Recordatorios', level: 1 }),
     ).toBeInTheDocument();
@@ -82,7 +84,7 @@ describe('tareas de gestión primero para quien administra (F34)', () => {
       expect.stringMatching(/^Nuevo usuario/),
       expect.stringMatching(/^Registrar el rostro del personal/),
       expect.stringMatching(/^Agregar al catálogo/),
-      expect.stringMatching(/^Tomas para dar ahora/),
+      expect.stringMatching(/^Tomas y estudios para atender/),
       expect.stringMatching(/^Administrar medicamento/),
       expect.stringMatching(/^Registrar insumos/),
       expect.stringMatching(/^Buscar paciente/),
@@ -138,7 +140,7 @@ describe('la tarea más frecuente del rol se destaca (F34)', () => {
     renderizarApp('/', ENFERMERO);
     await screen.findByRole('heading', { name: /Hola, Sofía/ });
 
-    const { tarjeta, celda } = tarjetaDe(/Tomas para dar ahora/);
+    const { tarjeta, celda } = tarjetaDe(/Tomas y estudios para atender/);
     expect(tarjeta).toHaveAttribute('data-destacada', 'true');
     expect(celda).toHaveClass('MuiGrid-grid-xs-12');
     expect(celda).not.toHaveClass('MuiGrid-grid-sm-6');
@@ -176,7 +178,9 @@ describe('la tarea más frecuente del rol se destaca (F34)', () => {
 
     expect(tarjetaDe(/Nuevo usuario/).tarjeta).toHaveAttribute('data-destacada', 'true');
     expect(tarjetaDe(/Administrar medicamento/).tarjeta).not.toHaveAttribute('data-destacada');
-    expect(tarjetaDe(/Tomas para dar ahora/).tarjeta).not.toHaveAttribute('data-destacada');
+    expect(tarjetaDe(/Tomas y estudios para atender/).tarjeta).not.toHaveAttribute(
+      'data-destacada',
+    );
   });
 });
 

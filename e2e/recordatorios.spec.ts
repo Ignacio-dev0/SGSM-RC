@@ -72,7 +72,7 @@ test('la toma que se acerca aparece sola en el panel y se atiende al administrar
       !(await page.getByText(/Modo demostración/).isVisible()),
       'Sin modo de demostración no se puede simular el rostro',
     );
-    await page.getByRole('link', { name: /Tomas para dar ahora/ }).click();
+    await page.getByRole('link', { name: /Tomas y estudios para atender/ }).click();
     await expect(page.getByRole('heading', { level: 1, name: 'Recordatorios' })).toBeVisible();
 
     // El temporizador corre cada 60 s: la tarjeta llega por el tiempo real, sin recargar.
