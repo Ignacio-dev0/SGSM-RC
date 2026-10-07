@@ -1,5 +1,7 @@
 // Esquema de la base de datos del SGSM-RC (T006 · T101).
-// El DER se documenta en docs/modelo-de-datos.md.
+// El DER, los supuestos y las reglas que se aplican en la base están en docs/modelo-de-datos.md.
+// Las restricciones que Prisma no expresa (índices únicos parciales, checks) se agregan en SQL
+// dentro de las migraciones (ver T102).
 
 generator client {
   provider = "prisma-client-js"
@@ -8,4 +10,451 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+}
+
+// ─── Enumerados ─────────────────────────────────────────────────────────────────────────────
+
+enum Sexo {
+  FEMENINO
+  MASCULINO
+  OTRO
+}
+
+enum EstadoPaciente {
+  INTERNADO
+  EGRESADO
+}
+
+enum TipoInsumo {
+  MEDICAMENTO
+  INSUMO
+}
+
+enum ViaAdministracion {
+  ORAL
+  SUBLINGUAL
+  INTRAVENOSA
+  INTRAMUSCULAR
+  SUBCUTANEA
+  TOPICA
+  INHALATORIA
+  SONDA
+  RECTAL
+  OTRA
+}
+
+enum EstadoPrescripcion {
+  VIGENTE
+  SUSPENDIDA
+  FINALIZADA
+}
+
+enum TipoSuministro {
+  MEDICAMENTO
+  INSUMOS
+}
+
+enum EstadoEstudio {
+  PROGRAMADO
+  REALIZADO
+  CANCELADO
+}
+
+enum TipoRecordatorio {
+  MEDICAMENTO
+  ESTUDIO
+}
+
+enum EstadoRecordatorio {
+  PENDIENTE
+  ATENDIDO
+  VENCIDO
+  CANCELADO
+}
+
+enum PrioridadRecordatorio {
+  ALTA
+  MEDIA
+  BAJA
+}
+
+enum MotivoAsignacion {
+  INGRESO
+  TRASLADO
+  REINGRESO
+}
+
+// ─── Seguridad: roles, permisos y usuarios ─────────────────────────────────────────────────
+
+model Rol {
+  id          Int          @id @default(autoincrement())
+  /// ADMINISTRADOR, MEDICO, ENFERMERO
+  codigo      String       @unique @db.VarChar(30)
+  nombre      String       @db.VarChar(60)
+  descripcion String?      @db.VarChar(255)
+  permisos    RolPermiso[]
+  usuarios    Usuario[]
+
+  @@map("roles")
+}
+
+model Permiso {
+  id          Int              @id @default(autoincrement())
+  /// Formato modulo.accion, por ejemplo pacientes.gestionar
+  codigo      String           @unique @db.VarChar(60)
+  descripcion String           @db.VarChar(255)
+  modulo      String           @db.VarChar(40)
+  roles       RolPermiso[]
+  usuarios    UsuarioPermiso[]
+
+  @@map("permisos")
+}
+
+model RolPermiso {
+  rolId     Int     @map("rol_id")
+  permisoId Int     @map("permiso_id")
+  rol       Rol     @relation(fields: [rolId], references: [id], onDelete: Cascade)
+  permiso   Permiso @relation(fields: [permisoId], references: [id], onDelete: Cascade)
+
+  @@id([rolId, permisoId])
+  @@map("rol_permiso")
+}
+
+model Usuario {
+  id                          Int       @id @default(autoincrement())
+  nombreUsuario               String    @unique @map("nombre_usuario") @db.VarChar(30)
+  contrasenaHash              String    @map("contrasena_hash") @db.VarChar(100)
+  dni                         String    @unique @db.VarChar(10)
+  nombre                      String    @db.VarChar(80)
+  apellido                    String    @db.VarChar(80)
+  email                       String?   @db.VarChar(120)
+  matricula                   String?   @db.VarChar(30)
+  rolId                       Int       @map("rol_id")
+  activo                      Boolean   @default(true)
+  fechaBaja                   DateTime? @map("fecha_baja") @db.Timestamptz(3)
+  intentosFallidos            Int       @default(0) @map("intentos_fallidos")
+  bloqueadoHasta              DateTime? @map("bloqueado_hasta") @db.Timestamptz(3)
+  intentosBiometricosFallidos Int       @default(0) @map("intentos_biometricos_fallidos")
+  ultimoAcceso                DateTime? @map("ultimo_acceso") @db.Timestamptz(3)
+  creadoEn                    DateTime  @default(now()) @map("creado_en") @db.Timestamptz(3)
+  actualizadoEn               DateTime  @updatedAt @map("actualizado_en") @db.Timestamptz(3)
+
+  rol                    Rol              @relation(fields: [rolId], references: [id])
+  permisosAdicionales    UsuarioPermiso[] @relation("PermisosDelUsuario")
+  permisosOtorgados      UsuarioPermiso[] @relation("PermisosOtorgados")
+  datoBiometrico         DatoBiometrico?  @relation("BiometriaDelUsuario")
+  biometriasRegistradas  DatoBiometrico[] @relation("BiometriaRegistradaPor")
+  pacientesCreados       Paciente[]
+  asignacionesRealizadas AsignacionCama[] @relation("AsignadoPor")
+  asignacionesLiberadas  AsignacionCama[] @relation("LiberadoPor")
+  prescripciones         Prescripcion[]
+  suministros            Suministro[]     @relation("SuministradoPor")
+  suministrosCorregidos  Suministro[]     @relation("CorregidoPor")
+  estudiosCreados        Estudio[]        @relation("EstudioCreadoPor")
+  estudiosConfirmados    Estudio[]        @relation("EstudioConfirmadoPor")
+  recordatoriosAtendidos Recordatorio[]
+  auditorias             Auditoria[]
+  notificaciones         Notificacion[]
+
+  @@map("usuarios")
+}
+
+/// Permisos adicionales al rol, otorgados a un usuario puntual (CU05).
+model UsuarioPermiso {
+  usuarioId     Int      @map("usuario_id")
+  permisoId     Int      @map("permiso_id")
+  otorgadoPorId Int?     @map("otorgado_por_id")
+  otorgadoEn    DateTime @default(now()) @map("otorgado_en") @db.Timestamptz(3)
+
+  usuario     Usuario  @relation("PermisosDelUsuario", fields: [usuarioId], references: [id], onDelete: Cascade)
+  permiso     Permiso  @relation(fields: [permisoId], references: [id], onDelete: Cascade)
+  otorgadoPor Usuario? @relation("PermisosOtorgados", fields: [otorgadoPorId], references: [id])
+
+  @@id([usuarioId, permisoId])
+  @@map("usuario_permiso")
+}
+
+// ─── Pacientes y camas ─────────────────────────────────────────────────────────────────────
+
+model Sala {
+  id     Int     @id @default(autoincrement())
+  nombre String  @unique @db.VarChar(60)
+  piso   String? @db.VarChar(20)
+  activa Boolean @default(true)
+  camas  Cama[]
+
+  @@map("salas")
+}
+
+model Cama {
+  id           Int              @id @default(autoincrement())
+  numero       String           @db.VarChar(10)
+  salaId       Int              @map("sala_id")
+  habilitada   Boolean          @default(true)
+  sala         Sala             @relation(fields: [salaId], references: [id])
+  asignaciones AsignacionCama[]
+
+  @@unique([salaId, numero])
+  @@map("camas")
+}
+
+model Paciente {
+  id                         Int            @id @default(autoincrement())
+  dni                        String         @unique @db.VarChar(10)
+  nombre                     String         @db.VarChar(80)
+  apellido                   String         @db.VarChar(80)
+  fechaNacimiento            DateTime       @map("fecha_nacimiento") @db.Date
+  sexo                       Sexo
+  obraSocial                 String?        @map("obra_social") @db.VarChar(80)
+  numeroAfiliado             String?        @map("numero_afiliado") @db.VarChar(40)
+  diagnostico                String?        @db.VarChar(255)
+  contactoEmergenciaNombre   String?        @map("contacto_emergencia_nombre") @db.VarChar(120)
+  contactoEmergenciaTelefono String?        @map("contacto_emergencia_telefono") @db.VarChar(30)
+  observaciones              String?        @db.VarChar(500)
+  estado                     EstadoPaciente @default(INTERNADO)
+  fechaIngreso               DateTime       @map("fecha_ingreso") @db.Timestamptz(3)
+  fechaEgreso                DateTime?      @map("fecha_egreso") @db.Timestamptz(3)
+  motivoEgreso               String?        @map("motivo_egreso") @db.VarChar(255)
+  creadoPorId                Int            @map("creado_por_id")
+  creadoEn                   DateTime       @default(now()) @map("creado_en") @db.Timestamptz(3)
+  actualizadoEn              DateTime       @updatedAt @map("actualizado_en") @db.Timestamptz(3)
+
+  creadoPor      Usuario          @relation(fields: [creadoPorId], references: [id])
+  asignaciones   AsignacionCama[]
+  prescripciones Prescripcion[]
+  suministros    Suministro[]
+  estudios       Estudio[]
+  recordatorios  Recordatorio[]
+
+  @@index([apellido])
+  @@map("pacientes")
+}
+
+/// Historial de camas de cada paciente. La asignación activa es la que no tiene fecha_hasta.
+model AsignacionCama {
+  id            Int              @id @default(autoincrement())
+  pacienteId    Int              @map("paciente_id")
+  camaId        Int              @map("cama_id")
+  motivo        MotivoAsignacion
+  fechaDesde    DateTime         @map("fecha_desde") @db.Timestamptz(3)
+  fechaHasta    DateTime?        @map("fecha_hasta") @db.Timestamptz(3)
+  asignadoPorId Int              @map("asignado_por_id")
+  liberadoPorId Int?             @map("liberado_por_id")
+
+  paciente    Paciente @relation(fields: [pacienteId], references: [id])
+  cama        Cama     @relation(fields: [camaId], references: [id])
+  asignadoPor Usuario  @relation("AsignadoPor", fields: [asignadoPorId], references: [id])
+  liberadoPor Usuario? @relation("LiberadoPor", fields: [liberadoPorId], references: [id])
+
+  @@index([pacienteId])
+  @@map("asignaciones_cama")
+}
+
+// ─── Catálogo, prescripciones y suministros ────────────────────────────────────────────────
+
+/// Catálogo de insumos y medicamentos (T303).
+model Insumo {
+  id           Int        @id @default(autoincrement())
+  nombre       String     @db.VarChar(120)
+  tipo         TipoInsumo
+  /// Unidad en la que se registra el consumo: comprimido, ml, ampolla, unidad…
+  unidadMedida String     @map("unidad_medida") @db.VarChar(30)
+  /// Forma en que se compra o se presenta: "Comprimidos 500 mg x 20", "Paquete x 10"…
+  presentacion String     @default("") @db.VarChar(120)
+  activo       Boolean    @default(true)
+
+  prescripciones Prescripcion[]
+  detalles       DetalleSuministro[]
+
+  @@unique([nombre, presentacion])
+  @@map("insumos")
+}
+
+model Prescripcion {
+  id                 Int                @id @default(autoincrement())
+  pacienteId         Int                @map("paciente_id")
+  insumoId           Int                @map("insumo_id")
+  dosis              Float
+  unidadDosis        String             @map("unidad_dosis") @db.VarChar(30)
+  frecuenciaHoras    Int                @map("frecuencia_horas")
+  via                ViaAdministracion
+  fechaInicio        DateTime           @map("fecha_inicio") @db.Timestamptz(3)
+  fechaFin           DateTime?          @map("fecha_fin") @db.Timestamptz(3)
+  observaciones      String?            @db.VarChar(500)
+  estado             EstadoPrescripcion @default(VIGENTE)
+  motivoCambioEstado String?            @map("motivo_cambio_estado") @db.VarChar(255)
+  prescriptorId      Int                @map("prescriptor_id")
+  creadoEn           DateTime           @default(now()) @map("creado_en") @db.Timestamptz(3)
+  actualizadoEn      DateTime           @updatedAt @map("actualizado_en") @db.Timestamptz(3)
+
+  paciente      Paciente       @relation(fields: [pacienteId], references: [id])
+  insumo        Insumo         @relation(fields: [insumoId], references: [id])
+  prescriptor   Usuario        @relation(fields: [prescriptorId], references: [id])
+  suministros   Suministro[]
+  recordatorios Recordatorio[]
+
+  @@index([pacienteId, estado])
+  @@map("prescripciones")
+}
+
+/// Un registro de suministro: una administración de medicamento o un movimiento de insumos.
+model Suministro {
+  id                      Int            @id @default(autoincrement())
+  pacienteId              Int            @map("paciente_id")
+  /// Usuario que suministró y fue validado con reconocimiento facial.
+  usuarioId               Int            @map("usuario_id")
+  tipo                    TipoSuministro
+  prescripcionId          Int?           @map("prescripcion_id")
+  fechaHora               DateTime       @map("fecha_hora") @db.Timestamptz(3)
+  observaciones           String?        @db.VarChar(500)
+  validadoBiometricamente Boolean        @default(false) @map("validado_biometricamente")
+  motivoCorreccion        String?        @map("motivo_correccion") @db.VarChar(255)
+  corregidoEn             DateTime?      @map("corregido_en") @db.Timestamptz(3)
+  corregidoPorId          Int?           @map("corregido_por_id")
+  creadoEn                DateTime       @default(now()) @map("creado_en") @db.Timestamptz(3)
+
+  paciente     Paciente            @relation(fields: [pacienteId], references: [id])
+  usuario      Usuario             @relation("SuministradoPor", fields: [usuarioId], references: [id])
+  prescripcion Prescripcion?       @relation(fields: [prescripcionId], references: [id])
+  corregidoPor Usuario?            @relation("CorregidoPor", fields: [corregidoPorId], references: [id])
+  detalles     DetalleSuministro[]
+  recordatorio Recordatorio?
+
+  @@index([pacienteId, fechaHora])
+  @@index([usuarioId])
+  @@map("suministros")
+}
+
+model DetalleSuministro {
+  id           Int   @id @default(autoincrement())
+  suministroId Int   @map("suministro_id")
+  insumoId     Int   @map("insumo_id")
+  cantidad     Float
+
+  suministro Suministro @relation(fields: [suministroId], references: [id], onDelete: Cascade)
+  insumo     Insumo     @relation(fields: [insumoId], references: [id])
+
+  @@map("detalles_suministro")
+}
+
+/// Patrón facial (vector de 128 valores) y foto de referencia de cada usuario (CU07–CU09).
+model DatoBiometrico {
+  id              Int      @id @default(autoincrement())
+  usuarioId       Int      @unique @map("usuario_id")
+  patron          Float[]
+  fotoReferencia  Bytes    @map("foto_referencia")
+  fotoTipo        String   @map("foto_tipo") @db.VarChar(30)
+  registradoPorId Int      @map("registrado_por_id")
+  creadoEn        DateTime @default(now()) @map("creado_en") @db.Timestamptz(3)
+  actualizadoEn   DateTime @updatedAt @map("actualizado_en") @db.Timestamptz(3)
+
+  usuario       Usuario @relation("BiometriaDelUsuario", fields: [usuarioId], references: [id], onDelete: Cascade)
+  registradoPor Usuario @relation("BiometriaRegistradaPor", fields: [registradoPorId], references: [id])
+
+  @@map("datos_biometricos")
+}
+
+// ─── Estudios y recordatorios (lógica en la etapa E5) ──────────────────────────────────────
+
+model TipoEstudio {
+  id                    Int       @id @default(autoincrement())
+  nombre                String    @unique @db.VarChar(80)
+  preparacionPorDefecto String?   @map("preparacion_por_defecto") @db.VarChar(255)
+  activo                Boolean   @default(true)
+  estudios              Estudio[]
+
+  @@map("tipos_estudio")
+}
+
+model Estudio {
+  id                Int           @id @default(autoincrement())
+  pacienteId        Int           @map("paciente_id")
+  tipoEstudioId     Int           @map("tipo_estudio_id")
+  nombre            String        @db.VarChar(120)
+  fechaHora         DateTime      @map("fecha_hora") @db.Timestamptz(3)
+  preparacion       String?       @db.VarChar(500)
+  estado            EstadoEstudio @default(PROGRAMADO)
+  motivoCancelacion String?       @map("motivo_cancelacion") @db.VarChar(255)
+  realizadoEn       DateTime?     @map("realizado_en") @db.Timestamptz(3)
+  confirmadoPorId   Int?          @map("confirmado_por_id")
+  creadoPorId       Int           @map("creado_por_id")
+  creadoEn          DateTime      @default(now()) @map("creado_en") @db.Timestamptz(3)
+  actualizadoEn     DateTime      @updatedAt @map("actualizado_en") @db.Timestamptz(3)
+
+  paciente      Paciente       @relation(fields: [pacienteId], references: [id])
+  tipoEstudio   TipoEstudio    @relation(fields: [tipoEstudioId], references: [id])
+  confirmadoPor Usuario?       @relation("EstudioConfirmadoPor", fields: [confirmadoPorId], references: [id])
+  creadoPor     Usuario        @relation("EstudioCreadoPor", fields: [creadoPorId], references: [id])
+  recordatorios Recordatorio[]
+
+  @@index([pacienteId, estado])
+  @@map("estudios")
+}
+
+model Recordatorio {
+  id                Int                   @id @default(autoincrement())
+  tipo              TipoRecordatorio
+  pacienteId        Int                   @map("paciente_id")
+  prescripcionId    Int?                  @map("prescripcion_id")
+  estudioId         Int?                  @map("estudio_id")
+  /// Hora de la toma o del estudio que se recuerda.
+  fechaHoraObjetivo DateTime              @map("fecha_hora_objetivo") @db.Timestamptz(3)
+  generadoEn        DateTime              @default(now()) @map("generado_en") @db.Timestamptz(3)
+  prioridad         PrioridadRecordatorio
+  estado            EstadoRecordatorio    @default(PENDIENTE)
+  atendidoPorId     Int?                  @map("atendido_por_id")
+  atendidoEn        DateTime?             @map("atendido_en") @db.Timestamptz(3)
+  suministroId      Int?                  @unique @map("suministro_id")
+
+  paciente     Paciente      @relation(fields: [pacienteId], references: [id])
+  prescripcion Prescripcion? @relation(fields: [prescripcionId], references: [id])
+  estudio      Estudio?      @relation(fields: [estudioId], references: [id])
+  atendidoPor  Usuario?      @relation(fields: [atendidoPorId], references: [id])
+  suministro   Suministro?   @relation(fields: [suministroId], references: [id])
+
+  @@unique([prescripcionId, fechaHoraObjetivo])
+  @@unique([estudioId, fechaHoraObjetivo])
+  @@index([estado, fechaHoraObjetivo])
+  @@map("recordatorios")
+}
+
+// ─── Auditoría y notificaciones ────────────────────────────────────────────────────────────
+
+/// Registro inalterable de cada acción que modifica datos (RN06 · RNF10 · CU35).
+model Auditoria {
+  id            Int      @id @default(autoincrement())
+  usuarioId     Int?     @map("usuario_id")
+  fechaHora     DateTime @default(now()) @map("fecha_hora") @db.Timestamptz(3)
+  accion        String   @db.VarChar(40)
+  entidad       String   @db.VarChar(40)
+  entidadId     String?  @map("entidad_id") @db.VarChar(40)
+  /// Paciente afectado, si corresponde: permite filtrar la auditoría por paciente.
+  pacienteId    Int?     @map("paciente_id")
+  valorAnterior Json?    @map("valor_anterior")
+  valorNuevo    Json?    @map("valor_nuevo")
+  detalle       String?  @db.VarChar(255)
+
+  usuario Usuario? @relation(fields: [usuarioId], references: [id])
+
+  @@index([entidad, entidadId])
+  @@index([fechaHora])
+  @@index([usuarioId])
+  @@index([pacienteId])
+  @@map("auditoria")
+}
+
+/// Avisos al administrador principal: cuentas bloqueadas, validaciones faciales fallidas, etc.
+model Notificacion {
+  id             Int      @id @default(autoincrement())
+  destinatarioId Int      @map("destinatario_id")
+  tipo           String   @db.VarChar(40)
+  mensaje        String   @db.VarChar(255)
+  datos          Json?
+  leida          Boolean  @default(false)
+  creadaEn       DateTime @default(now()) @map("creada_en") @db.Timestamptz(3)
+
+  destinatario Usuario @relation(fields: [destinatarioId], references: [id], onDelete: Cascade)
+
+  @@index([destinatarioId, leida])
+  @@map("notificaciones")
 }
