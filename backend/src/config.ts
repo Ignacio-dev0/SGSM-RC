@@ -40,6 +40,10 @@ export const config = {
     /** Segundos que dura el comprobante de una validación correcta. */
     validezSegundos: numero('BIOMETRIA_VALIDEZ_SEG', 120),
   },
+  suministros: {
+    /** Horas durante las que se puede corregir un suministro (CU23). */
+    plazoCorreccionHoras: numero('SUMINISTRO_PLAZO_CORRECCION_HORAS', 24),
+  },
   sesion: {
     secreto: secreto('JWT_SECRETO', 'solo-para-desarrollo-cambiar-en-produccion'),
     /** Minutos sin actividad tras los que se cierra la sesión (RNF05). */
