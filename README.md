@@ -53,7 +53,9 @@ npm run dev:frontend     # interfaz en http://localhost:5173
 Abrir <http://localhost:5173> e ingresar con uno de los **usuarios de prueba** que crea la
 semilla (uno por rol). Los nombres de usuario y las contraseñas están en
 [`backend/src/semillas/usuarios-prueba.ts`](backend/src/semillas/usuarios-prueba.ts). Son solo
-para desarrollo: la semilla se niega a correr con `NODE_ENV=production`.
+para desarrollo: la semilla se niega a correr con `NODE_ENV=production`. En el servidor del
+hospital, los datos base, el primer administrador y los datos reales se cargan con el instalador
+([docs/despliegue.md](docs/despliegue.md), paso 7).
 
 ### Reconocimiento facial sin cámara
 

@@ -1,6 +1,6 @@
 # Despliegue local en el servidor del hospital
 
-> Tareas T005, T007, T801 y T802 (E8). Por decisión del equipo **todo corre en forma local con
+> Tareas T005, T007, T801, T802 y T803 (E8). Por decisión del equipo **todo corre en forma local con
 > Docker**, en una PC del hospital: no hay nube ni despliegue automático. Variables del backend en
 > [entorno.md](entorno.md); seguridad de la API en [seguridad.md](seguridad.md).
 
@@ -40,24 +40,26 @@ perfil `completo`, que en el servidor activa el `.env` (`COMPOSE_PROFILES=comple
 
 ### Archivos
 
-| Archivo                                                                                     | Para qué                                                                                   |
-| ------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
-| [`docker-compose.yml`](../docker-compose.yml)                                               | Los cuatro servicios, healthchecks, reinicio, rotación de registros, secretos obligatorios |
-| [`.env.ejemplo`](../.env.ejemplo)                                                           | Plantilla del `.env` del servidor (el `.env` no se versiona)                               |
-| [`backend/Dockerfile`](../backend/Dockerfile)                                               | Imagen de la API (usuario sin privilegios; migraciones y arranque)                         |
-| [`frontend/Dockerfile`](../frontend/Dockerfile)                                             | Imagen de la interfaz: `vite build`, hash de la CSP y nginx                                |
-| [`frontend/nginx.conf`](../frontend/nginx.conf)                                             | Plantilla de nginx: TLS, redirección, `/api`, WebSocket, caché                             |
-| [`docker/nginx/seguridad.conf`](../docker/nginx/seguridad.conf)                             | Encabezados de seguridad de la interfaz (CSP, HSTS, Permissions-Policy…)                   |
-| [`docker/nginx/csp-scripts.mjs`](../docker/nginx/csp-scripts.mjs)                           | Calcula el hash de los scripts en línea de `index.html` para la CSP                        |
-| [`docker/nginx/05-verificar-certificados.sh`](../docker/nginx/05-verificar-certificados.sh) | nginx no arranca sin certificado y lo dice claro                                           |
-| [`docker/nginx/generar-certificados.sh`](../docker/nginx/generar-certificados.sh)           | La CA local y el certificado del servidor (con openssl)                                    |
-| [`docker/respaldo/`](../docker/respaldo/)                                                   | `programar.sh` (horario), `respaldar.sh` (un respaldo), `salud.sh` (healthcheck)           |
-| `docker/certificados/`                                                                      | La CA y los certificados generados (no se versiona: `.gitignore` propio)                   |
-| [`scripts/certificado.sh`](../scripts/certificado.sh) (y `.ps1`)                            | Genera o renueva el certificado                                                            |
-| [`scripts/respaldar.sh`](../scripts/respaldar.sh)                                           | Un respaldo ahora                                                                          |
-| [`scripts/restaurar.sh`](../scripts/restaurar.sh)                                           | Restaura un respaldo (nunca sin `--si`)                                                    |
-| [`scripts/estado.sh`](../scripts/estado.sh)                                                 | Contenedores, API, certificado, último respaldo y disco                                    |
-| [`scripts/actualizar.sh`](../scripts/actualizar.sh)                                         | Respaldo, construcción y arranque de una versión nueva                                     |
+| Archivo                                                                                     | Para qué                                                                                                                               |
+| ------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| [`docker-compose.yml`](../docker-compose.yml)                                               | Los cuatro servicios, healthchecks, reinicio, rotación de registros, secretos obligatorios                                             |
+| [`.env.ejemplo`](../.env.ejemplo)                                                           | Plantilla del `.env` del servidor (el `.env` no se versiona)                                                                           |
+| [`backend/Dockerfile`](../backend/Dockerfile)                                               | Imagen de la API (usuario sin privilegios; migraciones y arranque)                                                                     |
+| [`frontend/Dockerfile`](../frontend/Dockerfile)                                             | Imagen de la interfaz: `vite build`, hash de la CSP y nginx                                                                            |
+| [`frontend/nginx.conf`](../frontend/nginx.conf)                                             | Plantilla de nginx: TLS, redirección, `/api`, WebSocket, caché                                                                         |
+| [`docker/nginx/seguridad.conf`](../docker/nginx/seguridad.conf)                             | Encabezados de seguridad de la interfaz (CSP, HSTS, Permissions-Policy…)                                                               |
+| [`docker/nginx/csp-scripts.mjs`](../docker/nginx/csp-scripts.mjs)                           | Calcula el hash de los scripts en línea de `index.html` para la CSP                                                                    |
+| [`docker/nginx/05-verificar-certificados.sh`](../docker/nginx/05-verificar-certificados.sh) | nginx no arranca sin certificado y lo dice claro                                                                                       |
+| [`docker/nginx/generar-certificados.sh`](../docker/nginx/generar-certificados.sh)           | La CA local y el certificado del servidor (con openssl)                                                                                |
+| [`docker/respaldo/`](../docker/respaldo/)                                                   | `programar.sh` (horario), `respaldar.sh` (un respaldo), `salud.sh` (healthcheck)                                                       |
+| `docker/certificados/`                                                                      | La CA y los certificados generados (no se versiona: `.gitignore` propio)                                                               |
+| [`scripts/certificado.sh`](../scripts/certificado.sh) (y `.ps1`)                            | Genera o renueva el certificado                                                                                                        |
+| [`scripts/respaldar.sh`](../scripts/respaldar.sh)                                           | Un respaldo ahora                                                                                                                      |
+| [`scripts/restaurar.sh`](../scripts/restaurar.sh)                                           | Restaura un respaldo (nunca sin `--si`)                                                                                                |
+| [`scripts/estado.sh`](../scripts/estado.sh)                                                 | Contenedores, API, certificado, último respaldo y disco                                                                                |
+| [`scripts/actualizar.sh`](../scripts/actualizar.sh)                                         | Respaldo, construcción y arranque de una versión nueva                                                                                 |
+| [`backend/src/scripts/instalar.ts`](../backend/src/scripts/instalar.ts)                     | Instalador: datos base, primer administrador y datos del hospital desde CSV ([paso 7](#7-datos-iniciales-y-primer-administrador-t803)) |
+| [`docs/ejemplos/`](ejemplos/)                                                               | Modelos de `salas.csv`, `catalogo.csv` y `personal.csv` con datos inventados                                                           |
 
 Los scripts son de bash: en Windows se corren desde **Git Bash** (viene con Git for Windows), en la
 carpeta del proyecto, por ejemplo `bash scripts/estado.sh`.
@@ -149,13 +151,122 @@ bash scripts/estado.sh
 
 Y abrir `https://<servidor>` desde la propia PC (con la CA instalada, sin advertencias).
 
-### 7. Datos iniciales (pendiente de T803)
+### 7. Datos iniciales y primer administrador (T803)
 
-La semilla de desarrollo (`npm run db:sembrar`) se niega a correr con `NODE_ENV=production`
-porque crea usuarios con contraseñas públicas. Para la primera instalación falta un comando que
-cargue los datos base (roles, permisos, salas, catálogo: `sembrarCatalogoBase`) y cree el primer
-administrador con una contraseña que se elige en el momento; es parte de T803 (carga de datos
-reales) junto con el registro de rostros del personal (T804).
+La semilla de desarrollo (`npm run db:sembrar`) se niega a correr con `NODE_ENV=production` porque
+crea usuarios con contraseñas públicas. En el servidor se usa el **instalador**, que viene en la
+imagen de la API ([`backend/src/scripts/instalar.ts`](../backend/src/scripts/instalar.ts)):
+
+- Carga los **datos base**: roles y permisos (al día con la versión instalada) y tipos de estudio.
+  Las salas, camas y medicamentos inventados de la semilla de desarrollo **no** van al servidor
+  (D102): los del hospital salen de los CSV.
+- Crea el **primer administrador** solo si no hay ningún usuario Administrador activo. Si ya hay
+  uno, no crea nada y lo dice.
+- Opcional: **salas y camas**, **catálogo** y **personal** desde CSV.
+- Se puede correr las veces que haga falta: solo agrega lo que falta y nunca modifica lo que ya
+  está. Primero revisa todos los archivos sin tocar la base y después carga todo en **una sola
+  transacción**: si algo falla, no queda nada cargado (D103).
+
+**Solo el primer administrador** (lo mínimo para entrar al sistema):
+
+```bash
+docker compose run --rm backend node dist/scripts/instalar.js
+```
+
+Pregunta usuario, nombre, apellido, DNI y contraseña; la contraseña **no se muestra** al escribirla
+y se pide dos veces. Valen las mismas reglas que el alta desde la pantalla de Usuarios (al menos 8
+caracteres, con letras y números). La contraseña nunca aparece en la pantalla ni en la auditoría.
+
+Sin una persona frente a la terminal (un script), los datos van en variables ([entorno.md](entorno.md)):
+
+```bash
+read -rs INSTALAR_ADMIN_CLAVE && export INSTALAR_ADMIN_CLAVE   # se escribe sin eco
+docker compose run --rm -T -e INSTALAR_ADMIN_USUARIO=lmendez -e INSTALAR_ADMIN_NOMBRE=Laura \
+  -e INSTALAR_ADMIN_APELLIDO=Méndez -e INSTALAR_ADMIN_DNI=20111111 -e INSTALAR_ADMIN_CLAVE \
+  backend node dist/scripts/instalar.js
+```
+
+(`-e INSTALAR_ADMIN_CLAVE` sin `=` la toma de la sesión: no queda en el historial de la consola.)
+Lo que falte se pregunta si hay terminal; si no, termina con código 1 y dice qué variables faltan.
+
+**Con los datos del hospital.** Preparar los CSV en la carpeta `instalacion/` del proyecto (no se
+versiona: está en `.gitignore`), a partir de los modelos de [`docs/ejemplos/`](ejemplos/):
+
+```bash
+mkdir -p instalacion   # salas.csv, catalogo.csv y personal.csv
+MSYS_NO_PATHCONV=1 docker compose run --rm -v "$PWD/instalacion:/instalacion" backend \
+  node dist/scripts/instalar.js --salas /instalacion/salas.csv \
+  --catalogo /instalacion/catalogo.csv --personal /instalacion/personal.csv
+```
+
+`MSYS_NO_PATHCONV=1` evita que Git Bash convierta `/instalacion/…` en una ruta de Windows (en Linux
+no hace falta). Cada opción es independiente: se puede cargar solo `--salas` hoy y el personal otro
+día. En Linux, la carpeta tiene que poder escribirla el usuario del contenedor (uid 1000) para dejar
+las credenciales.
+
+| Archivo        | Columnas                                               | Qué carga                                                                                                                                                      |
+| -------------- | ------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `salas.csv`    | `sala`, `cama`                                         | Una fila por cama; la sala se crea con su primera cama. Sala hasta 60 caracteres, cama hasta 10. **No hay pantalla para dar de alta salas**: este es el camino |
+| `catalogo.csv` | `tipo`, `nombre`, `presentacion`, `unidad`             | `tipo` es Medicamento o Insumo; la presentación puede ir vacía. Mismas reglas que el alta desde Catálogo                                                       |
+| `personal.csv` | `usuario`, `nombre`, `apellido`, `dni`, `rol`, `email` | `rol` es Administrador, Médico o Enfermero (también en femenino); el DNI con o sin puntos; `email` es opcional. Mismas reglas que el alta desde Usuarios       |
+
+- **Formato**: UTF-8 (en Excel, "Guardar como" → "CSV UTF-8 (delimitado por comas)"; el "CSV" común
+  de Excel no es UTF-8 y el instalador lo rechaza con esa indicación), separado por comas o por punto
+  y coma, con el encabezado en la primera fila (no importan mayúsculas, tildes ni el orden de las
+  columnas). Un valor con comas va entre comillas (`"Gotas 2,5 mg/ml"`).
+- **Errores**: se muestran todos juntos, cada uno con el archivo, la fila (como en la planilla: el
+  encabezado es la fila 1), la columna y lo que dice la celda, y no se carga nada:
+
+  ```text
+  No se cargó nada. Corrija lo siguiente y vuelva a correr el instalador:
+    salas.csv: Fila 4, cama: Escriba el número o nombre de la cama
+    personal.csv: Fila 3, dni: El DNI debe tener 7 u 8 dígitos, sin puntos (dice "3011")
+    personal.csv: Fila 5, usuario: el usuario "ana" ya está en la fila 2
+  ```
+
+- **Lo que ya existe**: escrito igual, se saltea ("ya estaba"). Escrito distinto (otra mayúscula o
+  tilde: "sala a" contra "Sala A") es un error, para no duplicar una sala o un medicamento que
+  después no se pueden borrar. Una persona que ya existe con el mismo usuario y DNI se deja como
+  está (rol, contraseña y todo); si coincide solo el usuario o solo el DNI, es un error.
+
+Al terminar muestra un resumen:
+
+```text
+Datos base: 3 roles y 20 permisos al día con esta versión; tipos de estudio: 8 nuevos (0 ya estaban).
+Primer administrador: se creó "lmendez" (Méndez, Laura).
+salas.csv: 2 salas nuevas (0 ya estaban) y 7 camas nuevas (0 ya estaban).
+catalogo.csv: 9 medicamentos e insumos nuevos (0 ya estaban).
+personal.csv: 4 usuarios nuevos (0 ya estaban).
+Contraseñas temporales de los 4 usuarios nuevos en /instalacion/credenciales-iniciales.csv: entréguelas en mano, el administrador las cambia desde Usuarios y después borre el archivo.
+Instalación terminada.
+```
+
+Y avisa si después de cargar no hay camas (no se puede internar) o el catálogo está vacío.
+
+**Contraseñas del personal (D104).** El sistema no tiene "cambiar la contraseña en el primer
+ingreso". Cada usuario nuevo de `personal.csv` recibe una contraseña temporal al azar (12
+caracteres en tres grupos, sin 0/O ni 1/l/I, con las reglas del alta) que se escribe **una sola
+vez** en `credenciales-iniciales.csv`, junto a `personal.csv` (o donde diga `--credenciales`), con
+permisos 600 (en Windows rigen los de la carpeta). Nunca se muestra en la pantalla y el archivo no
+se pisa: si ya existe y hay usuarios nuevos, no se carga nada. Procedimiento:
+
+1. Entregar a cada persona **en mano** su usuario y su contraseña temporal (impresa o anotada).
+2. El administrador la cambia desde **Usuarios** (en el formulario del usuario, "Contraseña nueva")
+   con la persona presente, que elige la suya.
+3. **Borrar** `credenciales-iniciales.csv`. La carpeta `instalacion/` no se versiona ni va en los
+   respaldos, pero tiene datos del personal: no dejarla en la PC más de lo necesario.
+
+Después, registrar el rostro de cada persona en **Biometría** (T804). Volver a correr el
+instalador con el mismo `personal.csv` no crea a nadie ni genera contraseñas nuevas.
+
+**Auditoría (D105).** Cada alta queda como `CREAR` sin usuario actor (en la pantalla de auditoría,
+origen "Sistema"), con el archivo y la fila en el detalle (`Instalador: personal.csv, fila 3`); el
+primer administrador, con "Primer administrador, creado por el instalador". Las salas y camas se
+auditan como `Sala` y `Cama`.
+
+**En desarrollo**: `npm run instalar -w backend -- --salas ../docs/ejemplos/salas.csv` (las rutas
+son relativas a `backend/`; usa la base de `backend/.env`, que con la semilla ya tiene un
+administrador). `--ayuda` muestra todas las opciones.
 
 ### 8. Instalar la CA en cada tablet y probar la cámara
 
@@ -315,12 +426,12 @@ docker compose exec db psql -U sgsm -d postgres -c 'DROP DATABASE sgsm_restaurad
 
 ## Monitoreo (T801)
 
-| Servicio   | Healthcheck                                            | Cada   |
-| ---------- | ------------------------------------------------------ | ------ |
-| `db`       | `pg_isready`                                           | 5 s    |
-| `backend`  | `GET /api/salud` dentro del contenedor                 | 30 s   |
-| `frontend` | `GET https://127.0.0.1/` (nginx con TLS y la interfaz) | 30 s   |
-| `respaldo` | hay un respaldo automático de las últimas 26 h         | 10 min |
+| Servicio   | Healthcheck                                                                                    | Cada   |
+| ---------- | ---------------------------------------------------------------------------------------------- | ------ |
+| `db`       | `pg_isready`                                                                                   | 5 s    |
+| `backend`  | `GET /api/salud` dentro del contenedor: 503 si la base no contesta un `SELECT 1` en 2 s (D100) | 30 s   |
+| `frontend` | `GET https://127.0.0.1/` (nginx con TLS y la interfaz)                                         | 30 s   |
+| `respaldo` | hay un respaldo automático de las últimas 26 h                                                 | 10 min |
 
 - Todos con `restart: unless-stopped`: se levantan solos si se caen y cuando arranca Docker.
 - Registros con rotación (`json-file`, 5 archivos de 10 MB por servicio; la base, ver D94):
@@ -348,6 +459,9 @@ script hace antes un respaldo:
 2. `bash scripts/actualizar.sh`: respaldo `-antes-de-actualizar`, `docker compose build --pull`
    (incluye las actualizaciones de seguridad de las imágenes de node y nginx),
    `docker compose up -d --wait` (recrea lo que cambió y espera a que esté sano) y el estado.
+3. `docker compose run --rm -T backend node dist/scripts/instalar.js`: suma los permisos y tipos de
+   estudio nuevos de la versión y deja los roles con los permisos de esta versión (la API no los
+   carga sola: así llegaron los de reportes y auditoría de E6). No toca nada más (D106).
 
 Si se quiere ver las migraciones antes de aplicarlas:
 `docker compose run --rm --no-deps backend npx prisma migrate status`.
@@ -404,8 +518,8 @@ La imagen de la interfaz no repite el chequeo de tipos (D89): se confía en esta
 
 - **Nube y despliegue automático** (la parte de nube de T007/T008): no hay proveedor; todo es
   local en una PC.
-- **Datos iniciales y primer administrador en producción** (T803) y **registro de rostros** del
-  personal (T804): ver el paso 7.
+- **Registro de rostros** del personal (T804): se hace desde Biometría con cada persona presente,
+  después del paso 7.
 - **Piloto** en una sala (T805) y **capacitación** del personal (T808).
 - Alertas automáticas (correo, mensajes) del monitoreo; copia automática de los respaldos fuera de
   la PC y cifrado de los respaldos.
@@ -416,22 +530,28 @@ La imagen de la interfaz no repite el chequeo de tipos (D89): se confía en esta
 
 ## Decisiones
 
-| #   | Decisión                                                                                                                                                                                                                                                            | Por qué                                                                                                                                                                                                                                                               |
-| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| D80 | Un solo `docker-compose.yml`: `db` siempre y el perfil `completo` (API, interfaz, respaldo) para el servidor, activado desde el `.env` con `COMPOSE_PROFILES=completo`.                                                                                             | Lo que se prueba es lo que se instala; en el servidor alcanza con `docker compose up -d`; `npm run db:up` sigue levantando solo la base.                                                                                                                              |
-| D81 | Los secretos del perfil son obligatorios con `${COMPOSE_PROFILES:+${X:?mensaje}}`, no con `${X:?mensaje}` solo. Sin `.env`, la API (con `NODE_ENV=production`) igual se niega a arrancar sin `JWT_SECRETO` ni `BIOMETRIA_CLAVE`.                                    | Compose interpola todo el archivo aunque el perfil no esté activo: un `:?` directo rompería `npm run db:up` en cualquier PC de desarrollo sin `.env`. Así el `.env` del servidor falla con un mensaje que dice qué falta y cómo generarlo.                            |
-| D82 | HTTPS con una CA local propia (10 años) que firma el certificado del servidor (825 días, RSA, SAN con nombres e IP); la CA se reutiliza al renovar.                                                                                                                 | No hay dominio público ni salida obligatoria a internet para Let's Encrypt; un autofirmado suelto obliga a aceptar advertencias en cada tablet. 825 días es el máximo de iOS. Renovar no toca las tablets.                                                            |
-| D83 | openssl corre en un contenedor (`nginx:1.27-alpine`, la base de la interfaz) con `--local` como alternativa; la clave de la CA nunca se monta en nginx.                                                                                                             | No depende de lo instalado en la PC; nginx solo ve lo que necesita.                                                                                                                                                                                                   |
-| D84 | La CA pública se descarga por HTTP desde la propia interfaz (`/sgsm-ca.crt`, `/sgsm-ca.cer`) y se valida comparando la huella SHA-256.                                                                                                                              | Es lo más simple para instalarla en cada tablet; la huella evita que alguien en la red cuele otra CA.                                                                                                                                                                 |
-| D85 | Puertos 8443/8080 por defecto, 443/80 recomendados en el servidor.                                                                                                                                                                                                  | Los por defecto no chocan en una PC de desarrollo. En el servidor, sin puerto en la dirección; además, con HSTS el navegador pasa `http://x:8080` a `https://x:8080` (puerto equivocado) y con 80/443 eso no pasa.                                                    |
-| D86 | HSTS de un año, sin `includeSubDomains` y nunca para `localhost`; en `/api` nginx reemplaza el HSTS de la API por el suyo.                                                                                                                                          | `includeSubDomains` con un nombre del DNS del hospital alcanzaría a otros sistemas internos. HSTS en `localhost` haría que el navegador de esa PC fuerce HTTPS en todos sus puertos (también el servidor de Vite).                                                    |
-| D87 | Encabezados de la interfaz (bloque de [seguridad.md](seguridad.md)) en cada `location` de la interfaz y no en `/api`. CSP con el hash del script del tema calculado al construir la imagen, `'wasm-unsafe-eval'`, `style-src 'unsafe-inline'` y `wss://` explícito. | La API ya pone los suyos. El hash calculado no se desactualiza si cambia el script. Probado en Chromium: TensorFlow.js compila WebAssembly al cargar (sin el permiso hay una violación); MUI inserta estilos; Safari viejo no cuenta wss en `'self'`.                 |
-| D88 | nginx busca la IP de la API en cada pedido (`resolver 127.0.0.11` y `proxy_pass` con variable) y manda `Host` con el puerto, `X-Forwarded-For` y `X-Forwarded-Proto`.                                                                                               | Al recrear la API en una actualización cambia su IP; el `Host` con puerto coincide con el `Origin` del WebSocket (sin `TIEMPO_REAL_ORIGENES`); la IP del cliente la usa el límite del login (`CONFIAR_PROXY=1`).                                                      |
-| D89 | La imagen de la interfaz corre solo `vite build` (con los modelos del `prebuild`), sin el `tsc -b` de `npm run build`.                                                                                                                                              | `tsc -b` revisa también las pruebas, que importan esquemas del backend que la imagen no tiene; los tipos los controlan `npm run verificar` y la CI.                                                                                                                   |
-| D90 | Las migraciones se aplican al arrancar la API; `scripts/actualizar.sh` respalda antes de construir y levantar.                                                                                                                                                      | Una actualización es un solo comando y la imagen trae exactamente sus migraciones; el respaldo previo permite volver atrás si una migración falla.                                                                                                                    |
-| D91 | El respaldo es un servicio con un bucle de `sh` (no cron): mira el reloj cada 30 s, recupera el respaldo perdido si la PC estuvo apagada, reintenta a los 30 min, verifica el archivo entero y retiene por cantidad solo los automáticos.                           | Funciona igual con la PC suspendida o apagada a esa hora, deja todo en `docker compose logs` y no borra los respaldos que alguien hizo a propósito.                                                                                                                   |
-| D92 | `scripts/restaurar.sh` no toca nada sin `--si`, restaura por defecto en una base aparte, respalda la base destino antes de borrarla, se niega si tiene conexiones y carga en una sola transacción.                                                                  | Restaurar es la operación más peligrosa: los errores tienen que ser imposibles o reversibles.                                                                                                                                                                         |
-| D93 | Monitoreo con healthchecks, `restart: unless-stopped`, rotación de registros y `scripts/estado.sh` con código de salida; sin servicio de alertas.                                                                                                                   | Cubre lo que se puede revisar en una sola PC sin infraestructura extra; el código de salida permite programarlo.                                                                                                                                                      |
-| D94 | El servicio `db` no cambió en lo efectivo (la contraseña y el nombre del contenedor son variables con el mismo valor por defecto): sin rotación de registros propia. En el servidor, `DB_PUERTO=127.0.0.1:5432` y `POSTGRES_CLAVE` solo letras y números.           | Cambiar su configuración recrearía el contenedor de la base de desarrollo en todas las PCs; PostgreSQL escribe poco en su registro (la rotación general de Docker Desktop la cubre). La contraseña va dentro de `DATABASE_URL`.                                       |
-| D95 | La API corre como el usuario `node`, con `exec` para que reciba el `SIGTERM` y con `init: true`; `npx` sin aviso de versiones de npm.                                                                                                                               | Sin privilegios de root; `docker compose stop` cierra ordenado (WebSocket con 1001); no sale a internet en cada arranque.                                                                                                                                             |
-| D96 | `.env.ejemplo` trae `LOGIN_IP_MAX_FALLIDOS=0`.                                                                                                                                                                                                                      | Con Docker Desktop las conexiones de la red llegan a nginx con la IP de Docker (comprobado: 172.19.0.1 desde la propia PC y desde su IP de red), así que el límite por IP sería uno solo para todo el hospital. Queda el bloqueo por cuenta. En Linux, dejarlo vacío. |
+| #    | Decisión                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            | Por qué                                                                                                                                                                                                                                                                                                                    |
+| ---- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| D80  | Un solo `docker-compose.yml`: `db` siempre y el perfil `completo` (API, interfaz, respaldo) para el servidor, activado desde el `.env` con `COMPOSE_PROFILES=completo`.                                                                                                                                                                                                                                                                                                                             | Lo que se prueba es lo que se instala; en el servidor alcanza con `docker compose up -d`; `npm run db:up` sigue levantando solo la base.                                                                                                                                                                                   |
+| D81  | Los secretos del perfil son obligatorios con `${COMPOSE_PROFILES:+${X:?mensaje}}`, no con `${X:?mensaje}` solo. Sin `.env`, la API (con `NODE_ENV=production`) igual se niega a arrancar sin `JWT_SECRETO` ni `BIOMETRIA_CLAVE`.                                                                                                                                                                                                                                                                    | Compose interpola todo el archivo aunque el perfil no esté activo: un `:?` directo rompería `npm run db:up` en cualquier PC de desarrollo sin `.env`. Así el `.env` del servidor falla con un mensaje que dice qué falta y cómo generarlo.                                                                                 |
+| D82  | HTTPS con una CA local propia (10 años) que firma el certificado del servidor (825 días, RSA, SAN con nombres e IP); la CA se reutiliza al renovar.                                                                                                                                                                                                                                                                                                                                                 | No hay dominio público ni salida obligatoria a internet para Let's Encrypt; un autofirmado suelto obliga a aceptar advertencias en cada tablet. 825 días es el máximo de iOS. Renovar no toca las tablets.                                                                                                                 |
+| D83  | openssl corre en un contenedor (`nginx:1.27-alpine`, la base de la interfaz) con `--local` como alternativa; la clave de la CA nunca se monta en nginx.                                                                                                                                                                                                                                                                                                                                             | No depende de lo instalado en la PC; nginx solo ve lo que necesita.                                                                                                                                                                                                                                                        |
+| D84  | La CA pública se descarga por HTTP desde la propia interfaz (`/sgsm-ca.crt`, `/sgsm-ca.cer`) y se valida comparando la huella SHA-256.                                                                                                                                                                                                                                                                                                                                                              | Es lo más simple para instalarla en cada tablet; la huella evita que alguien en la red cuele otra CA.                                                                                                                                                                                                                      |
+| D85  | Puertos 8443/8080 por defecto, 443/80 recomendados en el servidor.                                                                                                                                                                                                                                                                                                                                                                                                                                  | Los por defecto no chocan en una PC de desarrollo. En el servidor, sin puerto en la dirección; además, con HSTS el navegador pasa `http://x:8080` a `https://x:8080` (puerto equivocado) y con 80/443 eso no pasa.                                                                                                         |
+| D86  | HSTS de un año, sin `includeSubDomains` y nunca para `localhost`; en `/api` nginx reemplaza el HSTS de la API por el suyo.                                                                                                                                                                                                                                                                                                                                                                          | `includeSubDomains` con un nombre del DNS del hospital alcanzaría a otros sistemas internos. HSTS en `localhost` haría que el navegador de esa PC fuerce HTTPS en todos sus puertos (también el servidor de Vite).                                                                                                         |
+| D87  | Encabezados de la interfaz (bloque de [seguridad.md](seguridad.md)) en cada `location` de la interfaz y no en `/api`. CSP con el hash del script del tema calculado al construir la imagen, `'wasm-unsafe-eval'`, `style-src 'unsafe-inline'` y `wss://` explícito.                                                                                                                                                                                                                                 | La API ya pone los suyos. El hash calculado no se desactualiza si cambia el script. Probado en Chromium: TensorFlow.js compila WebAssembly al cargar (sin el permiso hay una violación); MUI inserta estilos; Safari viejo no cuenta wss en `'self'`.                                                                      |
+| D88  | nginx busca la IP de la API en cada pedido (`resolver 127.0.0.11` y `proxy_pass` con variable) y manda `Host` con el puerto, `X-Forwarded-For` y `X-Forwarded-Proto`.                                                                                                                                                                                                                                                                                                                               | Al recrear la API en una actualización cambia su IP; el `Host` con puerto coincide con el `Origin` del WebSocket (sin `TIEMPO_REAL_ORIGENES`); la IP del cliente la usa el límite del login (`CONFIAR_PROXY=1`).                                                                                                           |
+| D89  | La imagen de la interfaz corre solo `vite build` (con los modelos del `prebuild`), sin el `tsc -b` de `npm run build`.                                                                                                                                                                                                                                                                                                                                                                              | `tsc -b` revisa también las pruebas, que importan esquemas del backend que la imagen no tiene; los tipos los controlan `npm run verificar` y la CI.                                                                                                                                                                        |
+| D90  | Las migraciones se aplican al arrancar la API; `scripts/actualizar.sh` respalda antes de construir y levantar.                                                                                                                                                                                                                                                                                                                                                                                      | Una actualización es un solo comando y la imagen trae exactamente sus migraciones; el respaldo previo permite volver atrás si una migración falla.                                                                                                                                                                         |
+| D91  | El respaldo es un servicio con un bucle de `sh` (no cron): mira el reloj cada 30 s, recupera el respaldo perdido si la PC estuvo apagada, reintenta a los 30 min, verifica el archivo entero y retiene por cantidad solo los automáticos.                                                                                                                                                                                                                                                           | Funciona igual con la PC suspendida o apagada a esa hora, deja todo en `docker compose logs` y no borra los respaldos que alguien hizo a propósito.                                                                                                                                                                        |
+| D92  | `scripts/restaurar.sh` no toca nada sin `--si`, restaura por defecto en una base aparte, respalda la base destino antes de borrarla, se niega si tiene conexiones y carga en una sola transacción.                                                                                                                                                                                                                                                                                                  | Restaurar es la operación más peligrosa: los errores tienen que ser imposibles o reversibles.                                                                                                                                                                                                                              |
+| D93  | Monitoreo con healthchecks, `restart: unless-stopped`, rotación de registros y `scripts/estado.sh` con código de salida; sin servicio de alertas.                                                                                                                                                                                                                                                                                                                                                   | Cubre lo que se puede revisar en una sola PC sin infraestructura extra; el código de salida permite programarlo.                                                                                                                                                                                                           |
+| D94  | El servicio `db` no cambió en lo efectivo (la contraseña y el nombre del contenedor son variables con el mismo valor por defecto): sin rotación de registros propia. En el servidor, `DB_PUERTO=127.0.0.1:5432` y `POSTGRES_CLAVE` solo letras y números.                                                                                                                                                                                                                                           | Cambiar su configuración recrearía el contenedor de la base de desarrollo en todas las PCs; PostgreSQL escribe poco en su registro (la rotación general de Docker Desktop la cubre). La contraseña va dentro de `DATABASE_URL`.                                                                                            |
+| D95  | La API corre como el usuario `node`, con `exec` para que reciba el `SIGTERM` y con `init: true`; `npx` sin aviso de versiones de npm.                                                                                                                                                                                                                                                                                                                                                               | Sin privilegios de root; `docker compose stop` cierra ordenado (WebSocket con 1001); no sale a internet en cada arranque.                                                                                                                                                                                                  |
+| D96  | `.env.ejemplo` trae `LOGIN_IP_MAX_FALLIDOS=0`.                                                                                                                                                                                                                                                                                                                                                                                                                                                      | Con Docker Desktop las conexiones de la red llegan a nginx con la IP de Docker (comprobado: 172.19.0.1 desde la propia PC y desde su IP de red), así que el límite por IP sería uno solo para todo el hospital. Queda el bloqueo por cuenta. En Linux, dejarlo vacío.                                                      |
+| D100 | `GET /api/salud` responde 200 solo si la base contesta un `SELECT 1` en 2 s; si no, `503 { data: { estado: 'sin-base' } }` y el motivo (solo el mensaje) va al registro del servidor.                                                                                                                                                                                                                                                                                                               | Antes respondía "ok" con la base caída: el healthcheck de compose (que da 5 s) y `scripts/estado.sh` decían que todo estaba sano. 2 s deja margen dentro de esos 5 s; la respuesta no dice por qué (D61).                                                                                                                  |
+| D102 | Los datos base de cualquier instalación son roles, permisos y tipos de estudio (`sembrarDatosBase`); las salas, camas e insumos de la semilla son de demostración (`sembrarCatalogoDeDemostracion`) y solo los usa la semilla de desarrollo.                                                                                                                                                                                                                                                        | Roles, permisos y tipos de estudio no se pueden cargar desde la aplicación y no dependen del hospital. Las salas y el catálogo de la semilla son inventados: en el servidor se mezclarían con los reales, y las salas ni se pueden borrar.                                                                                 |
+| D103 | CSV en UTF-8 (otro se rechaza diciendo cómo guardarlo), con coma o punto y coma, encabezado por nombre sin importar mayúsculas ni tildes, filas numeradas como en la planilla y todos los errores juntos (archivo, fila, columna, lo que dice). Catálogo y personal se validan con los esquemas del alta. Solo agrega; lo escrito distinto que algo que ya existe es un error. Todo se valida antes de tocar la base y se carga en una transacción (datos base, administrador, CSV y credenciales). | El hospital va a armar los datos en Excel: en español separa con punto y coma y su "CSV" común rompe las tildes. Sin pantalla para borrar salas, un duplicado por una mayúscula quedaría para siempre. Con "todo o nada" se corrige el archivo y se vuelve a correr sin limpiar nada.                                      |
+| D104 | El personal se crea activo con una contraseña temporal al azar (12 caracteres sin 0/O ni 1/l/I, ~70 bits, con las reglas del alta) escrita una sola vez en `credenciales-iniciales.csv` (crear sin pisar, permisos 600); nunca en la pantalla. Si la transacción se deshace, el archivo se borra; si ya existe y hay usuarios nuevos, no se carga nada. Se entrega en mano y el administrador la cambia desde Usuarios.                                                                             | El sistema no tiene "cambiar la contraseña en el primer ingreso" y no se inventó para esto. Una contraseña por persona y por escrito evita una clave común para todos; sin pisar el archivo no se pierden las de una corrida anterior.                                                                                     |
+| D105 | El primer administrador se crea solo si no hay un Administrador activo, con las variables `INSTALAR_ADMIN_*` o preguntando (la contraseña sin eco y dos veces, hasta 5 intentos por dato), con el esquema del alta. Su alta y las de los CSV se auditan como `CREAR` sin usuario actor y con el detalle de dónde salieron.                                                                                                                                                                          | No lo hace una persona con sesión sino una herramienta del servidor, y quien la corre puede no ser el administrador: atribuírselo al propio usuario creado sería falso. Así queda en el origen "Sistema", junto a lo que hace el temporizador.                                                                             |
+| D106 | El instalador es `node dist/scripts/instalar.js` en la imagen de la API, con `docker compose run --rm` y la carpeta `instalacion/` montada (fuera de git); se vuelve a correr después de cada actualización.                                                                                                                                                                                                                                                                                        | Usa el código compilado y las variables de la base del servicio; los CSV y las credenciales quedan del lado de la PC. Probado con la imagen real contra `sgsm_test` (bind mount con ruta de Git Bash y el usuario `node` escribiendo las credenciales). Es idempotente, así que sincronizar permisos es volver a correrlo. |

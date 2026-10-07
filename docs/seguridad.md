@@ -91,21 +91,24 @@ comodidad: **la seguridad real está en el backend**, que valida el permiso en c
 - Contraseñas, patrones faciales y fotos (también sus versiones cifradas) se reemplazan por
   `[oculto]`.
 - Un **trigger** en la base rechaza cualquier `UPDATE` o `DELETE` sobre la tabla `auditoria`.
+- Sin usuario quedan las acciones del sistema: el temporizador de recordatorios y el instalador
+  (T803, D105 de [despliegue.md](despliegue.md)). La consulta las separa con `origen=sistema`.
 - La consulta (`GET /api/auditoria`, solo con `auditoria.ver`) vuelve a ocultar, a cualquier
   profundidad, toda clave que parezca sensible (contraseña, hash, patrón, foto, token, secreto)
   aunque una entrada vieja o cargada a mano la tuviera (D49 de [reportes.md](reportes.md)).
 
 Acciones registradas hasta ahora:
 
-| Acción                       | Entidad                   | Cuándo                                |
-| ---------------------------- | ------------------------- | ------------------------------------- |
-| `INICIAR_SESION`             | Usuario                   | Ingreso correcto                      |
-| `INICIAR_SESION_FALLIDO`     | Usuario                   | Usuario o contraseña incorrectos      |
-| `BLOQUEAR_CUENTA`            | Usuario                   | Tercer intento fallido                |
-| `CERRAR_SESION`              | Usuario                   | Salida voluntaria                     |
-| `CREAR`, `MODIFICAR`, `BAJA` | Usuario y demás entidades | Altas, modificaciones y bajas lógicas |
-| `MODIFICAR_PERMISOS`         | Usuario                   | Cambio de permisos adicionales        |
-| `EXPORTAR`                   | Reporte                   | Descarga de un reporte en PDF o Excel |
+| Acción                       | Entidad                     | Cuándo                                                                                                 |
+| ---------------------------- | --------------------------- | ------------------------------------------------------------------------------------------------------ |
+| `INICIAR_SESION`             | Usuario                     | Ingreso correcto                                                                                       |
+| `INICIAR_SESION_FALLIDO`     | Usuario                     | Usuario o contraseña incorrectos                                                                       |
+| `BLOQUEAR_CUENTA`            | Usuario                     | Tercer intento fallido                                                                                 |
+| `CERRAR_SESION`              | Usuario                     | Salida voluntaria                                                                                      |
+| `CREAR`, `MODIFICAR`, `BAJA` | Usuario y demás entidades   | Altas, modificaciones y bajas lógicas                                                                  |
+| `MODIFICAR_PERMISOS`         | Usuario                     | Cambio de permisos adicionales                                                                         |
+| `EXPORTAR`                   | Reporte                     | Descarga de un reporte en PDF o Excel                                                                  |
+| `CREAR` (sin usuario)        | Usuario, Sala, Cama, Insumo | Altas del instalador (T803): el primer administrador y los CSV, con el archivo y la fila en el detalle |
 
 Las acciones de los módulos clínicos, biometría y suministros se listan en
 [endpoints.md](endpoints.md).

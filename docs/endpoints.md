@@ -6,9 +6,9 @@
 
 ## Sistema
 
-| Método | Ruta         | Permiso | Descripción      |
-| ------ | ------------ | ------- | ---------------- |
-| GET    | `/api/salud` | público | Estado de la API |
+| Método | Ruta         | Permiso | Descripción                                                                                                                                                       |
+| ------ | ------------ | ------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| GET    | `/api/salud` | público | `200 { data: { estado: 'ok' } }` si la base contesta un `SELECT 1` en 2 s; si no, `503 { data: { estado: 'sin-base' } }` (lo usa el healthcheck de compose, D100) |
 
 ## Autenticación — T105, T112 · CU06
 
@@ -217,9 +217,9 @@ parámetros en `valorNuevo` y en `detalle`).
 
 ## Auditoría — T604 · CU35
 
-| Método | Ruta                                                                           | Permiso         | Descripción                                                                                                                                                           |
-| ------ | ------------------------------------------------------------------------------ | --------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| GET    | `/api/auditoria?desde&hasta&usuarioId&pacienteId&accion&entidad&pagina&tamano` | `auditoria.ver` | De la más reciente a la más vieja; `tamano` 50 por defecto, 100 como mucho (acepta también `porPagina`); usuario, paciente y valores con las claves sensibles ocultas |
-| GET    | `/api/auditoria/opciones`                                                      | `auditoria.ver` | `{ acciones, entidades }` que hay en la base, para armar los filtros                                                                                                  |
+| Método | Ruta                                                                                  | Permiso         | Descripción                                                                                                                                                                                                                                             |
+| ------ | ------------------------------------------------------------------------------------- | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| GET    | `/api/auditoria?desde&hasta&usuarioId&pacienteId&accion&entidad&origen&pagina&tamano` | `auditoria.ver` | De la más reciente a la más vieja; `origen` `personas` (con usuario) o `sistema` (sin usuario), sin él todos (D101); `tamano` 50 por defecto, 100 como mucho (acepta también `porPagina`); usuario, paciente y valores con las claves sensibles ocultas |
+| GET    | `/api/auditoria/opciones`                                                             | `auditoria.ver` | `{ acciones, entidades }` que hay en la base, para armar los filtros                                                                                                                                                                                    |
 
 Contrato en [reportes.md](reportes.md#auditoría).

@@ -44,6 +44,23 @@ Valores de [diseno-e5.md](diseno-e5.md) (supuestos S9–S11); el detalle de cada
 | `TIEMPO_REAL_LATIDO_SEG`               | `30`        | Segundos entre latidos del WebSocket (revisan la sesión y el permiso de cada conexión)           |
 | `TIEMPO_REAL_ORIGENES`                 | (vacío)     | Orígenes aceptados además del propio, separados por comas (ej.: `http://localhost:8080`)         |
 
+### Instalador (T803)
+
+Solo las lee el instalador (`node dist/scripts/instalar.js` o `npm run instalar -w backend`), y
+solo si no hay ningún usuario Administrador activo: son los datos del **primer administrador**. Lo
+que falte se pregunta si hay una terminal; sin terminal, faltar alguna es un error. Se validan con
+las mismas reglas que el alta de usuarios. Detalle en [despliegue.md](despliegue.md) (paso 7).
+
+| Variable                  | Para qué                                                                                                                                                               |
+| ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `INSTALAR_ADMIN_USUARIO`  | Nombre de usuario (3 a 30 letras, números, puntos o guiones; se guarda en minúsculas)                                                                                  |
+| `INSTALAR_ADMIN_NOMBRE`   | Nombre                                                                                                                                                                 |
+| `INSTALAR_ADMIN_APELLIDO` | Apellido                                                                                                                                                               |
+| `INSTALAR_ADMIN_DNI`      | DNI, 7 u 8 dígitos (con o sin puntos)                                                                                                                                  |
+| `INSTALAR_ADMIN_CLAVE`    | Contraseña: al menos 8 caracteres, con letras y números. Nunca se muestra; mejor pasarla sin escribirla en el comando (`-e INSTALAR_ADMIN_CLAVE` toma la de la sesión) |
+
+No van en `backend/.env` ni en el `.env` del servidor: se pasan solo al correr el instalador.
+
 Frontend: `VITE_BIOMETRIA_MODO` (`camara` por defecto o `simulado`), en
 `frontend/.env.development.local` (plantilla en `frontend/.env.example`). Ver
 [biometria.md](biometria.md).

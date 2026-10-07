@@ -191,6 +191,8 @@ arma Prisma.
    ~240 ms). Ahora el índice es `auditoria(fecha_hora, id)` (el orden exacto de la consulta) y la
    consulta pide primero solo los ids de la página (`Index Only Scan Backward`, `Heap Fetches: 0`)
    y después esas 100 filas: de ~210 a ~76 ms, sin cambiar el contrato (`pagina`, `tamano`).
+   Después, el filtro de origen (personas o sistema) sumó `usuario_id` al final de ese índice para
+   seguir sin leer la tabla con el filtro puesto (D101, en [reportes.md](reportes.md)).
 3. **Opciones de los filtros de auditoría (D73).** `findMany({ distinct })` de Prisma no hace
    `DISTINCT` en la base: trae `id` y `accion` de las 600.000 filas (y otra vez con `entidad`) y
    descarta en memoria (~1 s, y crece con la tabla). Ahora una consulta recursiva salta de un valor
@@ -385,7 +387,8 @@ Continúan las de [reportes.md](reportes.md) (D40–D49, D63–D68) y [seguridad
   reporte por cada agrupación, su total y las estadísticas coinciden con la definición del contrato
   calculada fila por fila, sin filtros, por tipo y por sala, con un suministro de medicamento e
   insumo juntos y otro con el mismo insumo en dos líneas.
-- [`esquema.test.ts`](../backend/tests/integracion/esquema.test.ts): los índices de D71 a D73.
+- [`esquema.test.ts`](../backend/tests/integracion/esquema.test.ts): los índices de D71 a D73 (el
+  de D72 ya con `usuario_id`, D101).
 - Las pruebas que ya había de auditoría, reportes, estadísticas y exportación siguen pasando sin
   cambios.
 
