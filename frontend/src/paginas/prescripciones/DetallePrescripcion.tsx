@@ -1,7 +1,6 @@
 import { useEffect, useId, useState, type ReactNode } from 'react';
 import {
   Box,
-  Chip,
   List,
   ListItem,
   Paper,
@@ -19,13 +18,16 @@ import { usePaciente } from '../../api/pacientes';
 import { prescripcionesApi, usePrescripcion } from '../../api/prescripciones';
 import type { EstadoPrescripcion, Prescripcion } from '../../api/tipos';
 import { useSesion } from '../../auth/useSesion';
+import { AccionesFormulario } from '../../componentes/AccionesFormulario';
 import { Alerta } from '../../componentes/Alerta';
 import { Boton } from '../../componentes/Boton';
 import { CampoTexto } from '../../componentes/CampoTexto';
+import { ChipEstado } from '../../componentes/ChipEstado';
 import { EncabezadoPagina } from '../../componentes/EncabezadoPagina';
 import { Cargando, ErrorDeCarga } from '../../componentes/EstadoDeCarga';
 import { ModalConfirmacion } from '../../componentes/ModalConfirmacion';
 import { Selector } from '../../componentes/Selector';
+import { soltarAlGirarLaRueda } from '../../utilidades/campoNumerico';
 import { formatearFechaHora, formatearHora } from '../../utilidades/formato';
 import {
   ACCIONES,
@@ -35,7 +37,7 @@ import {
   nombreConCama,
   type Edicion,
 } from './edicionPrescripcion';
-import { ESTADOS, FRECUENCIAS, VIAS, etiquetaVia, resumenPrescripcion } from './etiquetas';
+import { FRECUENCIAS, VIAS, etiquetaVia, resumenPrescripcion } from './etiquetas';
 import { motivoSinPaciente } from './estadoDelPaciente';
 import { IdentidadOEstado } from './IdentidadOEstado';
 
@@ -134,7 +136,7 @@ export function DetallePrescripcion() {
         volverA={`/pacientes/${p.pacienteId}?pestana=prescripciones`}
         subtitulo={
           <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap', mt: 0.5 }}>
-            <Chip label={ESTADOS[p.estado].etiqueta} color={ESTADOS[p.estado].color} />
+            <ChipEstado estado={p.estado} />
             <span>
               {resumenPrescripcion(p)} · {etiquetaVia(p.via)} · Prescribió {p.prescriptor}
             </span>
@@ -180,7 +182,15 @@ export function DetallePrescripcion() {
                   alCambiar={editar('dosis')}
                   type="number"
                   error={dosisInvalida ? 'La dosis debe ser mayor a 0' : undefined}
-                  slotProps={{ htmlInput: { inputMode: 'decimal', min: 0, step: 'any' } }}
+                  slotProps={{
+                    htmlInput: {
+                      inputMode: 'decimal',
+                      min: 0,
+                      step: 'any',
+                      // La rueda del mouse no cambia la dosis (UX-19).
+                      onWheel: soltarAlGirarLaRueda,
+                    },
+                  }}
                 />
                 <CampoTexto
                   etiqueta="Unidad"
@@ -223,23 +233,13 @@ export function DetallePrescripcion() {
                   multiline
                 />
               </Box>
-              <Box
-                sx={{
-                  display: 'flex',
-                  justifyContent: 'flex-end',
-                  alignItems: 'center',
-                  flexWrap: 'wrap',
-                  columnGap: 2,
-                  rowGap: 1,
-                  mt: 3,
-                }}
-              >
+              <AccionesFormulario>
                 {motivoBloqueo && (
                   <Typography
                     id={idMotivo}
                     variant="body2"
                     color="text.secondary"
-                    sx={{ textAlign: 'right' }}
+                    sx={{ flex: '1 1 auto', textAlign: { sm: 'right' } }}
                   >
                     {motivoBloqueo}
                   </Typography>
@@ -251,7 +251,7 @@ export function DetallePrescripcion() {
                 >
                   Guardar cambios
                 </Boton>
-              </Box>
+              </AccionesFormulario>
             </>
           ) : (
             <Box

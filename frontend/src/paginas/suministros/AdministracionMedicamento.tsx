@@ -9,11 +9,13 @@ import { prescripcionesApi } from '../../api/prescripciones';
 import { suministrosApi } from '../../api/suministros';
 import type { Prescripcion, Suministro } from '../../api/tipos';
 import { useValidacionFacial } from '../../biometria/useValidacionFacial';
+import { AccionesFormulario } from '../../componentes/AccionesFormulario';
 import { Alerta } from '../../componentes/Alerta';
 import { Boton } from '../../componentes/Boton';
 import { CampoTexto } from '../../componentes/CampoTexto';
 import { EncabezadoPagina } from '../../componentes/EncabezadoPagina';
 import { Cargando, ErrorDeCarga } from '../../componentes/EstadoDeCarga';
+import { soltarAlGirarLaRueda } from '../../utilidades/campoNumerico';
 import { formatearHora } from '../../utilidades/formato';
 import { useAhora } from '../../utilidades/useAhora';
 import { IdentidadPaciente } from '../pacientes/IdentidadPaciente';
@@ -30,8 +32,8 @@ const ANCHO_COLUMNA = 760;
 const conPunto = (texto: string) => (texto.endsWith('.') ? texto : `${texto}.`);
 
 /**
- * Botón final de la pantalla. Cuando está deshabilitado dice por qué (`ayuda`), también para el
- * lector de pantalla, para que no parezca roto.
+ * Botonera final de la pantalla. Cuando el botón está deshabilitado dice por qué (`ayuda`), junto
+ * a él y también para el lector de pantalla, para que no parezca roto.
  */
 function BotonConfirmar({
   habilitado,
@@ -46,7 +48,16 @@ function BotonConfirmar({
 }) {
   const ayudaId = useId();
   return (
-    <Box sx={{ justifySelf: 'start' }}>
+    <AccionesFormulario>
+      {ayuda && (
+        <Typography
+          id={ayudaId}
+          color="text.secondary"
+          sx={{ flex: '1 1 auto', textAlign: { sm: 'right' } }}
+        >
+          {ayuda}
+        </Typography>
+      )}
       <Boton
         startIcon={<FaceRetouchingNaturalIcon />}
         disabled={!habilitado}
@@ -56,12 +67,7 @@ function BotonConfirmar({
       >
         Confirmar con mi rostro
       </Boton>
-      {ayuda && (
-        <Typography id={ayudaId} color="text.secondary" sx={{ mt: 1 }}>
-          {ayuda}
-        </Typography>
-      )}
-    </Box>
+    </AccionesFormulario>
   );
 }
 
@@ -73,7 +79,7 @@ interface Intento {
 
 /**
  * Administración de medicamento (T413 · CU20): la pantalla más usada del sistema. Paciente →
- * prescripción vigente → cantidad → revisar → confirmación con la cara. Los avisos (dosis
+ * prescripción vigente → cantidad → revisar → confirmación con el rostro. Los avisos (dosis
  * distinta, toma ya dada, toma adelantada) no bloquean salvo la toma ya dada, que pide
  * confirmar a propósito que corresponde otra.
  */
@@ -339,7 +345,15 @@ export function AdministracionMedicamento() {
                 type="number"
                 error={cantidadValida ? undefined : 'La cantidad debe ser mayor a 0'}
                 ayuda={`Prescripto: ${formatearDosis(elegida.dosis, elegida.unidadDosis)}`}
-                slotProps={{ htmlInput: { inputMode: 'decimal', min: 0, step: 'any' } }}
+                slotProps={{
+                  htmlInput: {
+                    inputMode: 'decimal',
+                    min: 0,
+                    step: 'any',
+                    // La rueda del mouse no cambia la cantidad (UX-19).
+                    onWheel: soltarAlGirarLaRueda,
+                  },
+                }}
               />
               <CampoTexto
                 etiqueta="Observaciones"

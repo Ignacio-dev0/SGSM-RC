@@ -11,6 +11,7 @@ import { useCatalogo } from '../../api/prescripciones';
 import { suministrosApi } from '../../api/suministros';
 import type { Insumo } from '../../api/tipos';
 import { useValidacionFacial } from '../../biometria/useValidacionFacial';
+import { AccionesFormulario } from '../../componentes/AccionesFormulario';
 import { Alerta } from '../../componentes/Alerta';
 import { Boton } from '../../componentes/Boton';
 import { CampoTexto } from '../../componentes/CampoTexto';
@@ -22,7 +23,7 @@ import { ListaCantidades, SelectorPaciente, type ItemCantidad } from './comunes'
 
 /**
  * Registro de insumos no prescriptos (T414 · CU21): carga rápida de varios insumos con sus
- * cantidades al lado de la cama, confirmada con la cara en un solo movimiento.
+ * cantidades al lado de la cama, confirmada con el rostro en un solo movimiento.
  */
 export function RegistroInsumos() {
   const clienteQuery = useQueryClient();
@@ -242,22 +243,26 @@ export function RegistroInsumos() {
                 valor={observaciones}
                 alCambiar={setObservaciones}
               />
-              <Boton
-                startIcon={<FaceRetouchingNaturalIcon />}
-                disabled={!puedeConfirmar}
-                cargando={registrar.isPending}
-                onClick={() => void confirmar()}
-              >
-                Confirmar con mi rostro
-              </Boton>
+              <AccionesFormulario>
+                <Boton
+                  startIcon={<FaceRetouchingNaturalIcon />}
+                  disabled={!puedeConfirmar}
+                  cargando={registrar.isPending}
+                  onClick={() => void confirmar()}
+                >
+                  Confirmar con mi rostro
+                </Boton>
+              </AccionesFormulario>
             </Paper>
           </Box>
         </>
       )}
       {!p && !pacienteId && (
-        <Boton disabled startIcon={<FaceRetouchingNaturalIcon />}>
-          Confirmar con mi rostro
-        </Boton>
+        <AccionesFormulario>
+          <Boton disabled startIcon={<FaceRetouchingNaturalIcon />}>
+            Confirmar con mi rostro
+          </Boton>
+        </AccionesFormulario>
       )}
       {modalValidacion}
     </>

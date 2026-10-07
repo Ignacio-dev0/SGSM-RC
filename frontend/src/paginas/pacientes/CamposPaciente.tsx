@@ -11,12 +11,17 @@ interface Props {
   alCambiar: (campo: keyof DatosPaciente, valor: string) => void;
 }
 
-/** Campos de datos personales, compartidos por el registro y la edición del paciente. */
+/**
+ * Campos de datos personales, compartidos por el registro y la edición del paciente. Son datos
+ * de otra persona, no de quien usa la tablet: ninguno se autocompleta (UX-20d), para que el
+ * navegador no ofrezca ahí los datos de quien está usando el sistema.
+ */
 export function CamposPaciente({ datos, errores, alCambiar }: Props) {
   const campo = (c: keyof DatosPaciente) => ({
     valor: datos[c],
     alCambiar: (v: string) => alCambiar(c, v),
     error: errores[c],
+    autoComplete: 'off',
   });
   const grilla = { display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' } };
 
@@ -30,6 +35,8 @@ export function CamposPaciente({ datos, errores, alCambiar }: Props) {
           etiqueta="DNI"
           {...campo('dni')}
           required
+          // El formato se dice de entrada (UX-20a); si falla, el error toma el lugar de la ayuda.
+          ayuda="7 u 8 dígitos, sin puntos"
           slotProps={{ htmlInput: { inputMode: 'numeric', maxLength: 8 } }}
         />
         <CampoTexto etiqueta="Nombre" {...campo('nombre')} required />

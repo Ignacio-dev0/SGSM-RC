@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { Box, Button, Chip, Paper, Typography } from '@mui/material';
+import { Box, Button, Paper, Typography } from '@mui/material';
 import FaceOutlinedIcon from '@mui/icons-material/FaceOutlined';
 import KeyOutlinedIcon from '@mui/icons-material/KeyOutlined';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -8,9 +8,11 @@ import { ErrorApi, erroresPorCampo, mensajeDeError } from '../../api/cliente';
 import type { Usuario } from '../../api/tipos';
 import { useRoles, usuariosApi, type DatosUsuario } from '../../api/usuarios';
 import { useSesion, useUsuario } from '../../auth/useSesion';
+import { AccionesFormulario } from '../../componentes/AccionesFormulario';
 import { Alerta } from '../../componentes/Alerta';
 import { Boton } from '../../componentes/Boton';
 import { CampoTexto } from '../../componentes/CampoTexto';
+import { ChipEstado } from '../../componentes/ChipEstado';
 import { EncabezadoPagina } from '../../componentes/EncabezadoPagina';
 import { Cargando, ErrorDeCarga } from '../../componentes/EstadoDeCarga';
 import { ModalConfirmacion } from '../../componentes/ModalConfirmacion';
@@ -158,7 +160,7 @@ export function FormularioUsuario() {
           u && (
             <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap' }}>
               {u.rol.nombre}
-              {!u.activo && <Chip label="Dado de baja" size="small" />}
+              {!u.activo && <ChipEstado estado="DADO_DE_BAJA" />}
               <span>· Último acceso: {formatearFechaHora(u.ultimoAcceso)}</span>
             </Box>
           )
@@ -252,6 +254,8 @@ export function FormularioUsuario() {
               alCambiar={actualizar('dni')}
               error={errores.dni}
               required
+              // El formato se dice de entrada (UX-20a); si falla, el error toma el lugar de la ayuda.
+              ayuda="7 u 8 dígitos, sin puntos"
               slotProps={{ htmlInput: { inputMode: 'numeric', maxLength: 8 } }}
             />
             <CampoTexto
@@ -306,14 +310,14 @@ export function FormularioUsuario() {
             />
           </Box>
 
-          <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, mt: 4 }}>
+          <AccionesFormulario>
             <Boton variante="texto" onClick={() => navegar('/usuarios')}>
               Cancelar
             </Boton>
             <Boton type="submit" cargando={guardar.isPending}>
               Guardar
             </Boton>
-          </Box>
+          </AccionesFormulario>
         </Paper>
       )}
 

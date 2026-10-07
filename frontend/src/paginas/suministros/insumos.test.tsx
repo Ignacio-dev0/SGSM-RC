@@ -1,4 +1,4 @@
-import { screen, waitFor, within } from '@testing-library/react';
+import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { ENFERMERO } from '../../pruebas/datos';
@@ -115,8 +115,8 @@ describe('registro de insumos · identificación del paciente y catálogo (F29 �
     expect(ficha).toHaveTextContent('Benítez, Rosa');
     expect(ficha).toHaveTextContent('DNI 30111222');
     expect(ficha).toHaveTextContent(/\d+ años/);
-    expect(ficha).toHaveTextContent('Cama A-01 · Sala A – Neurorrehabilitación');
-    expect(within(ficha).getByText(/Cama A-01/).tagName).toBe('STRONG');
+    expect(ficha).toHaveTextContent(/Cama A.01 · Sala A – Neurorrehabilitación/);
+    expect(within(ficha).getByText(/Cama A.01/).tagName).toBe('STRONG');
   });
 
   it('la identificación va debajo del selector de paciente y no queda el "Para …" al pie', async () => {
@@ -372,5 +372,40 @@ describe('registro de insumos · cantidades (UX-09)', () => {
     expect(campo).toHaveValue(1);
     expect(screen.queryByText(ERROR)).not.toBeInTheDocument();
     expect(confirmar()).toBeEnabled();
+  });
+});
+
+describe('registro de insumos · botonera y campos numéricos (F31 · UX-19)', () => {
+  const botonera = () =>
+    within(screen.getByRole('group', { name: 'Acciones del formulario' })).getAllByRole('button');
+
+  it('Confirmar con mi rostro, la acción principal, está en la botonera del formulario', async () => {
+    renderizarApp('/suministros/insumos?pacienteId=7', ENFERMERO);
+
+    await userEvent.click(await screen.findByRole('button', { name: /Agregar Gasa estéril/ }));
+    expect(botonera().at(-1)).toHaveAccessibleName('Confirmar con mi rostro');
+    expect(botonera().at(-1)).toBeEnabled();
+  });
+
+  it('sin paciente elegido el botón deshabilitado también va en la botonera', async () => {
+    renderizarApp('/suministros/insumos', ENFERMERO);
+
+    await screen.findByRole('combobox', { name: 'Paciente' });
+    expect(botonera().map((b) => b.textContent)).toEqual(['Confirmar con mi rostro']);
+    expect(botonera().at(-1)).toBeDisabled();
+  });
+
+  it('la rueda del mouse no cambia la cantidad de un insumo: el campo suelta el foco', async () => {
+    renderizarApp('/suministros/insumos?pacienteId=7', ENFERMERO);
+
+    await userEvent.click(await screen.findByRole('button', { name: /Agregar Gasa estéril/ }));
+    const cantidad = screen.getByLabelText('Cantidad de Gasa estéril');
+    cantidad.focus();
+    expect(cantidad).toHaveFocus();
+
+    fireEvent.wheel(cantidad, { deltaY: -100 });
+
+    expect(cantidad).not.toHaveFocus();
+    expect(cantidad).toHaveValue(1);
   });
 });

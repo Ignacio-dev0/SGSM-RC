@@ -24,7 +24,7 @@ type Estado = 'iniciando' | 'buscando' | 'varios' | 'listo' | 'error';
 
 const MENSAJES: Record<Exclude<Estado, 'error'>, string> = {
   iniciando: 'Encendiendo la cámara…',
-  buscando: 'Mire a la cámara, con buena luz y la cara descubierta.',
+  buscando: 'Mire a la cámara, con buena luz y el rostro descubierto.',
   varios: 'Hay más de un rostro: quede solo usted frente a la tablet.',
   listo: 'Rostro capturado.',
 };

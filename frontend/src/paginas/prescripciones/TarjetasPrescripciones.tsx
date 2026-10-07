@@ -1,11 +1,12 @@
 import { useId } from 'react';
-import { Box, ButtonBase, Chip, LinearProgress, Paper, Typography } from '@mui/material';
+import { Box, ButtonBase, LinearProgress, Paper, Typography } from '@mui/material';
 import MedicationOutlinedIcon from '@mui/icons-material/MedicationOutlined';
 import type { Prescripcion } from '../../api/tipos';
 import { Boton } from '../../componentes/Boton';
+import { ChipEstado } from '../../componentes/ChipEstado';
 import { formatearFechaHora } from '../../utilidades/formato';
 import { ChipEstadoToma } from './ChipEstadoToma';
-import { ESTADOS, etiquetaVia, formatearDosis, formatearFrecuencia } from './etiquetas';
+import { etiquetaVia, formatearDosis, formatearFrecuencia } from './etiquetas';
 import { formatearProximaToma } from './proximaToma';
 
 interface PropsTarjeta {
@@ -68,8 +69,8 @@ function TarjetaDePrescripcion({ p, ahora, administra, alAbrir, alAdministrar }:
         <Typography variant="body2" color="text.secondary" sx={{ overflowWrap: 'anywhere' }}>
           {p.medicamento.presentacion}
         </Typography>
-        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 1 }}>
-          <Chip label={ESTADOS[p.estado].etiqueta} color={ESTADOS[p.estado].color} />
+        <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 1, mt: 1 }}>
+          <ChipEstado estado={p.estado} />
           <ChipEstadoToma prescripcion={p} ahora={ahora} tamano="medium" />
         </Box>
         <Box id={`${id}-datos`} sx={{ mt: 1 }}>

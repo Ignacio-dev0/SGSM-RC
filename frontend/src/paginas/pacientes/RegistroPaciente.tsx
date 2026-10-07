@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { ErrorApi, erroresPorCampo, mensajeDeError } from '../../api/cliente';
 import { pacientesApi, useCamasLibres, type DatosPaciente } from '../../api/pacientes';
 import type { Paciente } from '../../api/tipos';
+import { AccionesFormulario } from '../../componentes/AccionesFormulario';
 import { Alerta } from '../../componentes/Alerta';
 import { Boton } from '../../componentes/Boton';
 import { EncabezadoPagina } from '../../componentes/EncabezadoPagina';
@@ -90,7 +91,9 @@ export function RegistroPaciente() {
       <EncabezadoPagina titulo="Internar paciente" volverA="/pacientes" />
       {errorGeneral && <Alerta tipo="error">{errorGeneral}</Alerta>}
       {egresadoId && (
+        // Pide una decisión y aparece arriba, lejos del botón tocado: se lleva el foco (UX-12).
         <Alerta
+          enfocar
           tipo="advertencia"
           titulo="El paciente ya estuvo internado"
           accion={
@@ -150,14 +153,14 @@ export function RegistroPaciente() {
           />
         </Box>
 
-        <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, mt: 4 }}>
+        <AccionesFormulario>
           <Boton variante="texto" onClick={() => navegar('/pacientes')}>
             Cancelar
           </Boton>
           <Boton type="submit" cargando={internar.isPending}>
             Internar
           </Boton>
-        </Box>
+        </AccionesFormulario>
       </Paper>
     </>
   );

@@ -50,7 +50,7 @@ export function RostroUsuario() {
     onSuccess: () => {
       // La captura se limpia al terminar de cerrarse el diálogo (onExited), no antes.
       setCapturando(false);
-      setAviso('Rostro registrado. Ya puede confirmar operaciones con su cara.');
+      setAviso('Rostro registrado. Ya puede confirmar operaciones con su rostro.');
       refrescar();
     },
   });
@@ -120,7 +120,7 @@ export function RostroUsuario() {
           <Typography color="text.secondary">
             {u.registrado
               ? `Última actualización: ${formatearFechaHora(u.actualizadoEn)}`
-              : 'Hasta que se registre, no podrá confirmar suministros con su cara.'}
+              : 'Hasta que se registre, no podrá confirmar suministros con su rostro.'}
           </Typography>
           <Box sx={{ display: 'flex', gap: 1, mt: 2, flexWrap: 'wrap' }}>
             <Boton onClick={() => setCapturando(true)}>
@@ -153,7 +153,7 @@ export function RostroUsuario() {
                 alt="Foto capturada"
                 style={{ maxWidth: 320, borderRadius: 12 }}
               />
-              <Typography>¿Se ve bien la cara? Esta foto queda como referencia.</Typography>
+              <Typography>¿Se ve bien el rostro? Esta foto queda como referencia.</Typography>
             </Box>
           ) : (
             <CapturaRostro key={intento} persona={u.nombreUsuario} alCapturar={setCaptura} />

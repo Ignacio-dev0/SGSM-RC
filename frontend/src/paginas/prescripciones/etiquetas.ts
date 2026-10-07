@@ -1,5 +1,5 @@
 // Textos para mostrar las prescripciones.
-import type { EstadoPrescripcion, Prescripcion, Via } from '../../api/tipos';
+import type { Prescripcion, Via } from '../../api/tipos';
 
 export const VIAS: { valor: Via; etiqueta: string }[] = [
   { valor: 'ORAL', etiqueta: 'Oral' },
@@ -20,15 +20,6 @@ export const FRECUENCIAS = [1, 2, 4, 6, 8, 12, 24, 48, 72].map((h) => ({
   valor: String(h),
   etiqueta: h === 1 ? 'Cada 1 hora' : `Cada ${h} horas`,
 }));
-
-export const ESTADOS: Record<
-  EstadoPrescripcion,
-  { etiqueta: string; color: 'success' | 'warning' | 'default' }
-> = {
-  VIGENTE: { etiqueta: 'Vigente', color: 'success' },
-  SUSPENDIDA: { etiqueta: 'Suspendida', color: 'warning' },
-  FINALIZADA: { etiqueta: 'Finalizada', color: 'default' },
-};
 
 /** Espacio no separable: el número y su unidad nunca quedan en renglones distintos. */
 const NBSP = String.fromCharCode(160);

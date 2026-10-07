@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Box, Chip, Typography, useMediaQuery, useTheme } from '@mui/material';
+import { Box, Typography, useMediaQuery, useTheme } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import MedicationOutlinedIcon from '@mui/icons-material/MedicationOutlined';
 import { useQuery } from '@tanstack/react-query';
@@ -8,13 +8,14 @@ import { prescripcionesApi } from '../../api/prescripciones';
 import type { EstadoPrescripcion, Paciente, Prescripcion } from '../../api/tipos';
 import { useSesion } from '../../auth/useSesion';
 import { Boton } from '../../componentes/Boton';
+import { ChipEstado } from '../../componentes/ChipEstado';
 import { ErrorDeCarga } from '../../componentes/EstadoDeCarga';
 import { Selector } from '../../componentes/Selector';
 import { Tabla, type Columna } from '../../componentes/Tabla';
 import { formatearFechaHora } from '../../utilidades/formato';
 import { useAhora } from '../../utilidades/useAhora';
 import { ChipEstadoToma } from './ChipEstadoToma';
-import { ESTADOS, etiquetaVia, formatearDosis, formatearFrecuencia } from './etiquetas';
+import { etiquetaVia, formatearDosis, formatearFrecuencia } from './etiquetas';
 import { formatearProximaToma } from './proximaToma';
 import { TarjetasPrescripciones } from './TarjetasPrescripciones';
 
@@ -45,9 +46,7 @@ const columnas = (ahora: Date): Columna<Prescripcion>[] => [
   },
   {
     titulo: 'Estado',
-    valor: (p) => (
-      <Chip size="small" label={ESTADOS[p.estado].etiqueta} color={ESTADOS[p.estado].color} />
-    ),
+    valor: (p) => <ChipEstado estado={p.estado} />,
   },
   {
     titulo: 'Última administración',

@@ -1,6 +1,6 @@
 import { ThemeProvider } from '@mui/material';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import type { Suministro } from '../../api/tipos';
@@ -209,5 +209,31 @@ describe('corregir un suministro: qué falta para confirmar (UX-17)', () => {
     expect(within(dialogo).getByText(/Falta indicar/)).toHaveTextContent(
       'Falta indicar una cantidad de 1 o más en cada insumo.',
     );
+  });
+});
+
+describe('corregir un suministro: la rueda del mouse no cambia las cantidades (UX-19)', () => {
+  it('en un medicamento, la rueda sobre la cantidad enfocada le saca el foco y no la modifica', async () => {
+    const dialogo = await abrirCorreccion(suministro());
+    const cantidad = within(dialogo).getByLabelText(/^Cantidad/);
+    cantidad.focus();
+    expect(cantidad).toHaveFocus();
+
+    fireEvent.wheel(cantidad, { deltaY: -100 });
+
+    expect(cantidad).not.toHaveFocus();
+    expect(cantidad).toHaveValue(500);
+  });
+
+  it('en los insumos también', async () => {
+    const dialogo = await abrirCorreccion(deInsumos());
+    const gasa = within(dialogo).getByLabelText('Cantidad de Gasa estéril');
+    gasa.focus();
+    expect(gasa).toHaveFocus();
+
+    fireEvent.wheel(gasa, { deltaY: 100 });
+
+    expect(gasa).not.toHaveFocus();
+    expect(gasa).toHaveValue(2);
   });
 });

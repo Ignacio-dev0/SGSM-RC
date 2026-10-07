@@ -7,6 +7,7 @@ import { useQuery } from '@tanstack/react-query';
 import { pacientesApi } from '../../api/pacientes';
 import { CampoTexto } from '../../componentes/CampoTexto';
 import { Selector } from '../../componentes/Selector';
+import { soltarAlGirarLaRueda } from '../../utilidades/campoNumerico';
 
 /** Selector de paciente internado, con la cama primero para encontrarlo rápido. */
 export function SelectorPaciente({
@@ -105,6 +106,8 @@ function FilaCantidad({ item, alFijar, alSumar, alQuitar }: PropsFila) {
           htmlInput: {
             min: 1,
             inputMode: 'numeric',
+            // La rueda del mouse no cambia la cantidad (UX-19).
+            onWheel: soltarAlGirarLaRueda,
             'aria-describedby': conError ? idError : undefined,
           },
           input: { error: conError },

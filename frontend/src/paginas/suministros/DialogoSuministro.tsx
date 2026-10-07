@@ -10,6 +10,7 @@ import { useValidacionFacial } from '../../biometria/useValidacionFacial';
 import { Alerta } from '../../componentes/Alerta';
 import { Boton } from '../../componentes/Boton';
 import { CampoTexto } from '../../componentes/CampoTexto';
+import { soltarAlGirarLaRueda } from '../../utilidades/campoNumerico';
 import { formatearFechaHora } from '../../utilidades/formato';
 import { formatearDosis } from '../prescripciones/etiquetas';
 import { detalleDe } from './formato';
@@ -33,7 +34,7 @@ const unir = (partes: string[]) =>
 
 /**
  * Detalle de un suministro (T415) con su corrección (T416 · CU23): dentro de las 24 horas,
- * con motivo obligatorio y confirmación con la cara.
+ * con motivo obligatorio y confirmación con el rostro.
  */
 export function DialogoSuministro({
   inicial,
@@ -184,6 +185,8 @@ export function DialogoSuministro({
                 alCambiar={setCantidad}
                 type="number"
                 sx={{ maxWidth: 240 }}
+                // La rueda del mouse no cambia la cantidad (UX-19).
+                slotProps={{ htmlInput: { onWheel: soltarAlGirarLaRueda } }}
               />
             ) : (
               <ListaCantidades titulo="Insumos corregidos" items={items} alCambiar={setItems} />

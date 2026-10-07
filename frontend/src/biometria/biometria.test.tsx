@@ -5,7 +5,8 @@ import { http, HttpResponse } from 'msw';
 import { useState, type ReactNode } from 'react';
 import type { UsuarioSesion } from '../api/tipos';
 import { Contexto } from '../auth/useSesion';
-import { ENFERMERO } from '../pruebas/datos';
+import { ADMIN, ENFERMERO } from '../pruebas/datos';
+import { renderizarApp } from '../pruebas/renderizar';
 import { servidor } from '../pruebas/servidor';
 import { tema } from '../tema';
 import { CapturaRostro } from './CapturaRostro';
@@ -100,6 +101,16 @@ describe('captura del rostro (T402 · CU07)', () => {
     expect(alerta).not.toHaveTextContent(/HTTPS|localhost|VITE_/);
     await userEvent.click(within(alerta).getByRole('button', { name: 'Reintentar' }));
     await waitFor(() => expect(pedirCamara).toHaveBeenCalledTimes(2));
+  });
+
+  it('el mensaje de la cámara habla de "rostro", como el resto de las pantallas (UX-21)', async () => {
+    conProveedores(<CapturaRostro persona="enfermero" alCapturar={vi.fn()} />, {
+      motor: motorFalso([{ rostros: 0, descriptor: null }]),
+    });
+
+    const mensaje = await screen.findByText(/Mire a la cámara/);
+    expect(mensaje).toHaveTextContent('con buena luz y el rostro descubierto.');
+    expect(mensaje).not.toHaveTextContent(/\bcara\b/i);
   });
 
   it('en modo de demostración simula el rostro de la persona sin usar la cámara', async () => {
@@ -404,5 +415,64 @@ describe('validación facial con cámara: sin reintento automático (UX-04)', ()
     await userEvent.click(screen.getByRole('button', { name: 'Intentar de nuevo' }));
     expect(await screen.findByText('Resultado: tok-camara', {}, { timeout: 3000 })).toBeVisible();
     expect(pedidos).toBe(2);
+  });
+});
+
+describe('pantalla del rostro de un usuario: "rostro" y no "cara" (UX-21)', () => {
+  beforeEach(() => vi.stubEnv('VITE_BIOMETRIA_MODO', 'simulado'));
+  afterEach(() => vi.unstubAllEnvs());
+
+  const estado = (registrado: boolean) => ({
+    usuarioId: 3,
+    nombreUsuario: 'enfermero',
+    nombre: 'Sofía',
+    apellido: 'Acosta',
+    rol: 'Enfermero',
+    registrado,
+    actualizadoEn: registrado ? '2026-10-07T12:00:00.000Z' : null,
+  });
+
+  it('sin rostro registrado avisa qué no va a poder hacer, con la palabra rostro', async () => {
+    servidor.use(
+      http.get('*/api/biometria/usuarios/3', () => HttpResponse.json({ data: estado(false) })),
+    );
+    renderizarApp('/biometria/3', ADMIN);
+
+    expect(
+      await screen.findByText(
+        'Hasta que se registre, no podrá confirmar suministros con su rostro.',
+      ),
+    ).toBeInTheDocument();
+    expect(document.body).not.toHaveTextContent(/\bcara\b/i);
+  });
+
+  it('al registrarlo, la pregunta de la foto y el aviso final dicen rostro', async () => {
+    let registrado = false;
+    servidor.use(
+      http.get('*/api/biometria/usuarios/3', () => HttpResponse.json({ data: estado(registrado) })),
+      http.get('*/api/biometria/usuarios/3/foto', () => new HttpResponse(null, { status: 200 })),
+      http.put('*/api/biometria/usuarios/3', () => {
+        registrado = true;
+        return HttpResponse.json({
+          data: { usuarioId: 3, registrado: true, actualizadoEn: '2026-10-07T12:00:00.000Z' },
+        });
+      }),
+    );
+    renderizarApp('/biometria/3', ADMIN);
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Registrar rostro' }));
+    const dialogo = screen.getByRole('dialog', { name: /Registrar rostro de Sofía Acosta/ });
+    await userEvent.click(
+      within(dialogo).getByRole('button', { name: /Simular el rostro de enfermero/ }),
+    );
+    expect(
+      within(dialogo).getByText('¿Se ve bien el rostro? Esta foto queda como referencia.'),
+    ).toBeInTheDocument();
+    await userEvent.click(within(dialogo).getByRole('button', { name: 'Guardar' }));
+
+    expect(await screen.findByRole('status')).toHaveTextContent(
+      'Rostro registrado. Ya puede confirmar operaciones con su rostro.',
+    );
+    expect(document.body).not.toHaveTextContent(/\bcara\b/i);
   });
 });

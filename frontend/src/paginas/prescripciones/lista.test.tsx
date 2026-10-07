@@ -332,3 +332,68 @@ describe('administrar desde la lista de prescripciones', () => {
     expect(within(tabla).queryByRole('button', { name: /Administrar/ })).not.toBeInTheDocument();
   });
 });
+
+describe('estado de la prescripción con ChipEstado (F30)', () => {
+  const vigente = prescripcion();
+  const suspendida = prescripcion({ id: 41, estado: 'SUSPENDIDA', proximaToma: null });
+  const finalizada = prescripcion({ id: 42, estado: 'FINALIZADA', proximaToma: null });
+  const lista = () =>
+    servidor.use(
+      http.get('*/api/pacientes/7/prescripciones', () =>
+        HttpResponse.json({ data: [vigente, suspendida, finalizada] }),
+      ),
+    );
+  /** El chip (el recuadro de MUI) con ese texto dentro del contenedor. */
+  const chipDe = (donde: HTMLElement, texto: string) =>
+    within(donde).getByText(texto).closest('.MuiChip-root') as HTMLElement;
+
+  /** Vigente, contorno neutro; suspendida, relleno de advertencia; finalizada, relleno neutro. */
+  function verificarChips(
+    vigenteEn: HTMLElement,
+    suspendidaEn: HTMLElement,
+    finalizadaEn: HTMLElement,
+  ) {
+    const esperable = chipDe(vigenteEn, 'Vigente');
+    expect(esperable).toHaveClass('MuiChip-outlined', 'MuiChip-colorDefault');
+    expect(esperable).not.toHaveClass('MuiChip-colorSuccess');
+
+    const atencion = chipDe(suspendidaEn, 'Suspendida');
+    expect(atencion).toHaveClass('MuiChip-filled', 'MuiChip-colorWarning');
+
+    const cerrada = chipDe(finalizadaEn, 'Finalizada');
+    expect(cerrada).toHaveClass('MuiChip-filled', 'MuiChip-colorDefault');
+  }
+
+  it('en la tabla, lo vigente es discreto y lo suspendido llama la atención', async () => {
+    lista();
+    renderizarApp('/pacientes/7?pestana=prescripciones', MEDICO);
+
+    const tabla = await screen.findByRole('table', { name: 'Prescripciones' });
+    await within(tabla).findAllByText('Paracetamol');
+    const filas = within(tabla).getAllByRole('row');
+    verificarChips(filas[1]!, filas[2]!, filas[3]!);
+  });
+
+  it('en las tarjetas (pantalla angosta) es igual', async () => {
+    simularPantallaAngosta();
+    lista();
+    renderizarApp('/pacientes/7?pestana=prescripciones', MEDICO);
+
+    const tarjetas = await screen.findByRole('list', { name: 'Prescripciones' });
+    const items = within(tarjetas).getAllByRole('listitem');
+    verificarChips(items[0]!, items[1]!, items[2]!);
+  });
+
+  it('el estado de la toma sigue siendo su propio chip: la suspendida no tiene ninguno', async () => {
+    fijarAhora();
+    lista();
+    renderizarApp('/pacientes/7?pestana=prescripciones', MEDICO);
+
+    const tabla = await screen.findByRole('table', { name: 'Prescripciones' });
+    await within(tabla).findAllByText('Paracetamol');
+    const filas = within(tabla).getAllByRole('row');
+    // La vigente tiene el chip de la toma (además del de estado); la suspendida, solo el de estado.
+    expect(filas[1]!.querySelectorAll('.MuiChip-root')).toHaveLength(2);
+    expect(filas[2]!.querySelectorAll('.MuiChip-root')).toHaveLength(1);
+  });
+});

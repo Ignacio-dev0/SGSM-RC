@@ -6,12 +6,14 @@ import { ErrorApi, erroresPorCampo, mensajeDeError } from '../../api/cliente';
 import { usePaciente } from '../../api/pacientes';
 import { prescripcionesApi, useCatalogo } from '../../api/prescripciones';
 import type { Via } from '../../api/tipos';
+import { AccionesFormulario } from '../../componentes/AccionesFormulario';
 import { Alerta } from '../../componentes/Alerta';
 import { Boton } from '../../componentes/Boton';
 import { CampoTexto } from '../../componentes/CampoTexto';
 import { EncabezadoPagina } from '../../componentes/EncabezadoPagina';
 import { Selector } from '../../componentes/Selector';
 import { proximasTomas } from '../../utilidades/agenda';
+import { soltarAlGirarLaRueda } from '../../utilidades/campoNumerico';
 import { formatearFechaHora, formatearHora } from '../../utilidades/formato';
 import { useFocoEnPrimerError } from '../../utilidades/useFocoEnPrimerError';
 import { FRECUENCIAS, VIAS, aLocal, etiquetaVia, resumenPrescripcion } from './etiquetas';
@@ -175,7 +177,9 @@ export function CargaPrescripcion() {
       <IdentidadOEstado consulta={paciente} />
       {errorGeneral && <Alerta tipo="error">{errorGeneral}</Alerta>}
       {duplicadas && (
+        // Pide una decisión y aparece arriba, lejos del botón tocado: se lleva el foco (UX-12).
         <Alerta
+          enfocar
           tipo="advertencia"
           titulo="Posible prescripción duplicada"
           accion={
@@ -233,7 +237,15 @@ export function CargaPrescripcion() {
             onBlur={validarDosisAlSalir}
             required
             type="number"
-            slotProps={{ htmlInput: { inputMode: 'decimal', min: 0, step: 'any' } }}
+            slotProps={{
+              htmlInput: {
+                inputMode: 'decimal',
+                min: 0,
+                step: 'any',
+                // La rueda del mouse no cambia la dosis (UX-19).
+                onWheel: soltarAlGirarLaRueda,
+              },
+            }}
           />
           <CampoTexto
             etiqueta="Unidad"
@@ -308,23 +320,13 @@ export function CargaPrescripcion() {
           </Box>
         )}
 
-        <Box
-          sx={{
-            display: 'flex',
-            justifyContent: 'flex-end',
-            alignItems: 'center',
-            flexWrap: 'wrap',
-            columnGap: 1,
-            rowGap: 1,
-            mt: 3,
-          }}
-        >
+        <AccionesFormulario>
           {motivoBloqueo && (
             <Typography
               id={idMotivo}
               variant="body2"
               color="text.secondary"
-              sx={{ mr: 1, textAlign: 'right' }}
+              sx={{ flex: '1 1 auto', textAlign: { sm: 'right' } }}
             >
               {motivoBloqueo}
             </Typography>
@@ -343,7 +345,7 @@ export function CargaPrescripcion() {
           >
             Guardar prescripción
           </Boton>
-        </Box>
+        </AccionesFormulario>
       </Paper>
     </>
   );

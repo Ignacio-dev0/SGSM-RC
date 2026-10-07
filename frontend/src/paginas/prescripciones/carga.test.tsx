@@ -1,4 +1,4 @@
-import { screen, waitFor, within } from '@testing-library/react';
+import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { MEDICO } from '../../pruebas/datos';
@@ -64,7 +64,7 @@ describe('carga de prescripción (T304 · CU17)', () => {
     const ficha = await screen.findByRole('region', { name: 'Paciente' });
     expect(ficha).toHaveTextContent('Benítez, Rosa');
     expect(ficha).toHaveTextContent('DNI 30111222');
-    expect(ficha).toHaveTextContent('Cama A-01');
+    expect(ficha).toHaveTextContent(/Cama A.01/);
   });
 
   it('valida la dosis al salir del campo y los datos obligatorios al guardar', async () => {
@@ -208,5 +208,81 @@ describe('carga de prescripción (T304 · CU17)', () => {
 
     expect(await screen.findByRole('status')).toHaveTextContent(/Prescripción cargada/);
     expect(envios.at(-1)).toMatchObject({ confirmarDuplicada: true });
+  });
+
+  it('T307: el aviso de posible duplicada toma el foco al aparecer, porque pide una decisión (UX-12)', async () => {
+    servidor.use(
+      http.post('*/api/pacientes/7/prescripciones', () =>
+        HttpResponse.json(
+          {
+            error: {
+              codigo: 'PRESCRIPCION_DUPLICADA',
+              mensaje: 'El paciente ya tiene una prescripción vigente de Paracetamol',
+              detalles: {
+                prescripciones: [
+                  { id: 40, dosis: 1000, unidadDosis: 'mg', frecuenciaHoras: 6, via: 'ORAL' },
+                ],
+              },
+            },
+          },
+          { status: 409 },
+        ),
+      ),
+    );
+    renderizarApp('/pacientes/7/prescripciones/nueva', MEDICO);
+
+    await completar();
+    await userEvent.click(screen.getByRole('button', { name: 'Guardar prescripción' }));
+
+    const aviso = (await screen.findByText('Posible prescripción duplicada')).closest(
+      '[role="alert"]',
+    );
+    expect(aviso).toHaveTextContent('Cargar igual');
+    await waitFor(() => expect(aviso).toHaveFocus());
+  });
+});
+
+describe('carga de prescripción: botonera y campos numéricos (F31 · UX-19)', () => {
+  /** Los botones de la botonera del formulario, en el orden en que se leen. */
+  const botonera = () =>
+    within(screen.getByRole('group', { name: 'Acciones del formulario' })).getAllByRole('button');
+
+  it('Cancelar va antes y la acción principal, Guardar prescripción, es la última del grupo', async () => {
+    renderizarApp('/pacientes/7/prescripciones/nueva', MEDICO);
+
+    await screen.findByRole('region', { name: 'Paciente' });
+    expect(botonera().map((b) => b.textContent)).toEqual(['Cancelar', 'Guardar prescripción']);
+    expect(botonera().at(-1)).toHaveAttribute('type', 'submit');
+  });
+
+  it('el motivo por el que no se puede guardar queda dentro de la botonera, junto al botón', async () => {
+    let liberar!: () => void;
+    const llega = new Promise<void>((resolver) => (liberar = resolver));
+    servidor.use(
+      http.get('*/api/pacientes/7', async () => {
+        await llega;
+        return HttpResponse.json({ data: paciente() });
+      }),
+    );
+    renderizarApp('/pacientes/7/prescripciones/nueva', MEDICO);
+
+    const grupo = await screen.findByRole('group', { name: 'Acciones del formulario' });
+    expect(within(grupo).getByText('Esperando los datos del paciente…')).toBeVisible();
+    expect(botonera().at(-1)).toHaveAccessibleDescription('Esperando los datos del paciente…');
+    liberar();
+    await screen.findByRole('region', { name: 'Paciente' });
+  });
+
+  it('la rueda del mouse no cambia la dosis: el campo suelta el foco', async () => {
+    renderizarApp('/pacientes/7/prescripciones/nueva', MEDICO);
+
+    const dosis = await screen.findByLabelText(/^Dosis/);
+    await userEvent.type(dosis, '500');
+    expect(dosis).toHaveFocus();
+
+    fireEvent.wheel(dosis, { deltaY: -100 });
+
+    expect(dosis).not.toHaveFocus();
+    expect(dosis).toHaveValue(500);
   });
 });

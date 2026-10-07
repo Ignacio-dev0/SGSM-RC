@@ -1,9 +1,10 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { Box, Paper } from '@mui/material';
+import { Paper } from '@mui/material';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ErrorApi, erroresPorCampo, mensajeDeError } from '../../api/cliente';
 import { pacientesApi, usePaciente, type DatosPaciente } from '../../api/pacientes';
+import { AccionesFormulario } from '../../componentes/AccionesFormulario';
 import { Alerta } from '../../componentes/Alerta';
 import { Boton } from '../../componentes/Boton';
 import { EncabezadoPagina } from '../../componentes/EncabezadoPagina';
@@ -89,14 +90,14 @@ export function EdicionPaciente() {
               setErrores((e) => ({ ...e, [campo]: undefined }));
             }}
           />
-          <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, mt: 4 }}>
+          <AccionesFormulario>
             <Boton variante="texto" onClick={() => navegar(`/pacientes/${id}`)}>
               Cancelar
             </Boton>
             <Boton type="submit" cargando={guardar.isPending} disabled={!p}>
               Guardar
             </Boton>
-          </Box>
+          </AccionesFormulario>
         </Paper>
       )}
     </>

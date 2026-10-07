@@ -1,4 +1,4 @@
-import { screen, waitFor, within } from '@testing-library/react';
+import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { ENFERMERO, MEDICO } from '../../pruebas/datos';
@@ -88,7 +88,7 @@ describe('modificación de prescripción (T306 · CU19)', () => {
     const ficha = await screen.findByRole('region', { name: 'Paciente' });
     expect(ficha).toHaveTextContent('Benítez, Rosa');
     expect(ficha).toHaveTextContent('DNI 30111222');
-    expect(ficha).toHaveTextContent('Cama A-01');
+    expect(ficha).toHaveTextContent(/Cama A.01/);
   });
 
   it('al guardar muestra el paciente y qué cambia, antes y después', async () => {
@@ -251,5 +251,74 @@ describe('modificación de prescripción (T306 · CU19)', () => {
     await userEvent.click(within(aviso).getByRole('button', { name: 'Reintentar' }));
     expect(await screen.findByRole('region', { name: 'Paciente' })).toBeInTheDocument();
     expect(guardar).toBeEnabled();
+  });
+});
+
+describe('detalle de la prescripción: estado, botonera y campos numéricos (F30 · F31 · UX-19)', () => {
+  const detalle = (extra: Parameters<typeof prescripcion>[0] = {}) =>
+    servidor.use(
+      http.get('*/api/prescripciones/40', () => HttpResponse.json({ data: prescripcion(extra) })),
+    );
+  /** El chip (el recuadro de MUI) que contiene ese texto. */
+  const chipDe = (texto: string) => screen.getByText(texto).closest('.MuiChip-root') as HTMLElement;
+
+  it('una prescripción vigente es lo esperable: chip de contorno y neutro', async () => {
+    detalle();
+    renderizarApp('/prescripciones/40', MEDICO);
+
+    await screen.findByRole('heading', { name: /Paracetamol/ });
+    const chip = chipDe('Vigente');
+    expect(chip).toHaveClass('MuiChip-outlined');
+    expect(chip).toHaveClass('MuiChip-colorDefault');
+    expect(chip).not.toHaveClass('MuiChip-colorSuccess');
+  });
+
+  it('una suspendida pide atención: chip relleno de advertencia', async () => {
+    detalle({ estado: 'SUSPENDIDA', proximaToma: null, motivoCambioEstado: 'Hipotensión' });
+    renderizarApp('/prescripciones/40', MEDICO);
+
+    await screen.findByRole('heading', { name: /Paracetamol/ });
+    const chip = chipDe('Suspendida');
+    expect(chip).toHaveClass('MuiChip-filled');
+    expect(chip).toHaveClass('MuiChip-colorWarning');
+  });
+
+  it('una finalizada ya está cerrada: chip relleno suave y neutro', async () => {
+    detalle({ estado: 'FINALIZADA', proximaToma: null });
+    renderizarApp('/prescripciones/40', MEDICO);
+
+    await screen.findByRole('heading', { name: /Paracetamol/ });
+    const chip = chipDe('Finalizada');
+    expect(chip).toHaveClass('MuiChip-filled');
+    expect(chip).toHaveClass('MuiChip-colorDefault');
+  });
+
+  it('Guardar cambios es lo último de la botonera y el motivo del bloqueo queda dentro', async () => {
+    detalle();
+    renderizarApp('/prescripciones/40', MEDICO);
+
+    await screen.findByRole('region', { name: 'Paciente' });
+    const dosis = await screen.findByLabelText(/^Dosis/);
+    await waitFor(() => expect(dosis).toHaveValue(500));
+    const grupo = screen.getByRole('group', { name: 'Acciones del formulario' });
+    const botones = within(grupo).getAllByRole('button');
+    expect(botones.at(-1)).toHaveAccessibleName('Guardar cambios');
+    expect(within(grupo).getByText('No hay cambios para guardar')).toBeVisible();
+    expect(botones.at(-1)).toHaveAccessibleDescription('No hay cambios para guardar');
+  });
+
+  it('la rueda del mouse no cambia la dosis: el campo suelta el foco', async () => {
+    detalle();
+    renderizarApp('/prescripciones/40', MEDICO);
+
+    const dosis = await screen.findByLabelText(/^Dosis/);
+    await waitFor(() => expect(dosis).toHaveValue(500));
+    dosis.focus();
+    expect(dosis).toHaveFocus();
+
+    fireEvent.wheel(dosis, { deltaY: 100 });
+
+    expect(dosis).not.toHaveFocus();
+    expect(dosis).toHaveValue(500);
   });
 });

@@ -1,4 +1,4 @@
-import { screen, waitFor, within } from '@testing-library/react';
+import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { ENFERMERO } from '../../pruebas/datos';
@@ -128,14 +128,14 @@ describe('administración de medicamento (T413 · CU20)', () => {
     );
   });
 
-  it('identifica al paciente con DNI, edad y cama (la cara valida a quien registra, no al paciente)', async () => {
+  it('identifica al paciente con DNI, edad y cama (el rostro valida a quien registra, no al paciente)', async () => {
     renderizarApp('/suministros/medicamento?pacienteId=7', ENFERMERO);
 
     const ficha = await screen.findByRole('region', { name: 'Paciente' });
     expect(ficha).toHaveTextContent('Benítez, Rosa');
     expect(ficha).toHaveTextContent('DNI 30111222');
     expect(ficha).toHaveTextContent(/\d+ años/);
-    expect(ficha).toHaveTextContent('Cama A-01');
+    expect(ficha).toHaveTextContent(/Cama A.01/);
   });
 
   it('cada prescripción dice si la toma toca ahora, está atrasada, ya se dio o cuánto falta', async () => {
@@ -665,5 +665,44 @@ describe('al cambiar de paciente no queda el intento anterior (UX-05)', () => {
     expect(
       await screen.findByRole('heading', { level: 1, name: /Benítez, Rosa/ }),
     ).toBeInTheDocument();
+  });
+});
+
+describe('botonera y campos numéricos de la administración (F31 · UX-19)', () => {
+  const grupo = () => screen.getByRole('group', { name: 'Acciones del formulario' });
+
+  it('antes de elegir el medicamento, el botón deshabilitado y su ayuda van juntos en la botonera', async () => {
+    renderizarApp('/suministros/medicamento?pacienteId=7', ENFERMERO);
+
+    const confirmar = await screen.findByRole('button', { name: 'Confirmar con mi rostro' });
+    expect(within(grupo()).getAllByRole('button').at(-1)).toBe(confirmar);
+    expect(within(grupo()).getByText('Elija el medicamento que va a dar')).toBeVisible();
+    expect(confirmar).toHaveAccessibleDescription('Elija el medicamento que va a dar');
+  });
+
+  it('con el medicamento elegido, Confirmar con mi rostro es lo último de la botonera', async () => {
+    renderizarApp('/suministros/medicamento?pacienteId=7', ENFERMERO);
+
+    await userEvent.click(await screen.findByRole('button', { name: /Paracetamol 500\smg/ }));
+
+    const botones = within(grupo()).getAllByRole('button');
+    expect(botones.map((b) => b.textContent)).toEqual(['Confirmar con mi rostro']);
+    expect(botones.at(-1)).toBeEnabled();
+    // Hay una sola botonera: la del formulario.
+    expect(screen.getAllByRole('group', { name: 'Acciones del formulario' })).toHaveLength(1);
+  });
+
+  it('la rueda del mouse no cambia la cantidad: el campo suelta el foco', async () => {
+    renderizarApp('/suministros/medicamento?pacienteId=7', ENFERMERO);
+
+    await userEvent.click(await screen.findByRole('button', { name: /Paracetamol 500\smg/ }));
+    const cantidad = screen.getByLabelText(/^Cantidad/);
+    cantidad.focus();
+    expect(cantidad).toHaveFocus();
+
+    fireEvent.wheel(cantidad, { deltaY: 100 });
+
+    expect(cantidad).not.toHaveFocus();
+    expect(cantidad).toHaveValue(500);
   });
 });
