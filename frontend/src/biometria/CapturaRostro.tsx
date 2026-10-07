@@ -48,6 +48,7 @@ function CapturaConCamara({ alCapturar }: Pick<Props, 'alCapturar'>) {
   alCapturarRef.current = alCapturar;
   const [estado, setEstado] = useState<Estado>('iniciando');
   const [error, setError] = useState<string | null>(null);
+  const [intento, setIntento] = useState(0);
 
   useEffect(() => {
     let cancelado = false;
@@ -94,7 +95,7 @@ function CapturaConCamara({ alCapturar }: Pick<Props, 'alCapturar'>) {
         if (cancelado) return;
         setEstado('error');
         setError(
-          'No se pudo usar la cámara. Revise que el navegador tenga permiso para usarla (la cámara solo funciona con HTTPS o en localhost) y que ninguna otra aplicación la esté ocupando.',
+          'No se pudo encender la cámara. Revise que la tablet le haya dado permiso a esta página para usarla y que no la esté usando otra aplicación. Si sigue sin funcionar, avise al área de sistemas.',
         );
       }
     })();
@@ -104,7 +105,13 @@ function CapturaConCamara({ alCapturar }: Pick<Props, 'alCapturar'>) {
       clearTimeout(temporizador);
       flujo?.getTracks().forEach((t) => t.stop());
     };
-  }, [motor]);
+  }, [motor, intento]);
+
+  const reintentar = () => {
+    setError(null);
+    setEstado('iniciando');
+    setIntento((i) => i + 1);
+  };
 
   return (
     <Box sx={{ display: 'grid', gap: 2, justifyItems: 'center' }}>
@@ -140,7 +147,16 @@ function CapturaConCamara({ alCapturar }: Pick<Props, 'alCapturar'>) {
         )}
       </Box>
       {error ? (
-        <Alerta tipo="error">{error}</Alerta>
+        <Alerta
+          tipo="error"
+          accion={
+            <Boton variante="texto" onClick={reintentar}>
+              Reintentar
+            </Boton>
+          }
+        >
+          {error}
+        </Alerta>
       ) : (
         <Typography role="status" sx={{ fontWeight: 700, textAlign: 'center' }}>
           {MENSAJES[estado as keyof typeof MENSAJES]}
@@ -154,7 +170,7 @@ function CapturaSimulada({ persona, alCapturar }: Props) {
   return (
     <Box sx={{ display: 'grid', gap: 2 }}>
       <Alerta tipo="info" titulo="Modo de demostración">
-        La cámara está desactivada (VITE_BIOMETRIA_MODO=simulado). Elija qué rostro simular.
+        Esta instalación no usa la cámara: elija qué rostro simular.
       </Alerta>
       <Boton
         startIcon={<FaceRetouchingNaturalIcon />}

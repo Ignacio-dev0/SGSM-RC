@@ -1,4 +1,4 @@
-import { act, render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ThemeProvider } from '@mui/material';
 import { http, HttpResponse } from 'msw';
@@ -87,12 +87,19 @@ describe('captura del rostro (T402 · CU07)', () => {
     expect(motor.cargar).toHaveBeenCalled();
   });
 
-  it('explica qué hacer si no se puede usar la cámara', async () => {
-    vi.mocked(navigator.mediaDevices.getUserMedia).mockRejectedValue(new Error('NotAllowedError'));
+  it('explica qué hacer si no se puede usar la cámara, sin jerga técnica, y deja reintentar', async () => {
+    const pedirCamara = vi.mocked(navigator.mediaDevices.getUserMedia);
+    pedirCamara.mockRejectedValue(new Error('NotAllowedError'));
     conProveedores(<CapturaRostro persona="enfermero" alCapturar={vi.fn()} />, {
       motor: motorFalso([{ rostros: 0, descriptor: null }]),
     });
-    expect(await screen.findByText(/No se pudo usar la cámara/)).toBeInTheDocument();
+
+    const alerta = await screen.findByRole('alert');
+    expect(alerta).toHaveTextContent(/No se pudo encender la cámara/);
+    expect(alerta).toHaveTextContent(/permiso/);
+    expect(alerta).not.toHaveTextContent(/HTTPS|localhost|VITE_/);
+    await userEvent.click(within(alerta).getByRole('button', { name: 'Reintentar' }));
+    await waitFor(() => expect(pedirCamara).toHaveBeenCalledTimes(2));
   });
 
   it('en modo de demostración simula el rostro de la persona sin usar la cámara', async () => {
@@ -101,6 +108,7 @@ describe('captura del rostro (T402 · CU07)', () => {
     conProveedores(<CapturaRostro persona="enfermero" alCapturar={alCapturar} />);
 
     expect(screen.getByText(/Modo de demostración/)).toBeInTheDocument();
+    expect(screen.queryByText(/VITE_/)).not.toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: /Simular el rostro de enfermero/ }));
 
     expect(alCapturar).toHaveBeenCalledWith(

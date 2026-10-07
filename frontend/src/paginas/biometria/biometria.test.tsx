@@ -125,7 +125,8 @@ describe('prueba de concepto del reconocimiento facial (T401)', () => {
   it('en modo demostración explica que la prueba necesita la cámara', async () => {
     vi.stubEnv('VITE_BIOMETRIA_MODO', 'simulado');
     renderizarApp('/biometria/prueba', ADMIN);
-    expect(await screen.findByText(/necesita el modo cámara/)).toBeInTheDocument();
+    expect(await screen.findByText(/Esta prueba necesita la cámara/)).toBeInTheDocument();
+    expect(screen.queryByText(/VITE_/)).not.toBeInTheDocument();
   });
 
   it('con la cámara mide el tiempo de detección y la cantidad de rostros', async () => {
