@@ -52,3 +52,27 @@ export function tomaMasCercana(p: DatosAgenda, momento: Date): Date | null {
   while (k > 0 && !dentroDelTratamiento(p, tomaN(p, k))) k--;
   return tomaN(p, k);
 }
+
+/** Minutos durante los que una toma no administrada se sigue mostrando como la próxima. */
+export const MARGEN_TOMA_MINUTOS = 30;
+
+/**
+ * Próxima toma que falta dar: como `proximaToma`, pero una toma de los últimos
+ * MARGEN_TOMA_MINUTOS que todavía no se administró sigue siendo la próxima, y una que ya se
+ * administró se saltea. Las tomas atrasadas por más tiempo las sigue el módulo de recordatorios.
+ */
+export function proximaTomaPendiente(
+  p: DatosAgenda & { estado: string },
+  ahora: Date,
+  administraciones: Date[],
+): Date | null {
+  const desde = new Date(ahora.getTime() - MARGEN_TOMA_MINUTOS * 60_000);
+  let toma = proximaToma(p, desde);
+  const administradas = new Set(
+    administraciones.map((a) => tomaMasCercana(p, a)?.getTime()).filter((t) => t !== undefined),
+  );
+  while (toma && administradas.has(toma.getTime())) {
+    toma = proximaToma(p, new Date(toma.getTime() + 1));
+  }
+  return toma;
+}

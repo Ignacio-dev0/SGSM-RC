@@ -1,4 +1,4 @@
-import { proximaToma, tomaMasCercana, tomasEntre } from './agenda';
+import { proximaToma, proximaTomaPendiente, tomaMasCercana, tomasEntre } from './agenda';
 
 const h = (iso: string) => new Date(`2026-10-07T${iso}:00.000Z`);
 const dia2 = (iso: string) => new Date(`2026-10-08T${iso}:00.000Z`);
@@ -82,5 +82,27 @@ describe('cálculo de horarios de administración (T302 · RF07)', () => {
     it('antes del inicio no hay toma asociada', () => {
       expect(tomaMasCercana(cada8, h('03:00'))).toBeNull();
     });
+  });
+});
+
+describe('proximaTomaPendiente', () => {
+  const vigente = { ...cada8, estado: 'VIGENTE' as const };
+  const pendiente = (ahora: Date, administraciones: Date[] = []) =>
+    proximaTomaPendiente(vigente, ahora, administraciones)?.toISOString();
+
+  it('una toma de hace pocos minutos que no se dio sigue siendo la próxima', () => {
+    expect(pendiente(h('08:10'))).toBe(h('08:00').toISOString());
+  });
+
+  it('si esa toma ya se administró, la próxima es la siguiente', () => {
+    expect(pendiente(h('08:10'), [h('08:05')])).toBe(h('16:00').toISOString());
+  });
+
+  it('una toma atrasada más de media hora ya no se muestra como próxima', () => {
+    expect(pendiente(h('08:45'))).toBe(h('16:00').toISOString());
+  });
+
+  it('no hay próxima toma si la prescripción no está vigente', () => {
+    expect(proximaTomaPendiente({ ...vigente, estado: 'FINALIZADA' }, h('08:10'), [])).toBeNull();
   });
 });

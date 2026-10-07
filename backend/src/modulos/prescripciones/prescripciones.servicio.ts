@@ -3,7 +3,7 @@ import { conflicto, noEncontrado, reglaNegocio } from '../../comun/errores';
 import { reloj } from '../../comun/reloj';
 import { prisma, type ClienteDb } from '../../db';
 import { cambios, registrarAuditoria } from '../auditoria/auditoria.servicio';
-import { proximaToma, tomasEntre } from './agenda';
+import { proximaTomaPendiente, tomasEntre } from './agenda';
 import type { AltaPrescripcion, ModificacionPrescripcion } from './prescripciones.esquemas';
 
 /**
@@ -48,7 +48,11 @@ export function aDtoPrescripcion(p: PrescripcionCompleta, ahora = reloj.ahora())
     motivoCambioEstado: p.motivoCambioEstado,
     prescriptor: nombreDe(p.prescriptor),
     creadoEn: p.creadoEn,
-    proximaToma: proximaToma(p, ahora),
+    proximaToma: proximaTomaPendiente(
+      p,
+      ahora,
+      p.suministros.map((s) => s.fechaHora),
+    ),
     ultimasAdministraciones: p.suministros.map((s) => ({
       id: s.id,
       fechaHora: s.fechaHora,
