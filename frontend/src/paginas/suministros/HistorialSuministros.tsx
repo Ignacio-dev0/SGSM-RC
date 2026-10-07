@@ -13,9 +13,15 @@ import { EncabezadoPagina } from '../../componentes/EncabezadoPagina';
 import { ErrorDeCarga } from '../../componentes/EstadoDeCarga';
 import { Selector } from '../../componentes/Selector';
 import { Tabla, type Columna } from '../../componentes/Tabla';
-import { formatearFechaHora, formatearFechaSinZona } from '../../utilidades/formato';
+import {
+  formatearFechaHora,
+  formatearFechaHoraCorta,
+  rangoDeFechas,
+} from '../../utilidades/formato';
+import { ColumnaPrincipal, GrillaDeFiltros, Recargando } from '../../utilidades/listado';
 import { oracionDe, pasosParaProbar } from '../../utilidades/sinResultados';
 import { useFiltrosEnUrl } from '../../utilidades/useFiltrosEnUrl';
+import { formatearCama } from '../pacientes/etiquetas';
 import { SelectorPaciente } from './comunes';
 import { DialogoSuministro } from './DialogoSuministro';
 import { detalleDe } from './formato';
@@ -23,9 +29,13 @@ import { detalleDe } from './formato';
 const COLUMNAS: Columna<Suministro>[] = [
   { titulo: 'Fecha y hora', valor: (s) => formatearFechaHora(s.fechaHora), ancho: 170 },
   {
+    // El paciente y su cama, en negrita; la cama no se parte en "A-" y "01".
     titulo: 'Paciente',
-    valor: (s) =>
-      `${s.paciente.apellido}, ${s.paciente.nombre}${s.paciente.cama ? ` · ${s.paciente.cama}` : ''}`,
+    valor: (s) => (
+      <ColumnaPrincipal>
+        {`${s.paciente.apellido}, ${s.paciente.nombre}${s.paciente.cama ? ` · ${formatearCama(s.paciente.cama)}` : ''}`}
+      </ColumnaPrincipal>
+    ),
   },
   { titulo: 'Detalle', valor: detalleDe },
   { titulo: 'Registró', valor: (s) => s.usuario.nombre },
@@ -49,16 +59,6 @@ const FILTROS_INICIALES = { pacienteId: '', desde: '', hasta: '', tipoInsumo: ''
 
 const MENSAJE_SIN_SUMINISTROS =
   'Todavía no se registró ningún suministro. Aparecerán aquí cuando se administre un medicamento o se registren insumos.';
-
-/** "AAAA-MM-DD" (de los campos de fecha) → "entre el 01/10/2026 y el 05/10/2026". */
-function rangoDeFechas(desde: string, hasta: string) {
-  if (desde && hasta) {
-    return `entre el ${formatearFechaSinZona(desde)} y el ${formatearFechaSinZona(hasta)}`;
-  }
-  if (desde) return `desde el ${formatearFechaSinZona(desde)}`;
-  if (hasta) return `hasta el ${formatearFechaSinZona(hasta)}`;
-  return '';
-}
 
 /** Qué no se encontró y qué probar: la causa y el paso siguiente, con lo que se filtró. */
 function mensajeSinSuministros(
@@ -145,14 +145,7 @@ export function HistorialSuministros() {
           )
         }
       />
-      <Box
-        sx={{
-          display: 'grid',
-          gap: 2,
-          gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', lg: '2fr 1fr 1fr 1fr 1.5fr' },
-          mb: 2,
-        }}
-      >
+      <GrillaDeFiltros columnas="2fr 1fr 1fr 1fr 1.5fr" desde="lg">
         <SelectorPaciente
           valor={pacienteId}
           alCambiar={(v) => filtros.fijar({ pacienteId: v })}
@@ -192,7 +185,7 @@ export function HistorialSuministros() {
             etiqueta: u.nombre,
           }))}
         />
-      </Box>
+      </GrillaDeFiltros>
       {consulta.isError ? (
         // Un fallo de carga no se lee como "no hay suministros": sin tabla ni mensaje de vacío.
         <ErrorDeCarga
@@ -201,18 +194,23 @@ export function HistorialSuministros() {
           alReintentar={() => void consulta.refetch()}
         />
       ) : (
-        <Tabla
-          titulo="Suministros"
-          columnas={COLUMNAS}
-          filas={consulta.data?.data ?? []}
-          claveFila={(s) => s.id}
-          cargando={consulta.isFetching}
-          mensajeVacio={mensajeSinSuministros(filtros.valores, conFiltros, nombreResponsable)}
-          alTocarFila={setAbierto}
-          {...(consulta.data && {
-            paginacion: { ...consulta.data.meta, alCambiarPagina: filtros.irAPagina },
-          })}
-        />
+        <Recargando activo={consulta.isFetching && consulta.isPlaceholderData}>
+          <Tabla
+            titulo="Suministros"
+            columnas={COLUMNAS}
+            filas={consulta.data?.data ?? []}
+            claveFila={(s) => s.id}
+            cargando={consulta.isFetching}
+            mensajeVacio={mensajeSinSuministros(filtros.valores, conFiltros, nombreResponsable)}
+            alTocarFila={setAbierto}
+            etiquetaFila={(s) =>
+              `Abrir el registro de ${formatearFechaHoraCorta(s.fechaHora)} de ${s.paciente.apellido}, ${s.paciente.nombre}`
+            }
+            {...(consulta.data && {
+              paginacion: { ...consulta.data.meta, alCambiarPagina: filtros.irAPagina },
+            })}
+          />
+        </Recargando>
       )}
       {sinResultados && conFiltros && (
         <Box

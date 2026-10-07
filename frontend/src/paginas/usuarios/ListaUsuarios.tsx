@@ -13,12 +13,16 @@ import { EncabezadoPagina } from '../../componentes/EncabezadoPagina';
 import { ErrorDeCarga } from '../../componentes/EstadoDeCarga';
 import { Selector } from '../../componentes/Selector';
 import { Tabla, type Columna } from '../../componentes/Tabla';
+import { ColumnaPrincipal, GrillaDeFiltros, Recargando } from '../../utilidades/listado';
 import { oracionDe, pasosParaProbar } from '../../utilidades/sinResultados';
 import { useFiltrosEnUrl } from '../../utilidades/useFiltrosEnUrl';
 import { useRetardo } from '../../utilidades/useRetardo';
 
 const COLUMNAS: Columna<Usuario>[] = [
-  { titulo: 'Apellido y nombre', valor: (u) => `${u.apellido}, ${u.nombre}` },
+  {
+    titulo: 'Nombre',
+    valor: (u) => <ColumnaPrincipal>{`${u.apellido}, ${u.nombre}`}</ColumnaPrincipal>,
+  },
   { titulo: 'Usuario', valor: (u) => u.nombreUsuario },
   { titulo: 'DNI', valor: (u) => u.dni },
   { titulo: 'Rol', valor: (u) => u.rol.nombre },
@@ -114,14 +118,7 @@ export function ListaUsuarios() {
       />
       {aviso && <Alerta tipo="exito">{aviso}</Alerta>}
 
-      <Box
-        sx={{
-          display: 'grid',
-          gap: 2,
-          gridTemplateColumns: { xs: '1fr', md: '2fr 1fr 1fr' },
-          mb: 2,
-        }}
-      >
+      <GrillaDeFiltros columnas="2fr 1fr 1fr">
         <CampoTexto
           etiqueta="Buscar por apellido, usuario o DNI"
           valor={texto}
@@ -155,7 +152,7 @@ export function ListaUsuarios() {
             { valor: '', etiqueta: 'Todos' },
           ]}
         />
-      </Box>
+      </GrillaDeFiltros>
 
       {consulta.isError ? (
         // Un fallo de carga no se lee como "no hay usuarios": sin tabla ni mensaje de vacío.
@@ -165,18 +162,21 @@ export function ListaUsuarios() {
           alReintentar={() => void consulta.refetch()}
         />
       ) : (
-        <Tabla
-          titulo="Usuarios"
-          columnas={COLUMNAS}
-          filas={consulta.data?.data ?? []}
-          claveFila={(u) => u.id}
-          cargando={consulta.isFetching}
-          mensajeVacio={mensajeSinUsuarios(aplicados, conFiltros, nombreRol)}
-          alTocarFila={(u) => navegar(`/usuarios/${u.id}`)}
-          {...(consulta.data && {
-            paginacion: { ...consulta.data.meta, alCambiarPagina: filtros.irAPagina },
-          })}
-        />
+        <Recargando activo={consulta.isFetching && consulta.isPlaceholderData}>
+          <Tabla
+            titulo="Usuarios"
+            columnas={COLUMNAS}
+            filas={consulta.data?.data ?? []}
+            claveFila={(u) => u.id}
+            cargando={consulta.isFetching}
+            mensajeVacio={mensajeSinUsuarios(aplicados, conFiltros, nombreRol)}
+            alTocarFila={(u) => navegar(`/usuarios/${u.id}`)}
+            etiquetaFila={(u) => `Abrir ${u.apellido}, ${u.nombre}`}
+            {...(consulta.data && {
+              paginacion: { ...consulta.data.meta, alCambiarPagina: filtros.irAPagina },
+            })}
+          />
+        </Recargando>
       )}
       {sinResultados && conFiltros && (
         <Box

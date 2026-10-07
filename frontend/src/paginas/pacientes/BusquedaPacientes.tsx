@@ -14,17 +14,22 @@ import { ErrorDeCarga } from '../../componentes/EstadoDeCarga';
 import { Selector } from '../../componentes/Selector';
 import { Tabla, type Columna } from '../../componentes/Tabla';
 import { edad } from '../../utilidades/formato';
+import { ColumnaPrincipal, GrillaDeFiltros, Recargando } from '../../utilidades/listado';
 import { oracionDe, pasosParaProbar } from '../../utilidades/sinResultados';
 import { useFiltrosEnUrl } from '../../utilidades/useFiltrosEnUrl';
 import { useRetardo } from '../../utilidades/useRetardo';
+import { formatearCama } from './etiquetas';
 
 const COLUMNAS: Columna<Paciente>[] = [
   {
     titulo: 'Cama',
-    valor: (p) => (p.cama ? <strong>{p.cama.numero}</strong> : '—'),
+    valor: (p) => (p.cama ? <strong>{formatearCama(p.cama.numero)}</strong> : '—'),
     ancho: 90,
   },
-  { titulo: 'Apellido y nombre', valor: (p) => `${p.apellido}, ${p.nombre}` },
+  {
+    titulo: 'Paciente',
+    valor: (p) => <ColumnaPrincipal>{`${p.apellido}, ${p.nombre}`}</ColumnaPrincipal>,
+  },
   { titulo: 'DNI', valor: (p) => p.dni },
   { titulo: 'Edad', valor: (p) => `${edad(p.fechaNacimiento)} años` },
   { titulo: 'Sala', valor: (p) => p.cama?.sala.nombre ?? '—' },
@@ -120,14 +125,7 @@ export function BusquedaPacientes() {
         }
       />
 
-      <Box
-        sx={{
-          display: 'grid',
-          gap: 2,
-          gridTemplateColumns: { xs: '1fr', md: '2fr 1fr 1fr' },
-          mb: 2,
-        }}
-      >
+      <GrillaDeFiltros columnas="2fr 1fr 1fr">
         <CampoTexto
           etiqueta="Buscar por apellido, DNI o cama"
           valor={texto}
@@ -162,7 +160,7 @@ export function BusquedaPacientes() {
             { valor: '', etiqueta: 'Todos' },
           ]}
         />
-      </Box>
+      </GrillaDeFiltros>
 
       {consulta.isError ? (
         // Un fallo de carga no se lee como "no hay pacientes": sin tabla ni mensaje de vacío.
@@ -172,23 +170,26 @@ export function BusquedaPacientes() {
           alReintentar={() => void consulta.refetch()}
         />
       ) : (
-        <Tabla
-          titulo="Pacientes"
-          columnas={COLUMNAS}
-          filas={consulta.data?.data ?? []}
-          claveFila={(p) => p.id}
-          cargando={consulta.isFetching}
-          mensajeVacio={mensajeSinPacientes(aplicados, conFiltros, nombreSala)}
-          // La ficha vuelve a esta búsqueda, con sus filtros, con la flecha Volver.
-          alTocarFila={(p) =>
-            navegar(`/pacientes/${p.id}`, {
-              state: { volverA: ubicacion.pathname + ubicacion.search },
-            })
-          }
-          {...(consulta.data && {
-            paginacion: { ...consulta.data.meta, alCambiarPagina: filtros.irAPagina },
-          })}
-        />
+        <Recargando activo={consulta.isFetching && consulta.isPlaceholderData}>
+          <Tabla
+            titulo="Pacientes"
+            columnas={COLUMNAS}
+            filas={consulta.data?.data ?? []}
+            claveFila={(p) => p.id}
+            cargando={consulta.isFetching}
+            mensajeVacio={mensajeSinPacientes(aplicados, conFiltros, nombreSala)}
+            // La ficha vuelve a esta búsqueda, con sus filtros, con la flecha Volver.
+            alTocarFila={(p) =>
+              navegar(`/pacientes/${p.id}`, {
+                state: { volverA: ubicacion.pathname + ubicacion.search },
+              })
+            }
+            etiquetaFila={(p) => `Abrir ${p.apellido}, ${p.nombre}`}
+            {...(consulta.data && {
+              paginacion: { ...consulta.data.meta, alCambiarPagina: filtros.irAPagina },
+            })}
+          />
+        </Recargando>
       )}
       {sinResultados && (conFiltros || puedeInternar) && (
         <Box

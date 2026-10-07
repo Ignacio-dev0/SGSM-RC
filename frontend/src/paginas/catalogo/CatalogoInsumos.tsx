@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Box,
   Chip,
@@ -10,7 +10,7 @@ import {
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import SearchIcon from '@mui/icons-material/Search';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ErrorApi, erroresPorCampo, mensajeDeError } from '../../api/cliente';
 import { insumosApi, type DatosInsumo } from '../../api/prescripciones';
 import type { Insumo, TipoInsumo } from '../../api/tipos';
@@ -22,6 +22,8 @@ import { ErrorDeCarga } from '../../componentes/EstadoDeCarga';
 import { ModalConfirmacion } from '../../componentes/ModalConfirmacion';
 import { Selector } from '../../componentes/Selector';
 import { Tabla, type Columna } from '../../componentes/Tabla';
+import { sinCortes } from '../../utilidades/formato';
+import { ColumnaPrincipal, GrillaDeFiltros, Recargando } from '../../utilidades/listado';
 import { oracionDe, pasosParaProbar } from '../../utilidades/sinResultados';
 import { useFiltrosEnUrl } from '../../utilidades/useFiltrosEnUrl';
 import { useRetardo } from '../../utilidades/useRetardo';
@@ -34,9 +36,10 @@ const TIPOS = [
 ];
 
 const COLUMNAS: Columna<Insumo>[] = [
-  { titulo: 'Nombre', valor: (i) => <strong>{i.nombre}</strong> },
+  // Nombre y presentación sin cortes entre el número y su unidad ("500 mg", "10 x 10 cm").
+  { titulo: 'Nombre', valor: (i) => <ColumnaPrincipal>{sinCortes(i.nombre)}</ColumnaPrincipal> },
   { titulo: 'Tipo', valor: (i) => (i.tipo === 'MEDICAMENTO' ? 'Medicamento' : 'Insumo') },
-  { titulo: 'Presentación', valor: (i) => i.presentacion || '—' },
+  { titulo: 'Presentación', valor: (i) => (i.presentacion ? sinCortes(i.presentacion) : '—') },
   { titulo: 'Unidad', valor: (i) => i.unidadMedida },
   {
     titulo: 'Estado',
@@ -263,7 +266,13 @@ export function CatalogoInsumos() {
   const consulta = useQuery({
     queryKey: ['insumos', aplicados],
     queryFn: () => insumosApi.listar({ ...aplicados, tipo: tipo as TipoInsumo | '' }),
+    placeholderData: keepPreviousData,
   });
+  // Por nombre como se ordena en español: "Cánula" antes que "Ceftriaxona", no después de "Zinc".
+  const insumos = useMemo(
+    () => [...(consulta.data ?? [])].sort((a, b) => a.nombre.localeCompare(b.nombre, 'es')),
+    [consulta.data],
+  );
 
   // Solo con la respuesta ya asentada y sin error: un fallo de carga no es "no hay insumos".
   const sinResultados = consulta.isSuccess && !consulta.isFetching && consulta.data.length === 0;
@@ -289,14 +298,7 @@ export function CatalogoInsumos() {
           {aviso}
         </Alerta>
       )}
-      <Box
-        sx={{
-          display: 'grid',
-          gap: 2,
-          gridTemplateColumns: { xs: '1fr', md: '2fr 1fr 1fr' },
-          mb: 2,
-        }}
-      >
+      <GrillaDeFiltros columnas="2fr 1fr 1fr">
         <CampoTexto
           etiqueta="Buscar por nombre"
           valor={texto}
@@ -332,7 +334,7 @@ export function CatalogoInsumos() {
             { valor: 'false', etiqueta: 'Dados de baja' },
           ]}
         />
-      </Box>
+      </GrillaDeFiltros>
       {consulta.isError ? (
         // Un fallo de carga no se lee como "no hay insumos": sin tabla ni mensaje de vacío.
         <ErrorDeCarga
@@ -341,15 +343,18 @@ export function CatalogoInsumos() {
           alReintentar={() => void consulta.refetch()}
         />
       ) : (
-        <Tabla
-          titulo="Catálogo"
-          columnas={COLUMNAS}
-          filas={consulta.data ?? []}
-          claveFila={(i) => i.id}
-          cargando={consulta.isFetching}
-          mensajeVacio={mensajeSinInsumos(aplicados, conFiltros)}
-          alTocarFila={(i) => setDialogo({ insumo: i })}
-        />
+        <Recargando activo={consulta.isFetching && consulta.isPlaceholderData}>
+          <Tabla
+            titulo="Catálogo"
+            columnas={COLUMNAS}
+            filas={insumos}
+            claveFila={(i) => i.id}
+            cargando={consulta.isFetching}
+            mensajeVacio={mensajeSinInsumos(aplicados, conFiltros)}
+            alTocarFila={(i) => setDialogo({ insumo: i })}
+            etiquetaFila={(i) => `Abrir ${i.nombre}`}
+          />
+        </Recargando>
       )}
       {sinResultados && conFiltros && (
         <Box

@@ -8,6 +8,7 @@ import { usePermisos, usuariosApi } from '../../api/usuarios';
 import { Alerta } from '../../componentes/Alerta';
 import { Boton } from '../../componentes/Boton';
 import { EncabezadoPagina } from '../../componentes/EncabezadoPagina';
+import { Cargando, ErrorDeCarga } from '../../componentes/EstadoDeCarga';
 
 const NOMBRE_MODULO: Record<string, string> = {
   usuarios: 'Usuarios',
@@ -72,51 +73,79 @@ export function PermisosUsuario() {
       />
       {aviso && <Alerta tipo="exito">{aviso}</Alerta>}
       {guardar.isError && <Alerta tipo="error">{mensajeDeError(guardar.error)}</Alerta>}
-      {usuario.isError && <Alerta tipo="error">{mensajeDeError(usuario.error)}</Alerta>}
 
-      <Typography color="text.secondary" sx={{ mb: 2 }}>
-        Los permisos que trae el rol aparecen marcados y no se pueden quitar desde acá. Marque los
-        permisos extra que necesita este usuario.
-      </Typography>
+      {usuario.isError || permisos.isError ? (
+        // Un fallo de carga no se lee como "no hay permisos": sin lista ni botón de guardar.
+        <>
+          {usuario.isError && (
+            <ErrorDeCarga
+              que="los datos del usuario"
+              error={usuario.error}
+              alReintentar={() => void usuario.refetch()}
+            />
+          )}
+          {permisos.isError && (
+            <ErrorDeCarga
+              que="la lista de permisos"
+              error={permisos.error}
+              alReintentar={() => void permisos.refetch()}
+            />
+          )}
+        </>
+      ) : !u || !permisos.data ? (
+        <Cargando texto="Cargando los permisos…" />
+      ) : permisos.data.length === 0 ? (
+        <Alerta tipo="info">
+          No hay permisos adicionales para asignar. El usuario tiene los que trae su rol; vuelva a
+          su ficha para revisarlo.
+        </Alerta>
+      ) : (
+        <>
+          <Typography color="text.secondary" sx={{ mb: 2 }}>
+            Los permisos que trae el rol aparecen marcados y no se pueden quitar desde acá. Marque
+            los permisos extra que necesita este usuario.
+          </Typography>
 
-      <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr', lg: '1fr 1fr' } }}>
-        {[...porModulo.entries()].map(([modulo, lista]) => (
-          <Paper key={modulo} variant="outlined" sx={{ p: 2 }}>
-            <Typography variant="h6" component="h2">
-              {NOMBRE_MODULO[modulo] ?? modulo}
-            </Typography>
-            {lista.map((p) => (
-              <FormControlLabel
-                key={p.codigo}
-                sx={{ display: 'flex', alignItems: 'flex-start', my: 0.5 }}
-                control={
-                  <Checkbox
-                    checked={delRol.has(p.codigo) || adicionales.has(p.codigo)}
-                    disabled={delRol.has(p.codigo)}
-                    onChange={() => alternar(p.codigo)}
+          <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr', lg: '1fr 1fr' } }}>
+            {[...porModulo.entries()].map(([modulo, lista]) => (
+              <Paper key={modulo} variant="outlined" sx={{ p: 2 }}>
+                <Typography variant="h6" component="h2">
+                  {NOMBRE_MODULO[modulo] ?? modulo}
+                </Typography>
+                {lista.map((p) => (
+                  <FormControlLabel
+                    key={p.codigo}
+                    sx={{ display: 'flex', alignItems: 'flex-start', my: 0.5 }}
+                    control={
+                      <Checkbox
+                        checked={delRol.has(p.codigo) || adicionales.has(p.codigo)}
+                        disabled={delRol.has(p.codigo)}
+                        onChange={() => alternar(p.codigo)}
+                      />
+                    }
+                    label={
+                      <Box sx={{ pt: 1.5 }}>
+                        {p.descripcion}
+                        {delRol.has(p.codigo) && (
+                          <Typography variant="body2" color="text.secondary">
+                            Incluido en el rol
+                          </Typography>
+                        )}
+                      </Box>
+                    }
                   />
-                }
-                label={
-                  <Box sx={{ pt: 1.5 }}>
-                    {p.descripcion}
-                    {delRol.has(p.codigo) && (
-                      <Typography variant="body2" color="text.secondary">
-                        Incluido en el rol
-                      </Typography>
-                    )}
-                  </Box>
-                }
-              />
+                ))}
+              </Paper>
             ))}
-          </Paper>
-        ))}
-      </Box>
+          </Box>
 
-      <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 3 }}>
-        <Boton onClick={() => guardar.mutate()} cargando={guardar.isPending} disabled={!u}>
-          Guardar permisos
-        </Boton>
-      </Box>
+          <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 3 }}>
+            <Boton onClick={() => guardar.mutate()} cargando={guardar.isPending}>
+              Guardar permisos
+            </Boton>
+          </Box>
+        </>
+      )}
     </>
   );
 }

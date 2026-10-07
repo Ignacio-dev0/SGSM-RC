@@ -390,3 +390,172 @@ describe('el listado de usuarios recuerda lo que se buscó (queda en la URL)', (
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 });
+
+describe('permisos adicionales: carga, fallos y vacíos (UX-03)', () => {
+  const falla = () =>
+    HttpResponse.json(
+      { error: { codigo: 'ERROR_INTERNO', mensaje: 'Error inesperado del servidor' } },
+      { status: 500 },
+    );
+  const verUsuario = http.get('*/api/usuarios/10', () => HttpResponse.json({ data: usuario() }));
+
+  it('mientras llegan los datos dice que está cargando, sin mostrar una lista vacía', async () => {
+    let liberar!: () => void;
+    const lenta = new Promise<void>((resolver) => (liberar = resolver));
+    servidor.use(
+      http.get('*/api/permisos', async () => {
+        await lenta;
+        return HttpResponse.json({ data: PERMISOS });
+      }),
+      verUsuario,
+    );
+    renderizarApp('/usuarios/10/permisos', ADMIN);
+
+    expect(await screen.findByRole('status')).toHaveTextContent(/Cargando los permisos/);
+    expect(screen.queryByRole('button', { name: 'Guardar permisos' })).not.toBeInTheDocument();
+
+    liberar();
+    expect(
+      await screen.findByRole('checkbox', { name: /Registrar suministros/ }),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/Cargando los permisos/)).not.toBeInTheDocument();
+  });
+
+  it('si no se puede cargar al usuario, avisa y deja reintentar sin mostrar los permisos', async () => {
+    let pedidos = 0;
+    servidor.use(
+      http.get('*/api/usuarios/10', () => {
+        pedidos++;
+        return pedidos === 1 ? falla() : HttpResponse.json({ data: usuario() });
+      }),
+    );
+    renderizarApp('/usuarios/10/permisos', ADMIN);
+
+    const aviso = await screen.findByRole('alert');
+    expect(aviso).toHaveTextContent(/No se pudieron cargar los datos del usuario/);
+    expect(aviso).toHaveTextContent(/Error inesperado/);
+    expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Guardar permisos' })).not.toBeInTheDocument();
+
+    await userEvent.click(within(aviso).getByRole('button', { name: 'Reintentar' }));
+
+    expect(
+      await screen.findByRole('checkbox', { name: /Registrar suministros/ }),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
+  it('si no se puede cargar la lista de permisos, avisa y no ofrece guardar a ciegas', async () => {
+    let pedidos = 0;
+    servidor.use(
+      verUsuario,
+      http.get('*/api/permisos', () => {
+        pedidos++;
+        return pedidos === 1 ? falla() : HttpResponse.json({ data: PERMISOS });
+      }),
+    );
+    renderizarApp('/usuarios/10/permisos', ADMIN);
+
+    const aviso = await screen.findByRole('alert');
+    expect(aviso).toHaveTextContent(/No se pudo cargar la lista de permisos/);
+    expect(aviso).toHaveTextContent(/Error inesperado/);
+    expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Guardar permisos' })).not.toBeInTheDocument();
+    expect(screen.queryByText(/No hay permisos/)).not.toBeInTheDocument();
+
+    await userEvent.click(within(aviso).getByRole('button', { name: 'Reintentar' }));
+
+    expect(
+      await screen.findByRole('checkbox', { name: /Registrar suministros/ }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Guardar permisos' })).toBeEnabled();
+  });
+
+  it('si fallan las dos cargas, muestra cada aviso con su Reintentar', async () => {
+    servidor.use(http.get('*/api/usuarios/10', falla), http.get('*/api/permisos', falla));
+    renderizarApp('/usuarios/10/permisos', ADMIN);
+
+    await waitFor(() => expect(screen.getAllByRole('alert')).toHaveLength(2));
+    expect(screen.getAllByRole('button', { name: 'Reintentar' })).toHaveLength(2);
+  });
+
+  it('sin permisos para asignar, lo dice y explica qué hacer', async () => {
+    servidor.use(
+      verUsuario,
+      http.get('*/api/permisos', () => HttpResponse.json({ data: [] })),
+    );
+    renderizarApp('/usuarios/10/permisos', ADMIN);
+
+    expect(
+      await screen.findByText(
+        'No hay permisos adicionales para asignar. El usuario tiene los que trae su rol; vuelva a su ficha para revisarlo.',
+      ),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Guardar permisos' })).not.toBeInTheDocument();
+  });
+});
+
+describe('el listado de usuarios en tablet vertical (F28 · F32 · F48)', () => {
+  it('los filtros van en una región de búsqueda con nombre', async () => {
+    servidor.use(http.get('*/api/usuarios', () => lista([usuario()])));
+    renderizarApp('/usuarios', ADMIN);
+
+    const filtros = await screen.findByRole('search', { name: 'Filtros' });
+    expect(within(filtros).getByLabelText(/Buscar/)).toBeInTheDocument();
+    expect(within(filtros).getByLabelText('Rol')).toBeInTheDocument();
+    expect(within(filtros).getByLabelText('Estado')).toBeInTheDocument();
+  });
+
+  it('los encabezados son cortos, para que no se partan en dos renglones', async () => {
+    servidor.use(http.get('*/api/usuarios', () => lista([usuario()])));
+    renderizarApp('/usuarios', ADMIN);
+
+    const tabla = await screen.findByRole('table', { name: 'Usuarios' });
+    const encabezados = within(tabla)
+      .getAllByRole('columnheader')
+      .map((e) => e.textContent?.trim());
+    expect(encabezados.slice(0, 6)).toEqual([
+      'Nombre',
+      'Usuario',
+      'DNI',
+      'Rol',
+      'Estado',
+      'Rostro',
+    ]);
+  });
+
+  it('la persona va en negrita y la fila dice qué abre', async () => {
+    servidor.use(http.get('*/api/usuarios', () => lista([usuario()])));
+    renderizarApp('/usuarios', ADMIN);
+
+    const tabla = await screen.findByRole('table', { name: 'Usuarios' });
+    const fila = await within(tabla).findByRole('row', { name: 'Abrir Gómez, Lucía' });
+    expect(within(fila).getByText('Gómez, Lucía').tagName).toBe('STRONG');
+  });
+
+  it('mientras se filtra, las filas anteriores se ven atenuadas y el listado figura ocupado', async () => {
+    let liberar!: () => void;
+    const respuestaLenta = new Promise<void>((resolver) => (liberar = resolver));
+    servidor.use(
+      http.get('*/api/usuarios', async ({ request }) => {
+        if (new URL(request.url).searchParams.get('activo') === 'false') await respuestaLenta;
+        return lista([usuario()]);
+      }),
+    );
+    renderizarApp('/usuarios', ADMIN);
+
+    const tabla = await screen.findByRole('table', { name: 'Usuarios' });
+    await within(tabla).findByText('Gómez, Lucía');
+    const contenedor = tabla.closest('[aria-busy]')!;
+    expect(contenedor).toHaveAttribute('aria-busy', 'false');
+
+    await userEvent.selectOptions(screen.getByLabelText('Estado'), 'Dados de baja');
+
+    await waitFor(() => expect(contenedor).toHaveAttribute('aria-busy', 'true'));
+    expect(contenedor).toHaveStyle({ opacity: '0.5' });
+    expect(within(tabla).getByText('Gómez, Lucía')).toBeInTheDocument();
+
+    liberar();
+    await waitFor(() => expect(contenedor).toHaveAttribute('aria-busy', 'false'));
+  });
+});

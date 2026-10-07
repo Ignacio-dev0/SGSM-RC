@@ -236,3 +236,107 @@ describe('el historial de suministros recuerda lo que se filtró (queda en la UR
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 });
+
+describe('el historial de suministros en tablet vertical (F28 · F32 · F48)', () => {
+  /** Guion y espacio que no permiten cortar el renglón. */
+  const GUION = String.fromCharCode(0x2011);
+  const NBSP = String.fromCharCode(160);
+  const lista = (data: ReturnType<typeof suministro>[]) =>
+    HttpResponse.json({
+      data,
+      meta: { pagina: 1, porPagina: 20, total: data.length, totalPaginas: data.length ? 1 : 0 },
+    });
+  // 11:00 UTC son las 08:00 en Argentina.
+  const delMedio = () => suministro({ fechaHora: '2026-10-07T11:00:00.000Z' });
+
+  it('los filtros van en una región de búsqueda con nombre (grilla de dos columnas desde sm)', async () => {
+    servidor.use(http.get('*/api/suministros', () => lista([delMedio()])));
+    renderizarApp('/suministros', ENFERMERO);
+
+    const filtros = await screen.findByRole('search', { name: 'Filtros' });
+    for (const campo of ['Paciente', 'Desde', 'Hasta', 'Tipo', 'Responsable']) {
+      expect(within(filtros).getByLabelText(campo)).toBeInTheDocument();
+    }
+  });
+
+  it('los encabezados caben en un renglón', async () => {
+    servidor.use(http.get('*/api/suministros', () => lista([delMedio()])));
+    renderizarApp('/suministros', ENFERMERO);
+
+    const tabla = await screen.findByRole('table', { name: 'Suministros' });
+    const encabezados = within(tabla)
+      .getAllByRole('columnheader')
+      .map((e) => e.textContent?.trim());
+    expect(encabezados.slice(0, 5)).toEqual([
+      'Fecha y hora',
+      'Paciente',
+      'Detalle',
+      'Registró',
+      'Estado',
+    ]);
+  });
+
+  it('el paciente va en negrita con su cama sin partir, y la fila dice qué abre', async () => {
+    servidor.use(http.get('*/api/suministros', () => lista([delMedio()])));
+    renderizarApp('/suministros', ENFERMERO);
+
+    const tabla = await screen.findByRole('table', { name: 'Suministros' });
+    const fila = await within(tabla).findByRole('row', {
+      name: 'Abrir el registro de 07/10 08:00 de Benítez, Rosa',
+    });
+    const paciente = within(fila).getByText(`Benítez, Rosa · A${GUION}01`);
+    expect(paciente.tagName).toBe('STRONG');
+  });
+
+  it('la cantidad y la medida de cada insumo no se parten en dos renglones', async () => {
+    servidor.use(
+      http.get('*/api/suministros', () =>
+        lista([
+          suministro({
+            tipo: 'INSUMOS',
+            detalles: [
+              {
+                insumoId: 20,
+                insumo: 'Gasa estéril 10 x 10 cm',
+                tipoInsumo: 'INSUMO',
+                cantidad: 2,
+                unidad: 'unidad',
+              },
+            ],
+          }),
+        ]),
+      ),
+    );
+    renderizarApp('/suministros', ENFERMERO);
+
+    const tabla = await screen.findByRole('table', { name: 'Suministros' });
+    const detalle = await within(tabla).findByText(/Gasa estéril/);
+    expect(detalle.textContent).toBe(`Gasa estéril 10${NBSP}x${NBSP}10${NBSP}cm × 2${NBSP}unidad`);
+  });
+
+  it('mientras se filtra, las filas anteriores se ven atenuadas y el listado figura ocupado', async () => {
+    let liberar!: () => void;
+    const respuestaLenta = new Promise<void>((resolver) => (liberar = resolver));
+    servidor.use(
+      http.get('*/api/suministros', async ({ request }) => {
+        if (new URL(request.url).searchParams.has('tipoInsumo')) await respuestaLenta;
+        return lista([delMedio()]);
+      }),
+    );
+    renderizarApp('/suministros', ENFERMERO);
+
+    const tabla = await screen.findByRole('table', { name: 'Suministros' });
+    await within(tabla).findByText(/Paracetamol × 500 mg/);
+    const contenedor = tabla.closest('[aria-busy]')!;
+    expect(contenedor).toHaveAttribute('aria-busy', 'false');
+
+    await userEvent.selectOptions(screen.getByLabelText('Tipo'), 'Medicamentos');
+
+    await waitFor(() => expect(contenedor).toHaveAttribute('aria-busy', 'true'));
+    expect(contenedor).toHaveStyle({ opacity: '0.5' });
+    expect(within(tabla).getByText(/Paracetamol × 500 mg/)).toBeInTheDocument();
+
+    liberar();
+    await waitFor(() => expect(contenedor).toHaveAttribute('aria-busy', 'false'));
+  });
+});

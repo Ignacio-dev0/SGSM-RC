@@ -176,3 +176,82 @@ describe('estados de carga del rostro de un usuario', () => {
     expect(screen.getByRole('button', { name: 'Reintentar' })).toBeInTheDocument();
   });
 });
+
+describe('gestión biométrica: cuando no hay nada que mostrar (UX-03)', () => {
+  const falla = () =>
+    HttpResponse.json(
+      { error: { codigo: 'ERROR_INTERNO', mensaje: 'Error inesperado del servidor' } },
+      { status: 500 },
+    );
+  const persona = {
+    id: 3,
+    nombreUsuario: 'enfermero',
+    nombre: 'Sofía',
+    apellido: 'Acosta',
+    rol: 'Enfermero',
+    registrado: true,
+    actualizadoEn: '2026-10-07T12:00:00.000Z',
+  };
+
+  it('un fallo de carga no se lee como "no hay personal": avisa, deja reintentar y no muestra el vacío', async () => {
+    let pedidos = 0;
+    servidor.use(
+      http.get('*/api/biometria/usuarios', () => {
+        pedidos++;
+        return pedidos === 1 ? falla() : HttpResponse.json({ data: [persona] });
+      }),
+    );
+    renderizarApp('/biometria', ADMIN);
+
+    const aviso = await screen.findByRole('alert');
+    expect(aviso).toHaveTextContent(/No se pudo cargar la lista del personal/);
+    expect(aviso).toHaveTextContent(/Error inesperado/);
+    // Ni la tabla ni el mensaje de vacío: no es que no haya personal.
+    expect(screen.queryByText(/No hay personal/)).not.toBeInTheDocument();
+    expect(screen.queryByRole('table', { name: 'Personal' })).not.toBeInTheDocument();
+
+    await userEvent.click(within(aviso).getByRole('button', { name: 'Reintentar' }));
+
+    const tabla = await screen.findByRole('table', { name: 'Personal' });
+    expect(await within(tabla).findByText('Acosta, Sofía')).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
+  it('sin personal dice por qué y qué hacer', async () => {
+    servidor.use(http.get('*/api/biometria/usuarios', () => HttpResponse.json({ data: [] })));
+    renderizarApp('/biometria', ADMIN);
+
+    expect(
+      await screen.findByText(
+        'No hay personal activo. Cuando se registre un usuario nuevo, va a aparecer en esta lista para cargar su rostro.',
+      ),
+    ).toBeInTheDocument();
+  });
+});
+
+describe('gestión biométrica: el listado en tablet (F32 · F48)', () => {
+  const persona = {
+    id: 3,
+    nombreUsuario: 'enfermero',
+    nombre: 'Sofía',
+    apellido: 'Acosta',
+    rol: 'Enfermero',
+    registrado: true,
+    actualizadoEn: '2026-10-07T12:00:00.000Z',
+  };
+
+  it('cada fila dice qué abre y la persona va en negrita, con un encabezado corto', async () => {
+    servidor.use(
+      http.get('*/api/biometria/usuarios', () => HttpResponse.json({ data: [persona] })),
+    );
+    renderizarApp('/biometria', ADMIN);
+
+    const tabla = await screen.findByRole('table', { name: 'Personal' });
+    const fila = await within(tabla).findByRole('row', {
+      name: 'Abrir el registro facial de Acosta, Sofía',
+    });
+    expect(within(fila).getByText('Acosta, Sofía').tagName).toBe('STRONG');
+    expect(within(tabla).getByRole('columnheader', { name: 'Nombre' })).toBeInTheDocument();
+    expect(within(tabla).queryByRole('columnheader', { name: 'Apellido y nombre' })).toBeNull();
+  });
+});

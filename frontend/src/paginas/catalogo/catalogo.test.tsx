@@ -291,3 +291,109 @@ describe('dar de baja desde el catálogo: la confirmación (UX-10)', () => {
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 });
+
+describe('el catálogo en tablet vertical (F28 · F32 · F48)', () => {
+  const NBSP = String.fromCharCode(160);
+
+  it('los filtros van en una región de búsqueda con nombre (grilla de dos columnas desde sm)', async () => {
+    servidor.use(http.get('*/api/insumos', () => HttpResponse.json({ data: [insumo()] })));
+    renderizarApp('/catalogo', ADMIN);
+
+    const filtros = await screen.findByRole('search', { name: 'Filtros' });
+    expect(within(filtros).getByLabelText(/Buscar/)).toBeInTheDocument();
+    expect(within(filtros).getByLabelText('Tipo')).toBeInTheDocument();
+    expect(within(filtros).getByLabelText('Estado')).toBeInTheDocument();
+  });
+
+  it('los encabezados son cortos, para que no se partan en dos renglones', async () => {
+    servidor.use(http.get('*/api/insumos', () => HttpResponse.json({ data: [insumo()] })));
+    renderizarApp('/catalogo', ADMIN);
+
+    const tabla = await screen.findByRole('table', { name: 'Catálogo' });
+    const encabezados = within(tabla)
+      .getAllByRole('columnheader')
+      .map((e) => e.textContent?.trim());
+    expect(encabezados.slice(0, 5)).toEqual(['Nombre', 'Tipo', 'Presentación', 'Unidad', 'Estado']);
+  });
+
+  it('el nombre va en negrita y la fila dice qué abre', async () => {
+    servidor.use(http.get('*/api/insumos', () => HttpResponse.json({ data: [insumo()] })));
+    renderizarApp('/catalogo', ADMIN);
+
+    const tabla = await screen.findByRole('table', { name: 'Catálogo' });
+    const fila = await within(tabla).findByRole('row', { name: 'Abrir Paracetamol' });
+    expect(within(fila).getByText('Paracetamol').tagName).toBe('STRONG');
+  });
+
+  it('la presentación y la medida no se parten: el número queda junto a su unidad', async () => {
+    servidor.use(
+      http.get('*/api/insumos', () =>
+        HttpResponse.json({
+          data: [
+            insumo(),
+            insumo({ id: 2, nombre: 'Gasa estéril 10 x 10 cm', tipo: 'INSUMO', presentacion: '' }),
+          ],
+        }),
+      ),
+    );
+    renderizarApp('/catalogo', ADMIN);
+
+    const tabla = await screen.findByRole('table', { name: 'Catálogo' });
+    expect((await within(tabla).findByText(/^Comprimidos 500/)).textContent).toBe(
+      `Comprimidos 500${NBSP}mg`,
+    );
+    expect(within(tabla).getByText(/^Gasa estéril 10/).textContent).toBe(
+      `Gasa estéril 10${NBSP}x${NBSP}10${NBSP}cm`,
+    );
+  });
+
+  it('se ordena por nombre como se ordena en español: "Cánula" va antes que "Ceftriaxona"', async () => {
+    servidor.use(
+      http.get('*/api/insumos', () =>
+        HttpResponse.json({
+          data: [
+            insumo({ id: 1, nombre: 'Ceftriaxona' }),
+            insumo({ id: 2, nombre: 'Clonazepam' }),
+            insumo({ id: 3, nombre: 'Cánula nasal' }),
+          ],
+        }),
+      ),
+    );
+    renderizarApp('/catalogo', ADMIN);
+
+    const tabla = await screen.findByRole('table', { name: 'Catálogo' });
+    await within(tabla).findByText('Ceftriaxona');
+    const nombres = within(tabla)
+      .getAllByRole('row')
+      .slice(1)
+      .map((fila) => within(fila).getAllByRole('cell')[0]?.textContent);
+    expect(nombres).toEqual(['Cánula nasal', 'Ceftriaxona', 'Clonazepam']);
+  });
+
+  it('mientras se filtra, las filas anteriores se ven atenuadas y el listado figura ocupado', async () => {
+    let liberar!: () => void;
+    const respuestaLenta = new Promise<void>((resolver) => (liberar = resolver));
+    servidor.use(
+      http.get('*/api/insumos', async ({ request }) => {
+        if (new URL(request.url).searchParams.get('tipo') === 'INSUMO') await respuestaLenta;
+        return HttpResponse.json({ data: [insumo()] });
+      }),
+    );
+    renderizarApp('/catalogo', ADMIN);
+
+    const tabla = await screen.findByRole('table', { name: 'Catálogo' });
+    await within(tabla).findByText('Paracetamol');
+    const contenedor = tabla.closest('[aria-busy]')!;
+    expect(contenedor).toHaveAttribute('aria-busy', 'false');
+
+    await userEvent.selectOptions(screen.getByLabelText('Tipo'), 'Insumos');
+
+    await waitFor(() => expect(contenedor).toHaveAttribute('aria-busy', 'true'));
+    expect(contenedor).toHaveStyle({ opacity: '0.5' });
+    // Las filas viejas siguen ahí: no se vacía el catálogo mientras llegan las nuevas.
+    expect(within(tabla).getByText('Paracetamol')).toBeInTheDocument();
+
+    liberar();
+    await waitFor(() => expect(contenedor).toHaveAttribute('aria-busy', 'false'));
+  });
+});

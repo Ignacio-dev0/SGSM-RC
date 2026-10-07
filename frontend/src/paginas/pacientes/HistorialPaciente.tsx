@@ -8,10 +8,18 @@ import type { HistorialPaciente as Historial, Suministro } from '../../api/tipos
 import { useSesion } from '../../auth/useSesion';
 import { Alerta } from '../../componentes/Alerta';
 import { CampoTexto } from '../../componentes/CampoTexto';
+import { ErrorDeCarga } from '../../componentes/EstadoDeCarga';
 import { Tabla } from '../../componentes/Tabla';
-import { formatearFechaHora } from '../../utilidades/formato';
+import {
+  formatearFechaHora,
+  formatearFechaHoraCorta,
+  rangoDeFechas,
+} from '../../utilidades/formato';
+import { Recargando } from '../../utilidades/listado';
+import { oracionDe, pasosParaProbar } from '../../utilidades/sinResultados';
 import { DialogoSuministro } from '../suministros/DialogoSuministro';
-import { CAMPOS, MOTIVO_ASIGNACION, etiquetaAccion } from './etiquetas';
+import { detalleDe } from '../suministros/formato';
+import { CAMPOS, MOTIVO_ASIGNACION, etiquetaAccion, formatearCama } from './etiquetas';
 
 type Modificacion = Historial['modificaciones'][number];
 
@@ -39,6 +47,22 @@ function cambiosDe(m: Modificacion) {
       return `${nombre}: ${despues ?? antes}`;
     })
     .join(' · ');
+}
+
+/** Qué se espera ver en cada pestaña cuando todavía no hay nada, y cuándo va a aparecer. */
+const SIN_REGISTROS = {
+  camas:
+    'Todavía no hay asignaciones de cama. Aparecerán aquí cuando se interne o se traslade al paciente.',
+  modificaciones:
+    'Todavía no hay modificaciones. Aparecerán aquí cuando se edite la ficha o se registre un movimiento del paciente.',
+  suministros:
+    'Todavía no se registró ningún suministro. Aparecerán aquí cuando se administre un medicamento o se registren insumos.',
+};
+
+/** Sin fechas, el vacío normal; con fechas, nombra el período y propone ampliarlo. */
+function mensajeSin(que: string, sinRegistros: string, desde: string, hasta: string) {
+  if (!desde && !hasta) return sinRegistros;
+  return `${oracionDe(['No hay', que, rangoDeFechas(desde, hasta)])} ${pasosParaProbar(['amplíe las fechas'])}`;
 }
 
 /** Inicio y fin del día en hora de Argentina, para filtrar por fecha. */
@@ -85,76 +109,100 @@ export function HistorialPaciente({ pacienteId }: { pacienteId: number }) {
           slotProps={{ inputLabel: { shrink: true } }}
         />
       </Box>
-      {historial.isError && <Alerta tipo="error">{mensajeDeError(historial.error)}</Alerta>}
 
       <Tabs value={pestana} onChange={(_e, v: number) => setPestana(v)} sx={{ mb: 2 }}>
-        <Tab label={`Camas (${h?.asignaciones.length ?? 0})`} />
-        <Tab label={`Modificaciones (${h?.modificaciones.length ?? 0})`} />
-        <Tab label={`Suministros (${h?.suministros.length ?? 0})`} />
+        {/* Sin respuesta (cargando o con error) no se afirma "(0)": no se sabe cuántos hay. */}
+        <Tab label={h ? `Camas (${h.asignaciones.length})` : 'Camas'} />
+        <Tab label={h ? `Modificaciones (${h.modificaciones.length})` : 'Modificaciones'} />
+        <Tab label={h ? `Suministros (${h.suministros.length})` : 'Suministros'} />
       </Tabs>
 
-      {pestana === 0 && (
-        <Tabla
-          titulo="Asignaciones de cama"
-          columnas={[
-            { titulo: 'Cama', valor: (a) => a.cama },
-            { titulo: 'Motivo', valor: (a) => MOTIVO_ASIGNACION[a.motivo] ?? a.motivo },
-            { titulo: 'Desde', valor: (a) => formatearFechaHora(a.fechaDesde) },
-            {
-              titulo: 'Hasta',
-              valor: (a) => (a.fechaHasta ? formatearFechaHora(a.fechaHasta) : 'Actual'),
-            },
-            { titulo: 'Asignó', valor: (a) => a.asignadoPor ?? '—' },
-          ]}
-          filas={h?.asignaciones ?? []}
-          claveFila={(a) => a.id}
-          cargando={historial.isFetching}
-          mensajeVacio="Sin asignaciones de cama en el período"
+      {historial.isError ? (
+        // Un fallo de carga no se lee como "no hay registros": sin tabla ni mensaje de vacío.
+        <ErrorDeCarga
+          que="el historial del paciente"
+          error={historial.error}
+          alReintentar={() => void historial.refetch()}
         />
-      )}
-      {pestana === 1 && (
-        <Tabla
-          titulo="Modificaciones"
-          columnas={[
-            { titulo: 'Fecha y hora', valor: (m) => formatearFechaHora(m.fechaHora), ancho: 170 },
-            { titulo: 'Acción', valor: (m) => etiquetaAccion(m.accion, m.entidad) },
-            {
-              titulo: 'Detalle',
-              valor: (m) => <Typography variant="body2">{cambiosDe(m)}</Typography>,
-            },
-            { titulo: 'Usuario', valor: (m) => m.usuario ?? 'Sistema' },
-          ]}
-          filas={h?.modificaciones ?? []}
-          claveFila={(m) => m.id}
-          cargando={historial.isFetching}
-          mensajeVacio="Sin modificaciones en el período"
-        />
-      )}
-      {pestana === 2 && (
-        <Tabla
-          titulo="Suministros"
-          columnas={[
-            { titulo: 'Fecha y hora', valor: (s) => formatearFechaHora(s.fechaHora), ancho: 170 },
-            {
-              titulo: 'Tipo',
-              valor: (s) => (s.tipo === 'MEDICAMENTO' ? 'Medicamento' : 'Insumos'),
-            },
-            {
-              titulo: 'Detalle',
-              valor: (s) =>
-                s.detalles.map((d) => `${d.insumo} × ${d.cantidad} ${d.unidad}`).join(', ') +
-                (s.corregido ? ' (corregido)' : ''),
-            },
-            { titulo: 'Registró', valor: (s) => s.usuario ?? '—' },
-          ]}
-          filas={h?.suministros ?? []}
-          claveFila={(s) => s.id}
-          cargando={historial.isFetching || abrirSuministro.isPending}
-          mensajeVacio="Sin suministros en el período"
-          {...(tienePermiso('suministros.ver')
-            ? { alTocarFila: (s: { id: number }) => abrirSuministro.mutate(s.id) }
-            : {})}
-        />
+      ) : (
+        <Recargando activo={historial.isFetching && historial.isPlaceholderData}>
+          {pestana === 0 && (
+            <Tabla
+              titulo="Asignaciones de cama"
+              columnas={[
+                // La cama llega como "Sala B – Traumatología · B-01": su guion no deja cortar.
+                { titulo: 'Cama', valor: (a) => formatearCama(a.cama) },
+                { titulo: 'Motivo', valor: (a) => MOTIVO_ASIGNACION[a.motivo] ?? a.motivo },
+                { titulo: 'Desde', valor: (a) => formatearFechaHora(a.fechaDesde) },
+                {
+                  titulo: 'Hasta',
+                  valor: (a) => (a.fechaHasta ? formatearFechaHora(a.fechaHasta) : 'Actual'),
+                },
+                { titulo: 'Asignó', valor: (a) => a.asignadoPor ?? '—' },
+              ]}
+              filas={h?.asignaciones ?? []}
+              claveFila={(a) => a.id}
+              cargando={historial.isFetching}
+              mensajeVacio={mensajeSin('asignaciones de cama', SIN_REGISTROS.camas, desde, hasta)}
+            />
+          )}
+          {pestana === 1 && (
+            <Tabla
+              titulo="Modificaciones"
+              columnas={[
+                {
+                  titulo: 'Fecha y hora',
+                  valor: (m) => formatearFechaHora(m.fechaHora),
+                  ancho: 170,
+                },
+                { titulo: 'Acción', valor: (m) => etiquetaAccion(m.accion, m.entidad) },
+                {
+                  titulo: 'Detalle',
+                  valor: (m) => <Typography variant="body2">{cambiosDe(m)}</Typography>,
+                },
+                { titulo: 'Usuario', valor: (m) => m.usuario ?? 'Sistema' },
+              ]}
+              filas={h?.modificaciones ?? []}
+              claveFila={(m) => m.id}
+              cargando={historial.isFetching}
+              mensajeVacio={mensajeSin(
+                'modificaciones',
+                SIN_REGISTROS.modificaciones,
+                desde,
+                hasta,
+              )}
+            />
+          )}
+          {pestana === 2 && (
+            <Tabla
+              titulo="Suministros"
+              columnas={[
+                {
+                  titulo: 'Fecha y hora',
+                  valor: (s) => formatearFechaHora(s.fechaHora),
+                  ancho: 170,
+                },
+                {
+                  titulo: 'Tipo',
+                  valor: (s) => (s.tipo === 'MEDICAMENTO' ? 'Medicamento' : 'Insumos'),
+                },
+                {
+                  titulo: 'Detalle',
+                  valor: (s) => detalleDe(s) + (s.corregido ? ' (corregido)' : ''),
+                },
+                { titulo: 'Registró', valor: (s) => s.usuario ?? '—' },
+              ]}
+              filas={h?.suministros ?? []}
+              claveFila={(s) => s.id}
+              cargando={historial.isFetching || abrirSuministro.isPending}
+              mensajeVacio={mensajeSin('suministros', SIN_REGISTROS.suministros, desde, hasta)}
+              etiquetaFila={(s) => `Abrir el registro de ${formatearFechaHoraCorta(s.fechaHora)}`}
+              {...(tienePermiso('suministros.ver')
+                ? { alTocarFila: (s: { id: number }) => abrirSuministro.mutate(s.id) }
+                : {})}
+            />
+          )}
+        </Recargando>
       )}
       {abrirSuministro.isError && (
         <Alerta tipo="error">{mensajeDeError(abrirSuministro.error)}</Alerta>
