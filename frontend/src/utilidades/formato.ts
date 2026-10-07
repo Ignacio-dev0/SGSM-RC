@@ -1,4 +1,7 @@
-/** Formatos de fecha y hora para mostrar en pantalla, siempre en hora de Argentina. */
+/**
+ * Formatos de fecha y hora para mostrar en pantalla, siempre en hora de Argentina y con horas de
+ * 24 ("19:00", no "07:00 p. m."): en una dosis, a. m./p. m. es una fuente de errores.
+ */
 
 const ZONA = 'America/Argentina/Buenos_Aires';
 
@@ -17,6 +20,7 @@ export const formatearHora = (iso: string | null | undefined) =>
     ? new Date(iso).toLocaleTimeString('es-AR', {
         hour: '2-digit',
         minute: '2-digit',
+        hourCycle: 'h23',
         timeZone: ZONA,
       })
     : '—';

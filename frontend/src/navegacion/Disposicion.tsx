@@ -4,6 +4,7 @@ import { Outlet } from 'react-router-dom';
 import { useSesion, useUsuario } from '../auth/useSesion';
 import { Boton } from '../componentes/Boton';
 import { PlantillaTablet } from '../componentes/PlantillaTablet';
+import { SelectorTema } from '../componentes/SelectorTema';
 import { CampanaNotificaciones } from './CampanaNotificaciones';
 import { opcionesDelMenu } from './menu';
 
@@ -17,6 +18,7 @@ export function Disposicion() {
       opciones={opcionesDelMenu(usuario.permisos)}
       acciones={
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <SelectorTema />
           <CampanaNotificaciones />
           <Box sx={{ textAlign: 'right', display: { xs: 'none', sm: 'block' } }}>
             <Typography sx={{ fontWeight: 700, lineHeight: 1.2 }}>

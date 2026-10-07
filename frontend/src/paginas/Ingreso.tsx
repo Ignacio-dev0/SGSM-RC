@@ -17,6 +17,7 @@ import { useSesion } from '../auth/useSesion';
 import { Alerta } from '../componentes/Alerta';
 import { Boton } from '../componentes/Boton';
 import { CampoTexto } from '../componentes/CampoTexto';
+import { SelectorTema } from '../componentes/SelectorTema';
 
 const CLAVE_RECORDADO = 'sgsm.usuarioRecordado';
 
@@ -86,8 +87,12 @@ export function Ingreso() {
         placeItems: 'center',
         bgcolor: 'background.default',
         p: 2,
+        position: 'relative',
       }}
     >
+      <Box sx={{ position: 'absolute', top: 8, right: 8 }}>
+        <SelectorTema />
+      </Box>
       <Paper
         component="form"
         noValidate

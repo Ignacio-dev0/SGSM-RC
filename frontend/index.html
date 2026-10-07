@@ -5,6 +5,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#0b5d6b" />
     <title>SGSM-RC · Hospital El Dique</title>
+    <script>
+      // Aplica el tema guardado antes de dibujar, para que no destelle el tema equivocado.
+      (function () {
+        try {
+          var modo = localStorage.getItem('sgsm.tema') || 'system';
+          var oscuro =
+            modo === 'dark' ||
+            (modo === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+          document.documentElement.setAttribute('data-tema', oscuro ? 'dark' : 'light');
+        } catch (e) {}
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

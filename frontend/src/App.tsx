@@ -3,7 +3,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BrowserRouter } from 'react-router-dom';
 import { ProveedorSesion } from './auth/ContextoSesion';
 import { RutasApp } from './RutasApp';
-import { tema } from './tema';
+import { CLAVE_TEMA, tema } from './tema';
 
 const clienteQuery = new QueryClient({
   defaultOptions: {
@@ -15,7 +15,7 @@ const clienteQuery = new QueryClient({
 export function App() {
   return (
     <QueryClientProvider client={clienteQuery}>
-      <ThemeProvider theme={tema}>
+      <ThemeProvider theme={tema} modeStorageKey={CLAVE_TEMA} defaultMode="system">
         <CssBaseline />
         <BrowserRouter>
           <ProveedorSesion>
