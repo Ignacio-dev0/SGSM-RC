@@ -25,7 +25,12 @@ const corregirCantidad = async (page: Page, cantidad: number, motivo: string) =>
   await dialogo.getByLabel(/^Cantidad/).fill(String(cantidad));
   await dialogo.getByLabel(/Motivo de la corrección/).fill(motivo);
   await dialogo.getByRole('button', { name: 'Confirmar corrección con mi rostro' }).click();
+  // Se espera la respuesta del servidor: "Corregido por" ya se ve desde la primera corrección.
+  const guardado = page.waitForResponse(
+    (r) => r.request().method() === 'PATCH' && /\/api\/suministros\/\d+$/.test(r.url()),
+  );
   await confirmarConRostro(page);
+  expect((await guardado).ok()).toBe(true);
   await expect(dialogo.getByText(/Corregido por/)).toBeVisible();
 };
 
