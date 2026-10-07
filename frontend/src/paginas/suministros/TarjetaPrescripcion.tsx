@@ -1,11 +1,22 @@
 import { Box, Card, CardActionArea, CardContent, Chip, Typography } from '@mui/material';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import HistoryOutlinedIcon from '@mui/icons-material/HistoryOutlined';
+import RadioButtonUncheckedIcon from '@mui/icons-material/RadioButtonUnchecked';
 import type { Prescripcion } from '../../api/tipos';
 import { formatearFechaHora, formatearHora } from '../../utilidades/formato';
 import { etiquetaVia, formatearDosis, formatearFrecuencia } from '../prescripciones/etiquetas';
-import { colorEstadoToma, estadoToma, textoEstadoToma } from './estadoToma';
+import { colorEstadoToma, estadoToma, textoEstadoToma, varianteEstadoToma } from './estadoToma';
 
-/** Prescripción vigente para elegir al lado de la cama, con el estado de su toma. */
+/** Primario al 8 %: sigue al tema claro u oscuro porque parte de la variable de color del tema. */
+const TINTE_ELEGIDA = 'rgba(var(--mui-palette-primary-mainChannel) / 0.08)';
+
+/** Marcador de la derecha: círculo vacío en reposo, tilde al elegirla, siempre del mismo tamaño. */
+const MARCADOR = { fontSize: 36, flexShrink: 0 };
+
+/**
+ * Prescripción vigente para elegir al lado de la cama, con el estado de su toma. La elegida se
+ * distingue por borde y tinte del color primario (no por un gris, que se leería "deshabilitada").
+ */
 export function TarjetaPrescripcion({
   p,
   elegida,
@@ -25,7 +36,7 @@ export function TarjetaPrescripcion({
       sx={{
         borderWidth: 2,
         borderColor: elegida ? 'primary.main' : 'divider',
-        bgcolor: elegida ? 'action.selected' : undefined,
+        bgcolor: elegida ? TINTE_ELEGIDA : undefined,
       }}
     >
       <CardActionArea onClick={alElegir} aria-pressed={elegida} sx={{ p: 1 }}>
@@ -38,9 +49,9 @@ export function TarjetaPrescripcion({
               <Chip
                 label={textoEstadoToma(estado)}
                 color={colorEstadoToma(estado)}
-                variant={
-                  estado.tipo === 'falta' || estado.tipo === 'sin-tomas' ? 'outlined' : 'filled'
-                }
+                variant={varianteEstadoToma(estado)}
+                // Una toma ya dada avisa también con el ícono, no solo con el color.
+                icon={estado.tipo === 'dada' ? <HistoryOutlinedIcon /> : undefined}
               />
             </Box>
             <Typography color="text.secondary">
@@ -52,7 +63,11 @@ export function TarjetaPrescripcion({
               {ultima && ` · Última: ${formatearFechaHora(ultima.fechaHora)} (${ultima.usuario})`}
             </Typography>
           </Box>
-          {elegida && <CheckCircleIcon color="primary" sx={{ fontSize: 36 }} />}
+          {elegida ? (
+            <CheckCircleIcon color="primary" sx={MARCADOR} />
+          ) : (
+            <RadioButtonUncheckedIcon sx={{ ...MARCADOR, color: 'action.active' }} />
+          )}
         </CardContent>
       </CardActionArea>
     </Card>

@@ -1,4 +1,5 @@
 import type { Prescripcion } from '../../api/tipos';
+import { formatearHora } from '../../utilidades/formato';
 
 /**
  * En qué punto está la toma de una prescripción respecto de ahora, para que quien administra lo
@@ -50,7 +51,8 @@ export function estadoToma(
 export function textoEstadoToma(e: EstadoToma) {
   switch (e.tipo) {
     case 'dada':
-      return `Ya se dio hace ${duracion(e.minutos)}`;
+      // Hora absoluta (como el aviso al elegirla): la relativa no se puede cotejar con el historial.
+      return `Ya se dio a las ${formatearHora(e.fechaHora)}`;
     case 'atrasada':
       return `Atrasada ${duracion(e.minutos)}`;
     case 'ahora':
@@ -62,12 +64,20 @@ export function textoEstadoToma(e: EstadoToma) {
   }
 }
 
+/**
+ * Una toma ya dada es una advertencia (riesgo de duplicar la dosis), no un "todo bien": va en
+ * color de advertencia y con contorno para no confundirse con la atrasada, que va rellena.
+ */
 const COLORES = {
-  dada: 'success',
+  dada: 'warning',
   atrasada: 'warning',
   ahora: 'primary',
   falta: 'default',
   'sin-tomas': 'default',
-} as const satisfies Record<EstadoToma['tipo'], 'success' | 'warning' | 'primary' | 'default'>;
+} as const satisfies Record<EstadoToma['tipo'], 'warning' | 'primary' | 'default'>;
 
 export const colorEstadoToma = (e: EstadoToma) => COLORES[e.tipo];
+
+/** Relleno solo para lo que pide acción ahora (toca o está atrasada); el resto, con contorno. */
+export const varianteEstadoToma = (e: EstadoToma): 'filled' | 'outlined' =>
+  e.tipo === 'ahora' || e.tipo === 'atrasada' ? 'filled' : 'outlined';

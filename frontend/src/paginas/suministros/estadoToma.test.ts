@@ -1,4 +1,11 @@
-import { duracion, estadoToma, textoEstadoToma } from './estadoToma';
+import {
+  colorEstadoToma,
+  duracion,
+  estadoToma,
+  textoEstadoToma,
+  varianteEstadoToma,
+  type EstadoToma,
+} from './estadoToma';
 
 const AHORA = new Date('2026-10-07T18:00:00.000Z');
 const en = (minutos: number) => new Date(AHORA.getTime() + minutos * 60_000).toISOString();
@@ -46,7 +53,8 @@ describe('estado de la toma de una prescripción', () => {
       AHORA,
     );
     expect(e).toMatchObject({ tipo: 'dada', minutos: 10, usuario: 'Acosta, Sofía' });
-    expect(textoEstadoToma(e)).toBe('Ya se dio hace 10 min');
+    // Hora absoluta (24 h, Argentina): la misma forma que el aviso al elegir la tarjeta.
+    expect(textoEstadoToma(e)).toBe('Ya se dio a las 14:50');
   });
 
   it('una administración de la toma anterior no cuenta como dada', () => {
@@ -59,5 +67,39 @@ describe('estado de la toma de una prescripción', () => {
 
   it('sin próxima toma (tratamiento terminado)', () => {
     expect(textoEstadoToma(estadoToma(prescripcion(null), AHORA))).toBe('Sin más tomas');
+  });
+});
+
+describe('cómo se muestra cada estado', () => {
+  const estados: { tipo: string; estado: EstadoToma; color: string; variante: string }[] = [
+    {
+      tipo: 'dada',
+      estado: { tipo: 'dada', minutos: 10, fechaHora: en(-10), usuario: 'Acosta, Sofía' },
+      color: 'warning',
+      variante: 'outlined',
+    },
+    {
+      tipo: 'atrasada',
+      estado: { tipo: 'atrasada', minutos: 20, toma: en(-20) },
+      color: 'warning',
+      variante: 'filled',
+    },
+    { tipo: 'ahora', estado: { tipo: 'ahora', toma: en(0) }, color: 'primary', variante: 'filled' },
+    {
+      tipo: 'falta',
+      estado: { tipo: 'falta', minutos: 185, toma: en(185) },
+      color: 'default',
+      variante: 'outlined',
+    },
+    { tipo: 'sin-tomas', estado: { tipo: 'sin-tomas' }, color: 'default', variante: 'outlined' },
+  ];
+
+  it.each(estados)('$tipo → color $color y variante $variante', ({ estado, color, variante }) => {
+    expect(colorEstadoToma(estado)).toBe(color);
+    expect(varianteEstadoToma(estado)).toBe(variante);
+  });
+
+  it('ningún estado usa el verde de "todo bien": una toma ya dada pide cuidado, no tranquiliza', () => {
+    for (const { estado } of estados) expect(colorEstadoToma(estado)).not.toBe('success');
   });
 });
