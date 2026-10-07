@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import HomeOutlinedIcon from '@mui/icons-material/HomeOutlined';
+import HotelOutlinedIcon from '@mui/icons-material/HotelOutlined';
 import ManageAccountsOutlinedIcon from '@mui/icons-material/ManageAccountsOutlined';
 
 export interface OpcionDelMenu {
@@ -13,6 +14,12 @@ export interface OpcionDelMenu {
 /** Todas las opciones del menú principal, en el orden en que se muestran (T108). */
 export const OPCIONES_DEL_MENU: OpcionDelMenu[] = [
   { ruta: '/', etiqueta: 'Inicio', icono: <HomeOutlinedIcon />, permiso: null },
+  {
+    ruta: '/pacientes',
+    etiqueta: 'Pacientes',
+    icono: <HotelOutlinedIcon />,
+    permiso: 'pacientes.ver',
+  },
   {
     ruta: '/usuarios',
     etiqueta: 'Usuarios',

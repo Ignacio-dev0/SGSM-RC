@@ -49,3 +49,81 @@ export interface Notificacion {
   leida: boolean;
   creadaEn: string;
 }
+
+export type Sexo = 'FEMENINO' | 'MASCULINO' | 'OTRO';
+export type EstadoPaciente = 'INTERNADO' | 'EGRESADO';
+
+export interface CamaDePaciente {
+  id: number;
+  numero: string;
+  sala: { id: number; nombre: string };
+  desde: string;
+}
+
+export interface Paciente {
+  id: number;
+  dni: string;
+  nombre: string;
+  apellido: string;
+  fechaNacimiento: string;
+  sexo: Sexo;
+  obraSocial: string | null;
+  numeroAfiliado: string | null;
+  diagnostico: string | null;
+  contactoEmergenciaNombre: string | null;
+  contactoEmergenciaTelefono: string | null;
+  observaciones: string | null;
+  estado: EstadoPaciente;
+  fechaIngreso: string;
+  fechaEgreso: string | null;
+  motivoEgreso: string | null;
+  cama: CamaDePaciente | null;
+}
+
+export interface Cama {
+  id: number;
+  numero: string;
+  habilitada: boolean;
+  sala: { id: number; nombre: string };
+  ocupada: boolean;
+  paciente: { id: number; apellido: string; nombre: string; dni: string } | null;
+}
+
+export interface Sala {
+  id: number;
+  nombre: string;
+  piso: string | null;
+  camas: number;
+  libres: number;
+}
+
+export interface HistorialPaciente {
+  asignaciones: {
+    id: number;
+    cama: string;
+    motivo: 'INGRESO' | 'TRASLADO' | 'REINGRESO';
+    fechaDesde: string;
+    fechaHasta: string | null;
+    asignadoPor: string | null;
+    liberadoPor: string | null;
+  }[];
+  modificaciones: {
+    id: number;
+    fechaHora: string;
+    accion: string;
+    entidad: string;
+    usuario: string | null;
+    valorAnterior: Record<string, unknown> | null;
+    valorNuevo: Record<string, unknown> | null;
+    detalle: string | null;
+  }[];
+  suministros: {
+    id: number;
+    fechaHora: string;
+    tipo: 'MEDICAMENTO' | 'INSUMOS';
+    prescripcionId: number | null;
+    usuario: string | null;
+    corregido: boolean;
+    detalles: { insumo: string; cantidad: number; unidad: string }[];
+  }[];
+}
