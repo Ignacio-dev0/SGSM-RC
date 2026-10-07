@@ -1,6 +1,13 @@
-import { fireEvent, screen, waitFor, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { ThemeProvider } from '@mui/material';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { http, HttpResponse } from 'msw';
+import { MemoryRouter, useNavigate } from 'react-router-dom';
+import type { UsuarioSesion } from '../../api/tipos';
+import { ProveedorSesion } from '../../auth/ContextoSesion';
+import { RutasApp } from '../../RutasApp';
+import { tema } from '../../tema';
 import { ENFERMERO, MEDICO } from '../../pruebas/datos';
 import {
   HISTORIAL,
@@ -8,7 +15,7 @@ import {
   paciente,
   simularCatalogosDePacientes,
 } from '../../pruebas/datosPacientes';
-import { renderizarApp } from '../../pruebas/renderizar';
+import { renderizarApp, simularSesion } from '../../pruebas/renderizar';
 import { servidor } from '../../pruebas/servidor';
 
 beforeEach(() => {
@@ -64,7 +71,11 @@ describe('búsqueda de pacientes (T206 · CU12)', () => {
       expect(pedidos.at(-1)?.get('salaId')).toBe('2');
       expect(pedidos.at(-1)?.get('estado')).toBe('EGRESADO');
     });
-    expect(await screen.findByText(/No se encontraron pacientes/)).toBeInTheDocument();
+    expect(
+      await screen.findByText(
+        'No hay pacientes egresados en Sala B – Traumatología. Elija otra sala, o cambie Estado a Todos.',
+      ),
+    ).toBeInTheDocument();
   });
 
   it('solo quien puede gestionar pacientes ve el botón para internar', async () => {
@@ -510,5 +521,238 @@ describe('historial del paciente (T209 · CU16)', () => {
     const tabla = await screen.findByRole('table', { name: 'Modificaciones' });
     expect(await within(tabla).findByText('Internación')).toBeInTheDocument();
     expect(within(tabla).queryByText('Alta')).not.toBeInTheDocument();
+  });
+});
+
+/** Botón de prueba que hace lo mismo que el "Atrás" del navegador o del gesto de la tablet. */
+function BotonAtras() {
+  const navegar = useNavigate();
+  return <button onClick={() => navegar(-1)}>Atrás del navegador</button>;
+}
+
+/** Como renderizarApp, pero con un botón para navegar hacia atrás por el historial. */
+function renderizarConAtras(ruta: string, usuario: UsuarioSesion) {
+  simularSesion(usuario);
+  const cliente = new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  });
+  return render(
+    <QueryClientProvider client={cliente}>
+      <ThemeProvider theme={tema}>
+        <MemoryRouter initialEntries={[ruta]}>
+          <ProveedorSesion>
+            <RutasApp />
+          </ProveedorSesion>
+          <BotonAtras />
+        </MemoryRouter>
+      </ThemeProvider>
+    </QueryClientProvider>,
+  );
+}
+
+describe('la búsqueda de pacientes queda en la URL (abrir una ficha y volver no la pierde)', () => {
+  it('al abrir una ficha y volver atrás, conserva el texto y vuelve a pedir con el filtro', async () => {
+    const pedidos: URLSearchParams[] = [];
+    servidor.use(
+      http.get('*/api/pacientes', ({ request }) => {
+        pedidos.push(new URL(request.url).searchParams);
+        return listaDePacientes([paciente()]);
+      }),
+      http.get('*/api/pacientes/7', () => HttpResponse.json({ data: paciente() })),
+    );
+    renderizarConAtras('/pacientes', ENFERMERO);
+
+    await userEvent.type(await screen.findByLabelText(/Buscar/), 'a-01');
+    await waitFor(() => expect(pedidos.at(-1)?.get('texto')).toBe('a-01'));
+    const tabla = await screen.findByRole('table', { name: 'Pacientes' });
+    await userEvent.click(await within(tabla).findByText('Benítez, Rosa'));
+    expect(await screen.findByRole('heading', { name: 'Benítez, Rosa' })).toBeInTheDocument();
+
+    const pedidosAntes = pedidos.length;
+    await userEvent.click(screen.getByRole('button', { name: 'Atrás del navegador' }));
+
+    expect(await screen.findByLabelText(/Buscar/)).toHaveValue('a-01');
+    await waitFor(() => expect(pedidos.length).toBeGreaterThan(pedidosAntes));
+    // Todo pedido desde que volvió lleva el filtro: nunca se muestra la lista sin filtrar.
+    expect(pedidos.slice(pedidosAntes).map((p) => p.get('texto'))).not.toContain('');
+    expect(
+      await within(await screen.findByRole('table', { name: 'Pacientes' })).findByText(
+        'Benítez, Rosa',
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it('lo mismo con la sala, el estado y la página elegidos: se restauran al entrar', async () => {
+    const pedidos: URLSearchParams[] = [];
+    servidor.use(
+      http.get('*/api/pacientes', ({ request }) => {
+        pedidos.push(new URL(request.url).searchParams);
+        return HttpResponse.json({
+          data: [paciente()],
+          meta: { pagina: 2, porPagina: 20, total: 25, totalPaginas: 2 },
+        });
+      }),
+    );
+    renderizarApp('/pacientes?salaId=2&estado=EGRESADO&pagina=2', ENFERMERO);
+
+    await screen.findByRole('table', { name: 'Pacientes' });
+    expect(pedidos[0]?.get('salaId')).toBe('2');
+    expect(pedidos[0]?.get('estado')).toBe('EGRESADO');
+    expect(pedidos[0]?.get('pagina')).toBe('2');
+    await waitFor(() => expect(screen.getByLabelText('Sala')).toHaveValue('2'));
+    expect(screen.getByLabelText('Estado')).toHaveValue('EGRESADO');
+
+    await userEvent.click(screen.getByRole('button', { name: 'Página anterior' }));
+    await waitFor(() => expect(pedidos.at(-1)?.get('pagina')).toBe('1'));
+  });
+
+  it('un estado vacío en la URL es "Todos", no el valor por defecto', async () => {
+    const pedidos: URLSearchParams[] = [];
+    servidor.use(
+      http.get('*/api/pacientes', ({ request }) => {
+        pedidos.push(new URL(request.url).searchParams);
+        return listaDePacientes([paciente()]);
+      }),
+    );
+    renderizarApp('/pacientes?estado=', ENFERMERO);
+
+    await screen.findByRole('table', { name: 'Pacientes' });
+    expect(screen.getByLabelText('Estado')).toHaveValue('');
+    // El cliente no manda los filtros vacíos: sin "estado" el servidor devuelve todos.
+    expect(pedidos[0]?.has('estado')).toBe(false);
+  });
+
+  it.todo(
+    'la flecha "Volver" de la ficha vuelve a la búsqueda con sus filtros (hoy es un enlace fijo a /pacientes)',
+  );
+});
+
+describe('pacientes: cuando no hay nada que mostrar', () => {
+  const sinResultadosSiHayTexto = http.get('*/api/pacientes', ({ request }) =>
+    new URL(request.url).searchParams.get('texto')
+      ? listaDePacientes([])
+      : listaDePacientes([paciente()]),
+  );
+  const OPCIONES = { name: 'Qué puede hacer ahora' };
+
+  it('con filtros dice por qué no hay nada y qué probar, y permite quitarlos', async () => {
+    servidor.use(sinResultadosSiHayTexto);
+    renderizarApp('/pacientes', ENFERMERO);
+
+    await userEvent.type(await screen.findByLabelText(/Buscar/), 'Pérez');
+    expect(
+      await screen.findByText(
+        'No hay pacientes internados que coincidan con «Pérez». Pruebe con otro apellido, DNI o cama, o cambie Estado a Todos.',
+      ),
+    ).toBeInTheDocument();
+    const opciones = screen.getByRole('group', OPCIONES);
+    // Enfermería no interna pacientes: no se le ofrece.
+    expect(
+      within(opciones).queryByRole('button', { name: 'Internar paciente' }),
+    ).not.toBeInTheDocument();
+
+    await userEvent.click(within(opciones).getByRole('button', { name: 'Quitar filtros' }));
+
+    expect(screen.getByLabelText(/Buscar/)).toHaveValue('');
+    // El botón desaparece: el foco queda en el campo para buscar de nuevo.
+    expect(screen.getByLabelText(/Buscar/)).toHaveFocus();
+    const tabla = screen.getByRole('table', { name: 'Pacientes' });
+    expect(await within(tabla).findByText('Benítez, Rosa')).toBeInTheDocument();
+    expect(screen.queryByRole('group', OPCIONES)).not.toBeInTheDocument();
+  });
+
+  it('nombra la sala elegida y el estado en el mensaje', async () => {
+    servidor.use(http.get('*/api/pacientes', () => listaDePacientes([])));
+    renderizarApp('/pacientes?salaId=2&texto=Pérez&estado=', ENFERMERO);
+
+    expect(
+      await screen.findByText(
+        'No hay pacientes en Sala B – Traumatología que coincidan con «Pérez». Pruebe con otro apellido, DNI o cama, o elija otra sala.',
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it('quitar los filtros también vuelve a Internados si se había elegido otro estado', async () => {
+    const pedidos: URLSearchParams[] = [];
+    servidor.use(
+      http.get('*/api/pacientes', ({ request }) => {
+        const parametros = new URL(request.url).searchParams;
+        pedidos.push(parametros);
+        return listaDePacientes(parametros.get('estado') === 'EGRESADO' ? [] : [paciente()]);
+      }),
+    );
+    renderizarApp('/pacientes?estado=EGRESADO', ENFERMERO);
+
+    expect(
+      await screen.findByText('No hay pacientes egresados. Cambie Estado a Todos.'),
+    ).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Quitar filtros' }));
+
+    expect(screen.getByLabelText('Estado')).toHaveValue('INTERNADO');
+    await waitFor(() => expect(pedidos.at(-1)?.get('estado')).toBe('INTERNADO'));
+  });
+
+  it('quien puede internar pacientes lo tiene a mano también en la búsqueda sin resultados', async () => {
+    servidor.use(sinResultadosSiHayTexto);
+    renderizarApp('/pacientes?texto=zzz', MEDICO);
+
+    const opciones = await screen.findByRole('group', OPCIONES);
+    expect(within(opciones).getByRole('button', { name: 'Quitar filtros' })).toBeInTheDocument();
+    await userEvent.click(within(opciones).getByRole('button', { name: 'Internar paciente' }));
+
+    expect(await screen.findByRole('heading', { name: 'Internar paciente' })).toBeInTheDocument();
+  });
+
+  it('sin pacientes internados lo dice distinto, y quien puede internar tiene la acción', async () => {
+    servidor.use(http.get('*/api/pacientes', () => listaDePacientes([])));
+    renderizarApp('/pacientes', MEDICO);
+
+    expect(
+      await screen.findByText(
+        'No hay pacientes internados. Cuando se interne uno, va a aparecer en esta lista.',
+      ),
+    ).toBeInTheDocument();
+    const opciones = screen.getByRole('group', OPCIONES);
+    expect(within(opciones).getByRole('button', { name: 'Internar paciente' })).toBeInTheDocument();
+    // No hay filtros que quitar.
+    expect(screen.queryByRole('button', { name: 'Quitar filtros' })).not.toBeInTheDocument();
+  });
+
+  it('sin pacientes internados, enfermería ve el mensaje y no una acción que no puede usar', async () => {
+    servidor.use(http.get('*/api/pacientes', () => listaDePacientes([])));
+    renderizarApp('/pacientes', ENFERMERO);
+
+    expect(await screen.findByText(/No hay pacientes internados\./)).toBeInTheDocument();
+    expect(screen.queryByRole('group', OPCIONES)).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Internar paciente' })).not.toBeInTheDocument();
+  });
+
+  it('un fallo de carga no se lee como "no hay pacientes": avisa, deja reintentar y no muestra el vacío', async () => {
+    let pedidos = 0;
+    servidor.use(
+      http.get('*/api/pacientes', () => {
+        pedidos++;
+        return pedidos === 1
+          ? HttpResponse.json(
+              { error: { codigo: 'ERROR_INTERNO', mensaje: 'Error inesperado del servidor' } },
+              { status: 500 },
+            )
+          : listaDePacientes([paciente()]);
+      }),
+    );
+    renderizarApp('/pacientes?texto=zzz', MEDICO);
+
+    const aviso = await screen.findByRole('alert');
+    expect(aviso).toHaveTextContent(/No se pudo cargar la lista de pacientes/);
+    expect(aviso).toHaveTextContent(/Error inesperado/);
+    // Ni el mensaje de "sin resultados" ni sus acciones: no es que no haya pacientes.
+    expect(screen.queryByText(/No hay pacientes/)).not.toBeInTheDocument();
+    expect(screen.queryByRole('group', OPCIONES)).not.toBeInTheDocument();
+
+    await userEvent.click(within(aviso).getByRole('button', { name: 'Reintentar' }));
+
+    const tabla = await screen.findByRole('table', { name: 'Pacientes' });
+    expect(await within(tabla).findByText('Benítez, Rosa')).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 });

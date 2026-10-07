@@ -269,3 +269,124 @@ describe('permisos adicionales (T111 · CU05)', () => {
     expect(enviado).toEqual({ permisos: ['pacientes.gestionar'] });
   });
 });
+
+describe('el listado de usuarios recuerda lo que se buscó (queda en la URL)', () => {
+  const sinResultadosSiHayTexto = http.get('*/api/usuarios', ({ request }) =>
+    new URL(request.url).searchParams.get('texto') ? lista([]) : lista([usuario()]),
+  );
+  const OPCIONES = { name: 'Qué puede hacer ahora' };
+
+  it('restaura de la URL el texto, el rol, el estado y la página, y los pide a la API', async () => {
+    const pedidos: URLSearchParams[] = [];
+    servidor.use(
+      http.get('*/api/usuarios', ({ request }) => {
+        pedidos.push(new URL(request.url).searchParams);
+        return lista([usuario()]);
+      }),
+    );
+    renderizarApp('/usuarios?texto=gomez&rol=ENFERMERO&activo=false&pagina=2', ADMIN);
+
+    await screen.findByRole('table', { name: 'Usuarios' });
+    expect(screen.getByLabelText(/Buscar/)).toHaveValue('gomez');
+    expect(screen.getByLabelText('Estado')).toHaveValue('false');
+    await waitFor(() => expect(screen.getByLabelText('Rol')).toHaveValue('ENFERMERO'));
+    expect(pedidos[0]?.get('texto')).toBe('gomez');
+    expect(pedidos[0]?.get('rol')).toBe('ENFERMERO');
+    expect(pedidos[0]?.get('activo')).toBe('false');
+    expect(pedidos[0]?.get('pagina')).toBe('2');
+  });
+
+  it('con filtros dice por qué no hay nada y qué probar, y permite quitarlos', async () => {
+    servidor.use(sinResultadosSiHayTexto);
+    renderizarApp('/usuarios', ADMIN);
+
+    await userEvent.type(await screen.findByLabelText(/Buscar/), 'zzz');
+    expect(
+      await screen.findByText(
+        'No hay usuarios activos que coincidan con «zzz». Pruebe con otro apellido, usuario o DNI, o cambie Estado a Todos.',
+      ),
+    ).toBeInTheDocument();
+
+    await userEvent.click(
+      within(screen.getByRole('group', OPCIONES)).getByRole('button', { name: 'Quitar filtros' }),
+    );
+
+    expect(screen.getByLabelText(/Buscar/)).toHaveValue('');
+    // El botón desaparece: el foco queda en el campo para buscar de nuevo.
+    expect(screen.getByLabelText(/Buscar/)).toHaveFocus();
+    const tabla = screen.getByRole('table', { name: 'Usuarios' });
+    expect(await within(tabla).findByText('Gómez, Lucía')).toBeInTheDocument();
+    expect(screen.queryByRole('group', OPCIONES)).not.toBeInTheDocument();
+  });
+
+  it('nombra el rol elegido en el mensaje', async () => {
+    servidor.use(http.get('*/api/usuarios', () => lista([])));
+    renderizarApp('/usuarios?rol=ENFERMERO&texto=Pérez&activo=', ADMIN);
+
+    expect(
+      await screen.findByText(
+        'No hay usuarios con rol Enfermero que coincidan con «Pérez». Pruebe con otro apellido, usuario o DNI, o elija otro rol.',
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it('quitar los filtros también vuelve a Activos si se habían pedido los dados de baja', async () => {
+    const pedidos: URLSearchParams[] = [];
+    servidor.use(
+      http.get('*/api/usuarios', ({ request }) => {
+        const parametros = new URL(request.url).searchParams;
+        pedidos.push(parametros);
+        return lista(parametros.get('activo') === 'false' ? [] : [usuario()]);
+      }),
+    );
+    renderizarApp('/usuarios?activo=false', ADMIN);
+
+    expect(
+      await screen.findByText('No hay usuarios dados de baja. Cambie Estado a Todos.'),
+    ).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Quitar filtros' }));
+
+    expect(screen.getByLabelText('Estado')).toHaveValue('true');
+    await waitFor(() => expect(pedidos.at(-1)?.get('activo')).toBe('true'));
+  });
+
+  it('sin usuarios activos lo dice distinto, sin ofrecer quitar filtros que no hay', async () => {
+    servidor.use(http.get('*/api/usuarios', () => lista([])));
+    renderizarApp('/usuarios', ADMIN);
+
+    expect(
+      await screen.findByText(
+        'No hay usuarios activos. Use «Nuevo usuario» para registrar al personal.',
+      ),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Quitar filtros' })).not.toBeInTheDocument();
+  });
+
+  it('un fallo de carga no se lee como "no hay usuarios": avisa, deja reintentar y no muestra el vacío', async () => {
+    let pedidos = 0;
+    servidor.use(
+      http.get('*/api/usuarios', () => {
+        pedidos++;
+        return pedidos === 1
+          ? HttpResponse.json(
+              { error: { codigo: 'ERROR_INTERNO', mensaje: 'Error inesperado del servidor' } },
+              { status: 500 },
+            )
+          : lista([usuario()]);
+      }),
+    );
+    renderizarApp('/usuarios?texto=zzz', ADMIN);
+
+    const aviso = await screen.findByRole('alert');
+    expect(aviso).toHaveTextContent(/No se pudo cargar la lista de usuarios/);
+    expect(aviso).toHaveTextContent(/Error inesperado/);
+    expect(screen.queryByText(/No hay usuarios/)).not.toBeInTheDocument();
+    expect(screen.queryByRole('group', OPCIONES)).not.toBeInTheDocument();
+
+    await userEvent.click(within(aviso).getByRole('button', { name: 'Reintentar' }));
+
+    const tabla = await screen.findByRole('table', { name: 'Usuarios' });
+    expect(await within(tabla).findByText('Gómez, Lucía')).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+});

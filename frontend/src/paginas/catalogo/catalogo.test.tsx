@@ -110,3 +110,184 @@ describe('catálogo de insumos y medicamentos (T303)', () => {
     expect(await screen.findByText(/No tiene permiso/)).toBeInTheDocument();
   });
 });
+
+describe('el catálogo recuerda lo que se filtró (queda en la URL)', () => {
+  const sinResultadosSiHayTexto = http.get('*/api/insumos', ({ request }) =>
+    HttpResponse.json({ data: new URL(request.url).searchParams.get('texto') ? [] : [insumo()] }),
+  );
+  const OPCIONES = { name: 'Qué puede hacer ahora' };
+
+  it('restaura de la URL el texto, el tipo y el estado, y los pide a la API', async () => {
+    const pedidos: URLSearchParams[] = [];
+    servidor.use(
+      http.get('*/api/insumos', ({ request }) => {
+        pedidos.push(new URL(request.url).searchParams);
+        return HttpResponse.json({ data: [insumo()] });
+      }),
+    );
+    renderizarApp('/catalogo?texto=gasa&tipo=INSUMO&activo=false', ADMIN);
+
+    await screen.findByRole('table', { name: 'Catálogo' });
+    expect(screen.getByLabelText(/Buscar/)).toHaveValue('gasa');
+    expect(screen.getByLabelText('Tipo')).toHaveValue('INSUMO');
+    expect(screen.getByLabelText('Estado')).toHaveValue('false');
+    expect(pedidos[0]?.get('texto')).toBe('gasa');
+    expect(pedidos[0]?.get('tipo')).toBe('INSUMO');
+    expect(pedidos[0]?.get('activo')).toBe('false');
+  });
+
+  it('con filtros dice por qué no hay nada y qué probar, y permite quitarlos', async () => {
+    servidor.use(sinResultadosSiHayTexto);
+    renderizarApp('/catalogo', ADMIN);
+
+    await userEvent.type(await screen.findByLabelText(/Buscar/), 'zzz');
+    expect(
+      await screen.findByText(
+        'No hay insumos ni medicamentos activos que coincidan con «zzz». Pruebe con otro nombre.',
+      ),
+    ).toBeInTheDocument();
+    await userEvent.click(
+      within(screen.getByRole('group', OPCIONES)).getByRole('button', { name: 'Quitar filtros' }),
+    );
+
+    expect(screen.getByLabelText(/Buscar/)).toHaveValue('');
+    // El botón desaparece: el foco queda en el campo para buscar de nuevo.
+    expect(screen.getByLabelText(/Buscar/)).toHaveFocus();
+    const tabla = screen.getByRole('table', { name: 'Catálogo' });
+    expect(await within(tabla).findByText('Paracetamol')).toBeInTheDocument();
+    expect(screen.queryByRole('group', OPCIONES)).not.toBeInTheDocument();
+  });
+
+  it('si lo buscado no está, se puede agregar al catálogo desde el mismo lugar', async () => {
+    servidor.use(sinResultadosSiHayTexto);
+    renderizarApp('/catalogo?texto=zzz', ADMIN);
+
+    const opciones = await screen.findByRole('group', OPCIONES);
+    await userEvent.click(within(opciones).getByRole('button', { name: 'Agregar al catálogo' }));
+
+    expect(await screen.findByRole('dialog', { name: 'Nuevo medicamento' })).toBeInTheDocument();
+  });
+
+  it('nombra el tipo y el estado elegidos en el mensaje', async () => {
+    servidor.use(http.get('*/api/insumos', () => HttpResponse.json({ data: [] })));
+    renderizarApp('/catalogo?tipo=INSUMO&activo=false', ADMIN);
+
+    expect(
+      await screen.findByText(
+        'No hay insumos dados de baja. Cambie Tipo a Todos, o cambie Estado a Activos.',
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it('sin nada cargado lo dice distinto y apunta a Agregar al catálogo', async () => {
+    servidor.use(http.get('*/api/insumos', () => HttpResponse.json({ data: [] })));
+    renderizarApp('/catalogo', ADMIN);
+
+    expect(
+      await screen.findByText(
+        'No hay insumos ni medicamentos activos. Use «Agregar al catálogo» para cargar uno.',
+      ),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Quitar filtros' })).not.toBeInTheDocument();
+  });
+
+  it('un fallo de carga no se lee como "no hay insumos": avisa, deja reintentar y no muestra el vacío', async () => {
+    let pedidos = 0;
+    servidor.use(
+      http.get('*/api/insumos', () => {
+        pedidos++;
+        return pedidos === 1
+          ? HttpResponse.json(
+              { error: { codigo: 'ERROR_INTERNO', mensaje: 'Error inesperado del servidor' } },
+              { status: 500 },
+            )
+          : HttpResponse.json({ data: [insumo()] });
+      }),
+    );
+    renderizarApp('/catalogo?texto=zzz', ADMIN);
+
+    const aviso = await screen.findByRole('alert');
+    expect(aviso).toHaveTextContent(/No se pudo cargar el catálogo/);
+    expect(aviso).toHaveTextContent(/Error inesperado/);
+    expect(screen.queryByText(/No hay insumos/)).not.toBeInTheDocument();
+    expect(screen.queryByRole('group', OPCIONES)).not.toBeInTheDocument();
+
+    await userEvent.click(within(aviso).getByRole('button', { name: 'Reintentar' }));
+
+    const tabla = await screen.findByRole('table', { name: 'Catálogo' });
+    expect(await within(tabla).findByText('Paracetamol')).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+});
+
+describe('dar de baja desde el catálogo: la confirmación (UX-10)', () => {
+  const dosInsumos = http.get('*/api/insumos', () =>
+    HttpResponse.json({ data: [insumo(), insumo({ id: 2, nombre: 'Ibuprofeno' })] }),
+  );
+  const falla = () =>
+    HttpResponse.json(
+      { error: { codigo: 'ERROR_INTERNO', mensaje: 'Error inesperado del servidor' } },
+      { status: 500 },
+    );
+
+  /** Abre Paracetamol y llega a la confirmación de la baja. */
+  async function pedirBajaDeParacetamol() {
+    await userEvent.click(await screen.findByText('Paracetamol'));
+    const dialogo = screen.getByRole('dialog', { name: 'Editar medicamento' });
+    await userEvent.click(within(dialogo).getByRole('button', { name: 'Dar de baja' }));
+    return {
+      dialogo,
+      confirmacion: screen.getByRole('dialog', { name: /Dar de baja Paracetamol/ }),
+    };
+  }
+
+  it('después de dar de baja un insumo, abrir otro no muestra sola la confirmación', async () => {
+    servidor.use(
+      dosInsumos,
+      http.delete('*/api/insumos/1', () => HttpResponse.json({ data: insumo({ activo: false }) })),
+    );
+    renderizarApp('/catalogo', ADMIN);
+
+    const { confirmacion } = await pedirBajaDeParacetamol();
+    await userEvent.click(within(confirmacion).getByRole('button', { name: 'Dar de baja' }));
+    expect(await screen.findByRole('status')).toHaveTextContent(/dado de baja/);
+
+    await userEvent.click(await screen.findByText('Ibuprofeno'));
+    expect(await screen.findByRole('dialog', { name: 'Editar medicamento' })).toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.queryByRole('dialog', { name: /Dar de baja/ })).not.toBeInTheDocument(),
+    );
+  });
+
+  it('si la baja falla, el error se ve dentro de la confirmación y no en el diálogo de atrás', async () => {
+    servidor.use(dosInsumos, http.delete('*/api/insumos/1', falla));
+    renderizarApp('/catalogo', ADMIN);
+
+    const { dialogo, confirmacion } = await pedirBajaDeParacetamol();
+    await userEvent.click(within(confirmacion).getByRole('button', { name: 'Dar de baja' }));
+
+    expect(await within(confirmacion).findByRole('alert')).toHaveTextContent(/Error inesperado/);
+    expect(within(dialogo).queryByRole('alert', { hidden: true })).not.toBeInTheDocument();
+    // La confirmación sigue abierta: se puede reintentar o cancelar.
+    expect(confirmacion).toBeInTheDocument();
+  });
+
+  it('un error de un intento anterior no reaparece al abrir otro insumo', async () => {
+    servidor.use(dosInsumos, http.delete('*/api/insumos/1', falla));
+    renderizarApp('/catalogo', ADMIN);
+
+    const { dialogo, confirmacion } = await pedirBajaDeParacetamol();
+    await userEvent.click(within(confirmacion).getByRole('button', { name: 'Dar de baja' }));
+    await within(confirmacion).findByRole('alert');
+    await userEvent.click(within(confirmacion).getByRole('button', { name: 'Cancelar' }));
+    // El diálogo de atrás vuelve a ser accesible cuando termina de cerrarse la confirmación.
+    await userEvent.click(await within(dialogo).findByRole('button', { name: 'Cancelar' }));
+    await waitFor(() =>
+      expect(screen.queryByRole('dialog', { name: /Editar/ })).not.toBeInTheDocument(),
+    );
+
+    await userEvent.click(await screen.findByText('Ibuprofeno'));
+    expect(await screen.findByRole('dialog', { name: 'Editar medicamento' })).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+});

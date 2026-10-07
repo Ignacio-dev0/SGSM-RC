@@ -3,18 +3,19 @@ import { Box, Chip } from '@mui/material';
 import InventoryOutlinedIcon from '@mui/icons-material/Inventory2Outlined';
 import MedicationOutlinedIcon from '@mui/icons-material/MedicationOutlined';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
-import { useNavigate, useSearchParams } from 'react-router-dom';
-import { mensajeDeError } from '../../api/cliente';
+import { useNavigate } from 'react-router-dom';
 import { suministrosApi } from '../../api/suministros';
 import type { Suministro } from '../../api/tipos';
 import { useSesion } from '../../auth/useSesion';
-import { Alerta } from '../../componentes/Alerta';
 import { Boton } from '../../componentes/Boton';
 import { CampoTexto } from '../../componentes/CampoTexto';
 import { EncabezadoPagina } from '../../componentes/EncabezadoPagina';
+import { ErrorDeCarga } from '../../componentes/EstadoDeCarga';
 import { Selector } from '../../componentes/Selector';
 import { Tabla, type Columna } from '../../componentes/Tabla';
-import { formatearFechaHora } from '../../utilidades/formato';
+import { formatearFechaHora, formatearFechaSinZona } from '../../utilidades/formato';
+import { oracionDe, pasosParaProbar } from '../../utilidades/sinResultados';
+import { useFiltrosEnUrl } from '../../utilidades/useFiltrosEnUrl';
 import { SelectorPaciente } from './comunes';
 import { DialogoSuministro } from './DialogoSuministro';
 import { detalleDe } from './formato';
@@ -43,40 +44,81 @@ const COLUMNAS: Columna<Suministro>[] = [
 const inicioDelDia = (f: string) => (f ? `${f}T00:00:00-03:00` : undefined);
 const finDelDia = (f: string) => (f ? `${f}T23:59:59.999-03:00` : undefined);
 
-/** Historial de suministros con filtros y detalle (T415 · CU22 · RF10). */
+/** Vista inicial: todo lo registrado, sin filtros. Lo que se aparta de esto va en la URL. */
+const FILTROS_INICIALES = { pacienteId: '', desde: '', hasta: '', tipoInsumo: '', usuarioId: '' };
+
+const MENSAJE_SIN_SUMINISTROS =
+  'Todavía no se registró ningún suministro. Aparecerán aquí cuando se administre un medicamento o se registren insumos.';
+
+/** "AAAA-MM-DD" (de los campos de fecha) → "entre el 01/10/2026 y el 05/10/2026". */
+function rangoDeFechas(desde: string, hasta: string) {
+  if (desde && hasta) {
+    return `entre el ${formatearFechaSinZona(desde)} y el ${formatearFechaSinZona(hasta)}`;
+  }
+  if (desde) return `desde el ${formatearFechaSinZona(desde)}`;
+  if (hasta) return `hasta el ${formatearFechaSinZona(hasta)}`;
+  return '';
+}
+
+/** Qué no se encontró y qué probar: la causa y el paso siguiente, con lo que se filtró. */
+function mensajeSinSuministros(
+  { pacienteId, desde, hasta, tipoInsumo, usuarioId }: typeof FILTROS_INICIALES,
+  conFiltros: boolean,
+  nombreResponsable: string | undefined,
+) {
+  if (!conFiltros) return MENSAJE_SIN_SUMINISTROS;
+  const causa = oracionDe([
+    'No hay suministros',
+    tipoInsumo === 'MEDICAMENTO' && 'de medicamentos',
+    tipoInsumo === 'INSUMO' && 'de insumos',
+    pacienteId && 'del paciente elegido',
+    rangoDeFechas(desde, hasta),
+    usuarioId && `registrados por ${nombreResponsable ?? 'el responsable elegido'}`,
+  ]);
+  const pasos = pasosParaProbar([
+    pacienteId && 'elija otro paciente',
+    (desde || hasta) && 'amplíe las fechas',
+    tipoInsumo && 'cambie Tipo a Todos',
+    usuarioId && 'elija otro responsable',
+  ]);
+  return `${causa} ${pasos}`;
+}
+
+/**
+ * Historial de suministros con filtros y detalle (T415 · CU22 · RF10). Los filtros y la página
+ * viven en la URL (`?pacienteId=7` abre el historial de un paciente): al abrir un registro y
+ * volver, el filtro sigue ahí.
+ */
 export function HistorialSuministros() {
   const navegar = useNavigate();
   const { tienePermiso } = useSesion();
-  const [parametros] = useSearchParams();
-  const [pacienteId, setPacienteId] = useState(parametros.get('pacienteId') ?? '');
-  const [desde, setDesde] = useState('');
-  const [hasta, setHasta] = useState('');
-  const [tipoInsumo, setTipoInsumo] = useState('');
-  const [usuarioId, setUsuarioId] = useState('');
-  const [pagina, setPagina] = useState(1);
+  const filtros = useFiltrosEnUrl(FILTROS_INICIALES);
+  const { pacienteId, desde, hasta, tipoInsumo, usuarioId } = filtros.valores;
   const [abierto, setAbierto] = useState<Suministro | null>(null);
 
   const responsables = useQuery({
     queryKey: ['suministros', 'responsables'],
     queryFn: suministrosApi.responsables,
   });
-  const filtros = {
+  const pedido = {
     pacienteId,
     usuarioId,
     tipoInsumo,
     desde: inicioDelDia(desde),
     hasta: finDelDia(hasta),
-    pagina,
+    pagina: filtros.pagina,
   };
   const consulta = useQuery({
-    queryKey: ['suministros', filtros],
-    queryFn: () => suministrosApi.buscar(filtros),
+    queryKey: ['suministros', pedido],
+    queryFn: () => suministrosApi.buscar(pedido),
     placeholderData: keepPreviousData,
   });
-  const filtrar = (aplicar: () => void) => {
-    aplicar();
-    setPagina(1);
-  };
+
+  // Solo con la respuesta ya asentada y sin error: un fallo de carga no es "no hay suministros".
+  const sinResultados =
+    consulta.isSuccess && !consulta.isFetching && consulta.data.data.length === 0;
+  const conFiltros = filtros.hayFiltros();
+  const nombreResponsable = responsables.data?.find((u) => String(u.id) === usuarioId)?.nombre;
 
   return (
     <>
@@ -103,7 +145,6 @@ export function HistorialSuministros() {
           )
         }
       />
-      {consulta.isError && <Alerta tipo="error">{mensajeDeError(consulta.error)}</Alerta>}
       <Box
         sx={{
           display: 'grid',
@@ -114,27 +155,27 @@ export function HistorialSuministros() {
       >
         <SelectorPaciente
           valor={pacienteId}
-          alCambiar={(v) => filtrar(() => setPacienteId(v))}
+          alCambiar={(v) => filtros.fijar({ pacienteId: v })}
           textoVacio="Todos"
         />
         <CampoTexto
           etiqueta="Desde"
           valor={desde}
-          alCambiar={(v) => filtrar(() => setDesde(v))}
+          alCambiar={(v) => filtros.fijar({ desde: v })}
           type="date"
           slotProps={{ inputLabel: { shrink: true } }}
         />
         <CampoTexto
           etiqueta="Hasta"
           valor={hasta}
-          alCambiar={(v) => filtrar(() => setHasta(v))}
+          alCambiar={(v) => filtros.fijar({ hasta: v })}
           type="date"
           slotProps={{ inputLabel: { shrink: true } }}
         />
         <Selector
           etiqueta="Tipo"
           valor={tipoInsumo}
-          alCambiar={(v) => filtrar(() => setTipoInsumo(v))}
+          alCambiar={(v) => filtros.fijar({ tipoInsumo: v })}
           opciones={[
             { valor: '', etiqueta: 'Todos' },
             { valor: 'MEDICAMENTO', etiqueta: 'Medicamentos' },
@@ -144,7 +185,7 @@ export function HistorialSuministros() {
         <Selector
           etiqueta="Responsable"
           valor={usuarioId}
-          alCambiar={(v) => filtrar(() => setUsuarioId(v))}
+          alCambiar={(v) => filtros.fijar({ usuarioId: v })}
           textoVacio="Todos"
           opciones={(responsables.data ?? []).map((u) => ({
             valor: String(u.id),
@@ -152,18 +193,38 @@ export function HistorialSuministros() {
           }))}
         />
       </Box>
-      <Tabla
-        titulo="Suministros"
-        columnas={COLUMNAS}
-        filas={consulta.data?.data ?? []}
-        claveFila={(s) => s.id}
-        cargando={consulta.isFetching}
-        mensajeVacio="No hay suministros con esos filtros"
-        alTocarFila={setAbierto}
-        {...(consulta.data && {
-          paginacion: { ...consulta.data.meta, alCambiarPagina: setPagina },
-        })}
-      />
+      {consulta.isError ? (
+        // Un fallo de carga no se lee como "no hay suministros": sin tabla ni mensaje de vacío.
+        <ErrorDeCarga
+          que="el historial de suministros"
+          error={consulta.error}
+          alReintentar={() => void consulta.refetch()}
+        />
+      ) : (
+        <Tabla
+          titulo="Suministros"
+          columnas={COLUMNAS}
+          filas={consulta.data?.data ?? []}
+          claveFila={(s) => s.id}
+          cargando={consulta.isFetching}
+          mensajeVacio={mensajeSinSuministros(filtros.valores, conFiltros, nombreResponsable)}
+          alTocarFila={setAbierto}
+          {...(consulta.data && {
+            paginacion: { ...consulta.data.meta, alCambiarPagina: filtros.irAPagina },
+          })}
+        />
+      )}
+      {sinResultados && conFiltros && (
+        <Box
+          role="group"
+          aria-label="Qué puede hacer ahora"
+          sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mt: 2 }}
+        >
+          <Boton variante="secundario" onClick={filtros.quitarFiltros}>
+            Quitar filtros
+          </Boton>
+        </Box>
+      )}
       {abierto && <DialogoSuministro inicial={abierto} alCerrar={() => setAbierto(null)} />}
     </>
   );

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   Box,
   Chip,
@@ -18,9 +18,12 @@ import { Alerta } from '../../componentes/Alerta';
 import { Boton } from '../../componentes/Boton';
 import { CampoTexto } from '../../componentes/CampoTexto';
 import { EncabezadoPagina } from '../../componentes/EncabezadoPagina';
+import { ErrorDeCarga } from '../../componentes/EstadoDeCarga';
 import { ModalConfirmacion } from '../../componentes/ModalConfirmacion';
 import { Selector } from '../../componentes/Selector';
 import { Tabla, type Columna } from '../../componentes/Tabla';
+import { oracionDe, pasosParaProbar } from '../../utilidades/sinResultados';
+import { useFiltrosEnUrl } from '../../utilidades/useFiltrosEnUrl';
 import { useRetardo } from '../../utilidades/useRetardo';
 import { useFocoEnPrimerError } from '../../utilidades/useFocoEnPrimerError';
 import { cerrarSinTocarAfuera } from '../../componentes/dialogos';
@@ -62,22 +65,6 @@ function DialogoInsumo({ insumo, abierto, alCerrar, alTerminar }: PropsDialogo) 
   const [confirmandoBaja, setConfirmandoBaja] = useState(false);
   const { ref: refFormulario, enfocarPrimerError } = useFocoEnPrimerError<HTMLDivElement>();
 
-  useEffect(() => {
-    if (abierto) {
-      setDatos(
-        insumo
-          ? {
-              nombre: insumo.nombre,
-              tipo: insumo.tipo,
-              unidadMedida: insumo.unidadMedida,
-              presentacion: insumo.presentacion,
-            }
-          : VACIO,
-      );
-      setErrores({});
-    }
-  }, [abierto, insumo]);
-
   const alFallar = (err: unknown) => {
     const porCampo = erroresPorCampo(err) as Partial<Record<keyof DatosInsumo, string>>;
     if (err instanceof ErrorApi && err.codigo === 'INSUMO_DUPLICADO') porCampo.nombre = err.message;
@@ -98,13 +85,38 @@ function DialogoInsumo({ insumo, abierto, alCerrar, alTerminar }: PropsDialogo) 
       insumo!.activo
         ? insumosApi.darDeBaja(insumo!.id)
         : insumosApi.modificar(insumo!.id, { activo: true }),
-    onSuccess: (i) =>
+    onSuccess: (i) => {
+      setConfirmandoBaja(false);
       alTerminar(
         i.activo
           ? `${i.nombre} volvió a estar activo`
           : `${i.nombre} fue dado de baja del catálogo`,
-      ),
+      );
+    },
   });
+  const { reset: olvidarErrorAlGuardar } = guardar;
+  const { reset: olvidarErrorDeEstado } = cambiarEstado;
+
+  // Cada vez que el diálogo se abre, se cierra o pasa a otro insumo arranca limpio: sin la
+  // confirmación de baja del insumo anterior y sin errores de intentos anteriores.
+  useEffect(() => {
+    setConfirmandoBaja(false);
+    olvidarErrorAlGuardar();
+    olvidarErrorDeEstado();
+    if (abierto) {
+      setDatos(
+        insumo
+          ? {
+              nombre: insumo.nombre,
+              tipo: insumo.tipo,
+              unidadMedida: insumo.unidadMedida,
+              presentacion: insumo.presentacion,
+            }
+          : VACIO,
+      );
+      setErrores({});
+    }
+  }, [abierto, insumo, olvidarErrorAlGuardar, olvidarErrorDeEstado]);
 
   const enviar = () => {
     const faltan = {
@@ -123,8 +135,11 @@ function DialogoInsumo({ insumo, abierto, alCerrar, alTerminar }: PropsDialogo) 
     },
     error: errores[c],
   });
-  const error =
-    guardar.isError && Object.keys(errores).length === 0 ? guardar.error : cambiarEstado.error;
+  const errorAlGuardar =
+    guardar.isError && Object.keys(errores).length === 0 ? guardar.error : null;
+  // La baja se confirma en su propio modal: si falla, el error se ve ahí (y no en el diálogo de
+  // atrás, que queda tapado). Reactivar no pide confirmación: su error va en este diálogo.
+  const error = errorAlGuardar ?? (confirmandoBaja ? null : cambiarEstado.error);
 
   return (
     <Dialog
@@ -187,28 +202,77 @@ function DialogoInsumo({ insumo, abierto, alCerrar, alTerminar }: PropsDialogo) 
           peligroso
           cargando={cambiarEstado.isPending}
           alConfirmar={() => cambiarEstado.mutate()}
-          alCancelar={() => setConfirmandoBaja(false)}
-        />
+          alCancelar={() => {
+            setConfirmandoBaja(false);
+            olvidarErrorDeEstado();
+          }}
+        >
+          {cambiarEstado.isError && (
+            <Box sx={{ mt: 2 }}>
+              <Alerta tipo="error">{mensajeDeError(cambiarEstado.error)}</Alerta>
+            </Box>
+          )}
+        </ModalConfirmacion>
       )}
     </Dialog>
   );
 }
 
-/** Administración del catálogo de insumos y medicamentos (T303). */
+/** Vista inicial: lo activo de todo tipo, sin búsqueda. Lo que se aparta de esto va en la URL. */
+const FILTROS_INICIALES = { texto: '', tipo: '', activo: 'true' };
+
+/** Qué no se encontró y qué probar: la causa y el paso siguiente, con lo que se buscó. */
+function mensajeSinInsumos({ texto, tipo, activo }: typeof FILTROS_INICIALES, conFiltros: boolean) {
+  const buscado = texto.trim();
+  const que =
+    tipo === 'MEDICAMENTO'
+      ? 'medicamentos'
+      : tipo === 'INSUMO'
+        ? 'insumos'
+        : 'insumos ni medicamentos';
+  const causa = oracionDe([
+    'No hay',
+    que,
+    activo === 'true' ? 'activos' : activo === 'false' ? 'dados de baja' : '',
+    buscado && `que coincidan con «${buscado}»`,
+  ]);
+  if (!conFiltros) return `${causa} Use «Agregar al catálogo» para cargar uno.`;
+  const pasos = pasosParaProbar([
+    buscado && 'pruebe con otro nombre',
+    tipo && 'cambie Tipo a Todos',
+    activo !== 'true' && 'cambie Estado a Activos',
+  ]);
+  return `${causa} ${pasos}`;
+}
+
+/**
+ * Administración del catálogo de insumos y medicamentos (T303). Los filtros viven en la URL:
+ * la búsqueda sigue ahí al volver a la pantalla.
+ */
 export function CatalogoInsumos() {
   const clienteQuery = useQueryClient();
-  const [texto, setTexto] = useState('');
-  const [tipo, setTipo] = useState<TipoInsumo | ''>('');
-  const [activo, setActivo] = useState('true');
+  const filtros = useFiltrosEnUrl(FILTROS_INICIALES);
+  const { texto, tipo, activo } = filtros.valores;
   const [dialogo, setDialogo] = useState<{ insumo: Insumo | null } | null>(null);
   const [aviso, setAviso] = useState<string | null>(null);
   const textoBuscado = useRetardo(texto);
+  const campoBusqueda = useRef<HTMLInputElement>(null);
 
-  const filtros = { texto: textoBuscado, tipo, activo };
+  // Al escribir se espera a que termine de tipear; al vaciar el campo se aplica enseguida.
+  const aplicados = { texto: texto ? textoBuscado : '', tipo, activo };
   const consulta = useQuery({
-    queryKey: ['insumos', filtros],
-    queryFn: () => insumosApi.listar(filtros),
+    queryKey: ['insumos', aplicados],
+    queryFn: () => insumosApi.listar({ ...aplicados, tipo: tipo as TipoInsumo | '' }),
   });
+
+  // Solo con la respuesta ya asentada y sin error: un fallo de carga no es "no hay insumos".
+  const sinResultados = consulta.isSuccess && !consulta.isFetching && consulta.data.length === 0;
+  const conFiltros = filtros.hayFiltros(aplicados);
+  const quitarFiltros = () => {
+    filtros.quitarFiltros();
+    // El botón desaparece al recargar la lista: el foco pasa al campo para buscar de nuevo.
+    campoBusqueda.current?.focus();
+  };
 
   return (
     <>
@@ -225,7 +289,6 @@ export function CatalogoInsumos() {
           {aviso}
         </Alerta>
       )}
-      {consulta.isError && <Alerta tipo="error">{mensajeDeError(consulta.error)}</Alerta>}
       <Box
         sx={{
           display: 'grid',
@@ -237,8 +300,9 @@ export function CatalogoInsumos() {
         <CampoTexto
           etiqueta="Buscar por nombre"
           valor={texto}
-          alCambiar={setTexto}
+          alCambiar={(v) => filtros.fijar({ texto: v })}
           type="search"
+          inputRef={campoBusqueda}
           slotProps={{
             input: {
               startAdornment: (
@@ -252,7 +316,7 @@ export function CatalogoInsumos() {
         <Selector
           etiqueta="Tipo"
           valor={tipo}
-          alCambiar={(v) => setTipo(v as TipoInsumo | '')}
+          alCambiar={(v) => filtros.fijar({ tipo: v })}
           opciones={[
             { valor: '', etiqueta: 'Todos' },
             { valor: 'MEDICAMENTO', etiqueta: 'Medicamentos' },
@@ -262,22 +326,45 @@ export function CatalogoInsumos() {
         <Selector
           etiqueta="Estado"
           valor={activo}
-          alCambiar={setActivo}
+          alCambiar={(v) => filtros.fijar({ activo: v })}
           opciones={[
             { valor: 'true', etiqueta: 'Activos' },
             { valor: 'false', etiqueta: 'Dados de baja' },
           ]}
         />
       </Box>
-      <Tabla
-        titulo="Catálogo"
-        columnas={COLUMNAS}
-        filas={consulta.data ?? []}
-        claveFila={(i) => i.id}
-        cargando={consulta.isFetching}
-        mensajeVacio="No hay insumos que coincidan"
-        alTocarFila={(i) => setDialogo({ insumo: i })}
-      />
+      {consulta.isError ? (
+        // Un fallo de carga no se lee como "no hay insumos": sin tabla ni mensaje de vacío.
+        <ErrorDeCarga
+          que="el catálogo"
+          error={consulta.error}
+          alReintentar={() => void consulta.refetch()}
+        />
+      ) : (
+        <Tabla
+          titulo="Catálogo"
+          columnas={COLUMNAS}
+          filas={consulta.data ?? []}
+          claveFila={(i) => i.id}
+          cargando={consulta.isFetching}
+          mensajeVacio={mensajeSinInsumos(aplicados, conFiltros)}
+          alTocarFila={(i) => setDialogo({ insumo: i })}
+        />
+      )}
+      {sinResultados && conFiltros && (
+        <Box
+          role="group"
+          aria-label="Qué puede hacer ahora"
+          sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mt: 2 }}
+        >
+          <Boton variante="secundario" onClick={quitarFiltros}>
+            Quitar filtros
+          </Boton>
+          <Boton startIcon={<AddIcon />} onClick={() => setDialogo({ insumo: null })}>
+            Agregar al catálogo
+          </Boton>
+        </Box>
+      )}
       <DialogoInsumo
         insumo={dialogo?.insumo ?? null}
         abierto={dialogo !== null}
