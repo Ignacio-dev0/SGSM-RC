@@ -1,20 +1,28 @@
-import { CssBaseline, ThemeProvider, Typography } from '@mui/material';
-import { BrowserRouter, Route, Routes } from 'react-router-dom';
-import { PlantillaTablet } from './componentes/PlantillaTablet';
-
+import { CssBaseline, ThemeProvider } from '@mui/material';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { BrowserRouter } from 'react-router-dom';
+import { ProveedorSesion } from './auth/ContextoSesion';
+import { RutasApp } from './RutasApp';
 import { tema } from './tema';
+
+const clienteQuery = new QueryClient({
+  defaultOptions: {
+    // Errores de permisos o validación no se arreglan reintentando.
+    queries: { retry: 1, refetchOnWindowFocus: false },
+  },
+});
 
 export function App() {
   return (
-    <ThemeProvider theme={tema}>
-      <CssBaseline />
-      <BrowserRouter>
-        <PlantillaTablet opciones={[{ ruta: '/', etiqueta: 'Inicio' }]}>
-          <Routes>
-            <Route path="/" element={<Typography variant="h4">Inicio</Typography>} />
-          </Routes>
-        </PlantillaTablet>
-      </BrowserRouter>
-    </ThemeProvider>
+    <QueryClientProvider client={clienteQuery}>
+      <ThemeProvider theme={tema}>
+        <CssBaseline />
+        <BrowserRouter>
+          <ProveedorSesion>
+            <RutasApp />
+          </ProveedorSesion>
+        </BrowserRouter>
+      </ThemeProvider>
+    </QueryClientProvider>
   );
 }

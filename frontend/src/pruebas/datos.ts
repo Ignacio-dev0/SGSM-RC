@@ -1,0 +1,64 @@
+// Usuarios de ejemplo para las pruebas de pantallas, con los permisos reales de cada rol.
+import type { UsuarioSesion } from '../api/tipos';
+
+const PERMISOS_ADMIN = [
+  'biometria.gestionar',
+  'catalogo.gestionar',
+  'catalogo.ver',
+  'pacientes.gestionar',
+  'pacientes.ver',
+  'prescripciones.gestionar',
+  'prescripciones.ver',
+  'suministros.corregir',
+  'suministros.registrar',
+  'suministros.ver',
+  'usuarios.gestionar',
+  'usuarios.permisos',
+];
+
+const base = { tieneBiometria: false, inactividadMinutos: 15 };
+
+export const ADMIN: UsuarioSesion = {
+  ...base,
+  id: 1,
+  nombreUsuario: 'admin',
+  nombre: 'Laura',
+  apellido: 'Méndez',
+  rol: { codigo: 'ADMINISTRADOR', nombre: 'Administrador' },
+  permisos: PERMISOS_ADMIN,
+};
+
+export const MEDICO: UsuarioSesion = {
+  ...base,
+  id: 2,
+  nombreUsuario: 'medico',
+  nombre: 'Martín',
+  apellido: 'Ferreyra',
+  rol: { codigo: 'MEDICO', nombre: 'Médico' },
+  permisos: [
+    'catalogo.ver',
+    'pacientes.gestionar',
+    'pacientes.ver',
+    'prescripciones.gestionar',
+    'prescripciones.ver',
+    'suministros.ver',
+  ],
+};
+
+export const ENFERMERO: UsuarioSesion = {
+  ...base,
+  id: 3,
+  nombreUsuario: 'enfermero',
+  nombre: 'Sofía',
+  apellido: 'Acosta',
+  rol: { codigo: 'ENFERMERO', nombre: 'Enfermero' },
+  permisos: [
+    'catalogo.ver',
+    'pacientes.ver',
+    'prescripciones.ver',
+    'suministros.corregir',
+    'suministros.registrar',
+    'suministros.ver',
+  ],
+  tieneBiometria: true,
+};
