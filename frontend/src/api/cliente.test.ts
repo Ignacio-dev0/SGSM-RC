@@ -1,6 +1,6 @@
 import { http, HttpResponse } from 'msw';
 import { servidor } from '../pruebas/servidor';
-import { ErrorApi, api, alExpirarSesion, mensajeDeError } from './cliente';
+import { ErrorApi, api, alExpirarSesion, descargar, mensajeDeError } from './cliente';
 
 describe('cliente de la API', () => {
   it('devuelve el contenido de data', async () => {
@@ -128,5 +128,116 @@ describe('mensajes de error genéricos (F60)', () => {
     expect(mensajeDeError('algo')).toBe(
       'Ocurrió un problema inesperado. Intente de nuevo; si sigue, avise al área de sistemas.',
     );
+  });
+});
+
+// E6 · T603: los archivos (PDF, Excel) se bajan con fetch y el nombre lo da el servidor.
+describe('descarga de archivos', () => {
+  it('devuelve el archivo y el nombre de Content-Disposition, con los parámetros en la query', async () => {
+    let pedido: URL | undefined;
+    servidor.use(
+      http.get('*/api/reportes/suministros/exportar', ({ request }) => {
+        pedido = new URL(request.url);
+        return new HttpResponse('%PDF-1.7', {
+          headers: {
+            'Content-Type': 'application/pdf',
+            'Content-Disposition': 'attachment; filename="reporte-suministros-20261007.pdf"',
+          },
+        });
+      }),
+    );
+
+    const archivo = await descargar('/api/reportes/suministros/exportar', {
+      formato: 'pdf',
+      desde: '2026-10-01',
+      salaId: '',
+      tipo: undefined,
+    });
+
+    expect(archivo.nombre).toBe('reporte-suministros-20261007.pdf');
+    expect(await archivo.blob.text()).toBe('%PDF-1.7');
+    expect(pedido?.searchParams.get('formato')).toBe('pdf');
+    expect(pedido?.searchParams.get('desde')).toBe('2026-10-01');
+    // Lo vacío no viaja, como en los demás pedidos.
+    expect(pedido?.searchParams.has('salaId')).toBe(false);
+    expect(pedido?.searchParams.has('tipo')).toBe(false);
+  });
+
+  it('entiende el nombre codificado (filename*) y, sin encabezado, usa el nombre de respaldo', async () => {
+    servidor.use(
+      http.get(
+        '*/api/archivo/codificado',
+        () =>
+          new HttpResponse('x', {
+            headers: {
+              'Content-Disposition':
+                'attachment; filename="estadisticas.xlsx"; filename*=UTF-8\'\'estad%C3%ADsticas-20261007.xlsx',
+            },
+          }),
+      ),
+      http.get('*/api/archivo/sin-nombre', () => new HttpResponse('x')),
+    );
+
+    await expect(descargar('/api/archivo/codificado')).resolves.toMatchObject({
+      nombre: 'estadísticas-20261007.xlsx',
+    });
+    await expect(
+      descargar('/api/archivo/sin-nombre', undefined, 'reporte.pdf'),
+    ).resolves.toMatchObject({ nombre: 'reporte.pdf' });
+  });
+
+  it('si el servidor rechaza la descarga, lanza ErrorApi con su mensaje, como los demás pedidos', async () => {
+    servidor.use(
+      http.get('*/api/reportes/suministros/exportar', () =>
+        HttpResponse.json(
+          { error: { codigo: 'SIN_PERMISO', mensaje: 'No tiene permiso para esta acción' } },
+          { status: 403 },
+        ),
+      ),
+    );
+
+    await expect(descargar('/api/reportes/suministros/exportar')).rejects.toMatchObject({
+      estado: 403,
+      codigo: 'SIN_PERMISO',
+      message: 'No tiene permiso para esta acción',
+    });
+  });
+
+  it('un error interno o la falta de conexión se explican igual que en los demás pedidos', async () => {
+    servidor.use(
+      http.get('*/api/archivo/falla', () =>
+        HttpResponse.json(
+          { error: { codigo: 'ERROR_INTERNO', mensaje: 'Error interno del servidor' } },
+          { status: 500 },
+        ),
+      ),
+      http.get('*/api/archivo/sin-red', () => HttpResponse.error()),
+    );
+
+    await expect(descargar('/api/archivo/falla')).rejects.toMatchObject({
+      estado: 500,
+      message:
+        'El servidor tuvo un problema. Intente de nuevo en unos minutos; si sigue, avise al área de sistemas.',
+    });
+    await expect(descargar('/api/archivo/sin-red')).rejects.toMatchObject({
+      codigo: 'SIN_CONEXION',
+    });
+  });
+
+  it('avisa si la sesión venció mientras se pedía el archivo', async () => {
+    const manejador = vi.fn();
+    alExpirarSesion(manejador);
+    servidor.use(
+      http.get('*/api/archivo/vencida', () =>
+        HttpResponse.json(
+          { error: { codigo: 'NO_AUTENTICADO', mensaje: 'La sesión se cerró por inactividad' } },
+          { status: 401 },
+        ),
+      ),
+    );
+
+    await expect(descargar('/api/archivo/vencida')).rejects.toBeInstanceOf(ErrorApi);
+    expect(manejador).toHaveBeenCalledWith('La sesión se cerró por inactividad');
+    alExpirarSesion(null);
   });
 });

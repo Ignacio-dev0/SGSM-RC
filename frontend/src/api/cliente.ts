@@ -54,10 +54,10 @@ function armarUrl(ruta: string, query?: Query) {
   return url;
 }
 
-async function pedir(metodo: Metodo, ruta: string, cuerpo?: unknown, query?: Query) {
-  let respuesta: Response;
+/** Hace el pedido con la cookie de sesión; sin red, un error que dice qué revisar. */
+async function enviar(metodo: Metodo, ruta: string, cuerpo?: unknown, query?: Query) {
   try {
-    respuesta = await fetch(armarUrl(ruta, query), {
+    return await fetch(armarUrl(ruta, query), {
       method: metodo,
       credentials: 'same-origin',
       headers: cuerpo === undefined ? {} : { 'Content-Type': 'application/json' },
@@ -70,24 +70,71 @@ async function pedir(metodo: Metodo, ruta: string, cuerpo?: unknown, query?: Que
       'No hay conexión con el servidor. Revise el Wi-Fi e intente de nuevo.',
     );
   }
+}
 
-  const json = (await respuesta.json().catch(() => ({}))) as {
-    data?: unknown;
-    meta?: MetaPaginacion;
-    error?: { codigo: string; mensaje: string; detalles?: unknown };
-  };
+interface CuerpoApi {
+  data?: unknown;
+  meta?: MetaPaginacion;
+  error?: { codigo: string; mensaje: string; detalles?: unknown };
+}
 
-  if (!respuesta.ok) {
-    // Sin cuerpo con el formato de la API (un proxy caído, una página de error) es lo mismo que un
-    // error interno. El servidor no da detalles de un error interno a propósito: se explica acá.
-    const e = json.error ?? { codigo: 'ERROR_INTERNO', mensaje: FALLA_DEL_SERVIDOR };
-    if (respuesta.status === 401 && e.codigo === 'NO_AUTENTICADO') {
-      manejadorSesionVencida?.(e.mensaje);
-    }
-    const mensaje = e.codigo === 'ERROR_INTERNO' ? FALLA_DEL_SERVIDOR : e.mensaje;
-    throw new ErrorApi(respuesta.status, e.codigo, mensaje, e.detalles);
+/** El error de una respuesta fallida, con el mensaje que se le muestra a la persona. */
+function errorDeRespuesta(respuesta: Response, json: CuerpoApi) {
+  // Sin cuerpo con el formato de la API (un proxy caído, una página de error) es lo mismo que un
+  // error interno. El servidor no da detalles de un error interno a propósito: se explica acá.
+  const e = json.error ?? { codigo: 'ERROR_INTERNO', mensaje: FALLA_DEL_SERVIDOR };
+  if (respuesta.status === 401 && e.codigo === 'NO_AUTENTICADO') {
+    manejadorSesionVencida?.(e.mensaje);
   }
+  const mensaje = e.codigo === 'ERROR_INTERNO' ? FALLA_DEL_SERVIDOR : e.mensaje;
+  return new ErrorApi(respuesta.status, e.codigo, mensaje, e.detalles);
+}
+
+const leerJson = async (respuesta: Response) =>
+  (await respuesta.json().catch(() => ({}))) as CuerpoApi;
+
+async function pedir(metodo: Metodo, ruta: string, cuerpo?: unknown, query?: Query) {
+  const respuesta = await enviar(metodo, ruta, cuerpo, query);
+  const json = await leerJson(respuesta);
+  if (!respuesta.ok) throw errorDeRespuesta(respuesta, json);
   return json;
+}
+
+/** Un archivo bajado de la API (PDF, Excel) con el nombre que le dio el servidor. */
+export interface Archivo {
+  blob: Blob;
+  nombre: string;
+}
+
+/**
+ * Nombre del archivo de `Content-Disposition`: primero `filename*` (RFC 5987, admite tildes) y si
+ * no, `filename`. Sin encabezado, el de respaldo.
+ */
+function nombreDeArchivo(encabezado: string | null, respaldo: string) {
+  if (!encabezado) return respaldo;
+  const codificado = /filename\*\s*=\s*(?:UTF-8|utf-8)''([^;]+)/.exec(encabezado)?.[1];
+  if (codificado) {
+    try {
+      return decodeURIComponent(codificado.trim());
+    } catch {
+      // Mal codificado: se prueba con el nombre simple.
+    }
+  }
+  const simple = /filename\s*=\s*"([^"]+)"|filename\s*=\s*([^;]+)/.exec(encabezado);
+  return (simple?.[1] ?? simple?.[2])?.trim() || respaldo;
+}
+
+/**
+ * Baja un archivo de la API con la cookie de sesión. Si falla, el error es el de cualquier otro
+ * pedido (`ErrorApi` con el mensaje del servidor); si sale bien, el archivo y su nombre.
+ */
+export async function descargar(ruta: string, query?: Query, nombreDeRespaldo = 'archivo') {
+  const respuesta = await enviar('GET', ruta, undefined, query);
+  if (!respuesta.ok) throw errorDeRespuesta(respuesta, await leerJson(respuesta));
+  return {
+    blob: await respuesta.blob(),
+    nombre: nombreDeArchivo(respuesta.headers.get('Content-Disposition'), nombreDeRespaldo),
+  } satisfies Archivo;
 }
 
 export const api = {
