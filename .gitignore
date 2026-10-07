@@ -29,3 +29,6 @@ npm-debug.log*
 
 # Configuración local de herramientas
 .claude/
+
+# Servidor MCP local de Playwright (herramienta de revisión de UI, no del sistema)
+.mcp.json

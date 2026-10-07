@@ -1,0 +1,6 @@
+# Estado efímero de UX/UI Governance: no se versiona.
+# config.json SÍ se versiona (excepciones documentadas del proyecto).
+*.local.json
+*.tmp
+STATUS.md
+status.html

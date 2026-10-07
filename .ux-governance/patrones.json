@@ -1,0 +1,19 @@
+{
+  "revisados": {
+    "hoy-en-utc": {
+      "huella": "backend/src/modulos/pacientes/pacientes.esquemas.ts|const hoy = () => new Date().toISOString().slice(0, 10);#1",
+      "nota": "Arreglado: hoyEnArgentina() en backend/src/comun/fechas.ts con prueba a las 22:30 hora local (pacientes.esquemas.test.ts)",
+      "at": "2026-10-07T14:17:37.105Z"
+    },
+    "correccion-arrastra-defaults": {
+      "huella": "backend/src/modulos/insumos/insumos.servicio.ts|.partial();\nbackend/src/modulos/pacientes/pacientes.esquemas.ts|.partial()\nbackend/src/modulos/pacientes/pacientes.esquemas.ts|export const esquemaModificacionPaciente = z.object(camposPaciente).partial();\nbackend/src/modulos/prescripciones/prescripciones.esquemas.ts|.partial()\nbackend/src/modulos/usuarios/usuarios.esquemas.ts|.partial();#5",
+      "nota": "Los esquemas de corrección no tienen .default() (confirmarDuplicada está solo en el alta; presentacion se redefine sin default); las pruebas de PATCH parcial de usuarios, pacientes, prescripciones e insumos auditan que solo cambia lo enviado",
+      "at": "2026-10-07T14:17:37.229Z"
+    },
+    "vacio-sin-verificar-carga": {
+      "huella": "frontend/src/paginas/suministros/AdministracionMedicamento.tsx|{vigentes.data?.length === 0 && (#1",
+      "nota": "La condición data?.length === 0 solo es verdadera con datos cargados; se agrega el estado de error que faltaba en AdministracionMedicamento (se corrige en esta tarea)",
+      "at": "2026-10-07T14:17:37.349Z"
+    }
+  }
+}
