@@ -3,12 +3,13 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import HistoryOutlinedIcon from '@mui/icons-material/HistoryOutlined';
 import RadioButtonUncheckedIcon from '@mui/icons-material/RadioButtonUnchecked';
 import type { Prescripcion } from '../../api/tipos';
+import { tinte } from '../../tema';
 import { formatearFechaHora, formatearHora } from '../../utilidades/formato';
 import { etiquetaVia, formatearDosis, formatearFrecuencia } from '../prescripciones/etiquetas';
 import { colorEstadoToma, estadoToma, textoEstadoToma, varianteEstadoToma } from './estadoToma';
 
-/** Primario al 8 %: sigue al tema claro u oscuro porque parte de la variable de color del tema. */
-const TINTE_ELEGIDA = 'rgba(var(--mui-palette-primary-mainChannel) / 0.08)';
+/** Primario al 8 % (`tinte` sigue al tema claro u oscuro): el fondo de la tarjeta elegida. */
+const OPACIDAD_ELEGIDA = 0.08;
 
 /** Marcador de la derecha: círculo vacío en reposo, tilde al elegirla, siempre del mismo tamaño. */
 const MARCADOR = { fontSize: 36, flexShrink: 0 };
@@ -33,11 +34,11 @@ export function TarjetaPrescripcion({
   return (
     <Card
       variant="outlined"
-      sx={{
+      sx={(t) => ({
         borderWidth: 2,
         borderColor: elegida ? 'primary.main' : 'divider',
-        bgcolor: elegida ? TINTE_ELEGIDA : undefined,
-      }}
+        bgcolor: elegida ? tinte(t, 'primary', OPACIDAD_ELEGIDA) : undefined,
+      })}
     >
       <CardActionArea onClick={alElegir} aria-pressed={elegida} sx={{ p: 1 }}>
         <CardContent sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
