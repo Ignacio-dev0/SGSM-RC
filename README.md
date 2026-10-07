@@ -14,8 +14,8 @@ sobre las prescripciones que carga el equipo médico.
 | ----- | -------------------------------------------------------------- | ------------------------------------------- |
 | E0    | Entorno de trabajo, convenciones, componentes base             | ✅ (despliegue en la nube fuera de alcance) |
 | E1    | Base de datos, inicio de sesión, permisos, auditoría, usuarios | ✅                                          |
-| E2    | Pacientes y camas                                              | en curso                                    |
-| E3    | Prescripciones y catálogo                                      | pendiente                                   |
+| E2    | Pacientes y camas                                              | ✅                                          |
+| E3    | Prescripciones y catálogo                                      | en curso                                    |
 | E4    | Biometría y registro de suministros                            | pendiente                                   |
 | E5–E8 | Recordatorios, reportes, integración, despliegue               | fuera del prototipo                         |
 
