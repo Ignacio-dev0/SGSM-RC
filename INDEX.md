@@ -151,3 +151,4 @@ Las pruebas de cada módulo están junto a su código (`*.test.ts`).
 | [ejemplos/](docs/ejemplos/)                   | Modelos inventados de `salas.csv`, `catalogo.csv` y `personal.csv` para el instalador                                                                             |
 | [trazabilidad.md](docs/trazabilidad.md)       | Tareas del plan → código → pruebas                                                                                                                                |
 | [rendimiento.md](docs/rendimiento.md)         | Rendimiento (T702, RNF03): volumen de un año, mediciones antes/después, índices y consultas (D70–D76) y carga inicial del frontend partida por pantalla (DF1–DF5) |
+| [manual-tecnico.md](docs/manual-tecnico.md)   | Manual técnico (T809): arquitectura, instalación, modelo de datos, variables, respaldo, operación y dónde seguir                                                  |

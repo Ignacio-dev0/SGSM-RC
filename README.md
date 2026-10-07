@@ -121,6 +121,7 @@ El mapa archivo por archivo está en [INDEX.md](INDEX.md).
 | [docs/recordatorios.md](docs/recordatorios.md)     | Recordatorios y tiempo real (E5)                     |
 | [docs/estudios.md](docs/estudios.md)               | Estudios programados (E5)                            |
 | [docs/diseno-e6.md](docs/diseno-e6.md)             | Diseño de reportes y auditoría (E6)                  |
+| [docs/manual-tecnico.md](docs/manual-tecnico.md)   | Manual técnico: por dónde empezar (T809)             |
 | [docs/reportes.md](docs/reportes.md)               | Reportes, estadísticas, exportación y auditoría (E6) |
 | [docs/despliegue.md](docs/despliegue.md)           | Entornos y despliegue                                |
 | [docs/trazabilidad.md](docs/trazabilidad.md)       | Tareas del plan → código → pruebas                   |
