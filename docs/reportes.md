@@ -268,13 +268,14 @@ Ejemplo:
 
 Responde `200` con el archivo (no JSON):
 
-| Formato | `Content-Type`                                                      | Nombre                                                            |
-| ------- | ------------------------------------------------------------------- | ----------------------------------------------------------------- |
-| `pdf`   | `application/pdf`                                                   | `reporte-suministros-AAAAMMDD.pdf`, `estadisticas-AAAAMMDD.pdf`   |
-| `xlsx`  | `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet` | `reporte-suministros-AAAAMMDD.xlsx`, `estadisticas-AAAAMMDD.xlsx` |
+| Formato | `Content-Type`                                                      | Nombre                                                                              |
+| ------- | ------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| `pdf`   | `application/pdf`                                                   | `reporte-suministros-AAAAMMDD-AAAAMMDD.pdf`, `estadisticas-AAAAMMDD-AAAAMMDD.pdf`   |
+| `xlsx`  | `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet` | `reporte-suministros-AAAAMMDD-AAAAMMDD.xlsx`, `estadisticas-AAAAMMDD-AAAAMMDD.xlsx` |
 
-con `Content-Disposition: attachment; filename="reporte-suministros-20261007.pdf"` (la fecha es la
-de emisión en Argentina, D46) y `Cache-Control: no-store`. El frontend lo pide con `fetch` (la
+con `Content-Disposition: attachment; filename="reporte-suministros-20261001-20261007.pdf"` (las
+fechas son las del período, `desde` y `hasta`: ESC4, decisión del lead en la revisión de E6; antes
+era la de emisión, D46) y `Cache-Control: no-store`. El frontend lo pide con `fetch` (la
 cookie de sesión viaja sola), lo baja como `Blob` y usa el nombre del encabezado. Si falla,
 responde JSON con el error de siempre (`400`, `403`, `404`).
 
@@ -302,17 +303,21 @@ Cada exportación se **audita** antes de entregarse (si la auditoría falla, no 
 
 ## Auditoría
 
-`GET /api/auditoria?desde&hasta&usuarioId&pacienteId&accion&entidad&pagina&tamano`
+`GET /api/auditoria?desde&hasta&usuarioId&pacienteId&accion&entidad&origen&pagina&tamano`
 
-| Parámetro         | Valores                                                                      |
-| ----------------- | ---------------------------------------------------------------------------- |
-| `desde` / `hasta` | Días `AAAA-MM-DD` en hora de Argentina, ambos incluidos; sin límite de rango |
-| `usuarioId`       | Quién hizo la acción                                                         |
-| `pacienteId`      | Paciente afectado                                                            |
-| `accion`          | Exacta, como viene en `opciones` (`MODIFICAR`, `EXPORTAR`…)                  |
-| `entidad`         | Exacta, como viene en `opciones` (`Paciente`, `Reporte`…)                    |
-| `pagina`          | Desde 1 (por defecto 1)                                                      |
-| `tamano`          | 1 a 100, por defecto 50; también se acepta `porPagina` (D48)                 |
+| Parámetro         | Valores                                                                                                 |
+| ----------------- | ------------------------------------------------------------------------------------------------------- |
+| `desde` / `hasta` | Días `AAAA-MM-DD` en hora de Argentina, ambos incluidos; sin límite de rango                            |
+| `usuarioId`       | Quién hizo la acción                                                                                    |
+| `pacienteId`      | Paciente afectado                                                                                       |
+| `accion`          | Exacta, como viene en `opciones` (`MODIFICAR`, `EXPORTAR`…)                                             |
+| `entidad`         | Exacta, como viene en `opciones` (`Paciente`, `Reporte`…)                                               |
+| `origen`          | Opcional (ESC2): `personas` (con usuario, `usuarioId` no nulo) o `sistema` (sin usuario); sin él, todos |
+| `pagina`          | Desde 1 (por defecto 1)                                                                                 |
+| `tamano`          | 1 a 100, por defecto 50; también se acepta `porPagina` (D48)                                            |
+
+`origen` lo pide la pantalla con `personas` por defecto: el temporizador genera y vence
+recordatorios todo el día y taparía los movimientos de las personas.
 
 De la **más reciente a la más vieja** (y por id, a igual hora). `meta` tiene la forma de la
 convención de la API ([api.md](api.md)).
@@ -444,7 +449,8 @@ Continúan las de [estudios.md](estudios.md) (D26–D35). Tomadas al implementar
 Frontend en [`paginas/reportes/`](../frontend/src/paginas/reportes/) y
 [`paginas/auditoria/`](../frontend/src/paginas/auditoria/); API tipada en
 [`api/reportes.ts`](../frontend/src/api/reportes.ts) y [`api/auditoria.ts`](../frontend/src/api/auditoria.ts),
-con los tipos de este contrato.
+con los tipos de este contrato. Revisada contra los estándares en la revisión de E6 (hallazgos
+E6-01 a E6-19, decisiones del lead ESC2 a ESC4).
 
 ### Pantallas y permisos
 
@@ -452,10 +458,14 @@ con los tipos de este contrato.
 | ------------ | ---------------------------- | ------------------- | --------------------------------------------------------------------- |
 | `/reportes`  | "Reportes", tras Suministros | `reportes.ver`      | Pestañas **Suministros** y **Estadísticas** con los mismos parámetros |
 | (descargas)  | —                            | `reportes.exportar` | "Descargar PDF" y "Descargar Excel" en las dos pestañas               |
-| `/auditoria` | "Auditoría", al final        | `auditoria.ver`     | Registros filtrables y paginados, con el detalle Antes/Después        |
+| `/auditoria` | "Auditoría", al final        | `auditoria.ver`     | Movimientos filtrables y paginados, con el detalle Antes y después    |
 
-El Inicio suma la tarea "Ver reportes" (con `reportes.ver`) al final de las clínicas. Una ruta sin
-permiso muestra "No tiene permiso para ver esta pantalla" (el backend igual responde 403).
+El Inicio suma "Ver reportes" (con `reportes.ver`) al final de las clínicas y, para el
+administrador, **"Ver quién cambió algo"** (con `auditoria.ver`) entre sus tareas de gestión
+(E6-19). Una ruta sin permiso muestra "No tiene permiso para ver esta pantalla" (el backend igual
+responde 403). Quien ve los reportes pero no los descarga (el médico) lee en su lugar "Para
+descargar el archivo, pídaselo a un administrador." (E6-15: exportar sigue siendo del
+administrador).
 
 ### Parámetros en la URL
 
@@ -466,104 +476,211 @@ permiso muestra "No tiene permiso para ver esta pantalla" (el backend igual resp
 | Reportes  | `desde`, `hasta` (días `AAAA-MM-DD`): mandan sobre el atajo                | —                           |
 | Reportes  | `salaId`, `tipo` (`MEDICAMENTO`/`INSUMO`), `agruparPor`                    | todas, todos, `paciente`    |
 | Auditoría | `desde`, `hasta`, `usuarioId`, `pacienteId`, `accion`, `entidad`, `pagina` | todo, página 1              |
+| Auditoría | `origen` (`sistema`; vacío, `origen=`, es "Todos")                         | `personas`                  |
 
 Un enlace como `/reportes?periodo=30&tipo=INSUMO&agruparPor=insumo` abre siempre los últimos 30 días
 de ese momento. Cambiar de pestaña conserva los parámetros (las estadísticas no se agrupan, pero
 `agruparPor` queda para volver). "Quitar filtros" vuelve al período por defecto, todas las salas y
-todos los tipos, sin tocar la agrupación.
+todos los tipos, sin tocar la agrupación; en la auditoría, a Personas y sin fechas.
+
+### Período (E6-13)
+
+- Los campos **Desde** y **Hasta** guardan lo que se escribe y lo piden **al salir del campo o con
+  Enter**: el selector nativo cambia de valor con cada dígito del año y antes se pedía (y se
+  validaba) "0002-10-01".
+- Un campo **vacío no se repone solo**: queda vacío con "Elija la fecha "desde"" y no se muestra un
+  resultado de otro período hasta elegirla (o tocar un atajo).
+- El error del rango va **bajo el campo que se cambió**: "La fecha "desde" no puede ser posterior a
+  "hasta"" o "El período puede tener hasta 366 días" bajo Hasta si fue Hasta la que lo estiró.
+- Una fecha imposible (un enlace con `desde=2026-13-45`) pide "Elija una fecha válida", no el
+  formato `AAAA-MM-DD` del servidor (también si el 400 llega igual).
 
 ### Reporte de suministros
 
-- Tabla (tarjetas en teléfono) con la etiqueta del grupo, **Suministros** y **Unidades**; por
-  insumo, además el **Tipo** y la unidad junto al número ("1000 mg", "5 unidad"). La última fila es
-  **Total**, con el total del servidor (suministros distintos, D43).
-- Por insumo el total de unidades se escribe **por unidad** ("5 unidad, 1 comprimido, 1000 mg"),
-  nunca sumado (D42). Por paciente, personal o día la columna es el volumen que da el servidor y una
-  nota lo aclara.
-- Arriba de la tabla, el período, la sala y el tipo **que devolvió el servidor** (normalizados) y,
-  con `reportes.exportar`, las descargas.
+- Tabla (tarjetas en teléfono) con la etiqueta del grupo y **Suministros**. Por **medicamento o
+  insumo** (la agrupación se llama así, E6-04: "Insumo" solo es lo no medicinal), además el
+  **Tipo** y **Unidades** con la unidad junto al número ("1000 mg", "5 unidad"); el total, **por
+  unidad** ("5 unidad, 1 comprimido, 1000 mg"), nunca sumado (D42). La última fila es **Total**,
+  con el total del servidor (suministros distintos, D43).
+- Por **paciente, personal o día** la columna se llama **"Volumen (suma de cantidades de distinta
+  unidad)"** y una nota **arriba** de la tabla explica que sirve para comparar, no es una dosis,
+  con el enlace **"Ver cada unidad por separado"**: la misma URL con `agruparPor=insumo` (E6-05).
+- Arriba de la tabla, el período, la sala y el tipo **que devolvió el servidor** (normalizados) y
+  las descargas.
 
 ### Estadísticas
 
-- **Indicadores** grandes: Suministros, Con medicamentos, Con insumos, Pacientes atendidos y
-  Recordatorios atendidos (porcentaje y "41 de 44"; "—" si no hay recordatorios medibles).
-- **Gráficos** de `@mui/x-charts`, cada uno con título `h2`, descripción y "Ver como tabla"
-  (`GraficoConTabla`, ver [componentes.md](componentes.md)); ejes con letra de 14 px:
-  - Insumos más usados: barras horizontales con el número junto a cada barra; eje "Suministros
-    (cantidad)".
-  - Consumo por tipo: torta con la leyenda "Medicamentos: 27 (41,5 %)".
-  - Evolución diaria: tres líneas (Suministros, Con medicamentos, Con insumos) que se distinguen por
-    color, forma del punto y trazo (continuo, rayado, punteado); ejes "Día" y "Suministros por día".
-  - Recordatorios del período: barra apilada A tiempo / Tarde / No administrados / Vencidos sin
-    atender, con los números en la leyenda (dentro de la barra no tendrían contraste).
+- **Indicadores** grandes: Suministros, Con medicamentos, Con insumos, Pacientes atendidos,
+  **Recordatorios atendidos** (`porcentajeAtendido`, "4 de 5") y **Atendidos a tiempo** (ESC3:
+  `aTiempo / (total − pendientes)`, "2 de 5"; "—" si no hay recordatorios medibles). Debajo, la
+  explicación del cálculo, que también describe la lista de indicadores: "Sobre los 5
+  recordatorios que ya se atendieron o vencieron (el pendiente todavía no cuenta). Atendidos: dados
+  a tiempo o tarde, o no administrados con su motivo. A tiempo: dados antes de vencer."
+- **Gráficos** de `@mui/x-charts`, cada uno con título `h2`, descripción (la sección se describe
+  con ella por `aria-describedby` y termina con "Los mismos números están en Ver como tabla.",
+  E6-18) y "Ver como tabla" (`GraficoConTabla`, ver [componentes.md](componentes.md)); ejes con
+  letra de 14 px. Las reglas de color y forma están en [DESIGN.md](../DESIGN.md#gráficos):
+  - **Medicamentos e insumos más usados** (E6-04): barras horizontales del color de los
+    suministros, con el número al final; el eje tiene **el nombre y la presentación en dos
+    renglones** y se mide con el renglón más largo, hasta la mitad del ancho (E6-03). En el
+    teléfono la tabla ya está abierta.
+  - **Consumo por tipo**: dos barras con nombre, "Con medicamentos" y "Con insumos", cada una con
+    el color de su serie, y al final "3 (37,5 %)". El porcentaje es **sobre el total de
+    suministros del período** (uno con los dos cuenta en ambos, por eso pueden sumar más de
+    100 %) y la descripción y la columna "De los 8 suministros del período" lo dicen (E6-02).
+  - **Evolución diaria**: tres líneas (Suministros, Con medicamentos, Con insumos) que se distinguen
+    por color, forma del punto y trazo (continuo, rayado, punteado); la **leyenda dibuja el mismo
+    trazo y la misma forma** (`labelMarkType` propio) y los puntos siguen a la vista con muchos
+    días: uno cada tantos, con el primero y el último (E6-11).
+  - **Recordatorios del período** (E6-01): una barra horizontal por estado (A tiempo, Tarde, No
+    administrados, Vencidos sin atender) con el nombre en el eje y el número al final; un solo
+    color neutro y el de aviso **solo** para "Vencidos sin atender". Sin leyenda: el nombre ya
+    está en el eje.
+  - La biblioteca recorta lo que sale del área de las barras: el eje de los valores se **estira**
+    según el ancho de la etiqueta más larga para que el número de la barra más larga entre a su
+    derecha; si no hay lugar ni así (el consumo por tipo en el teléfono), queda solo el número y
+    el porcentaje sigue en la tabla (E6-17).
 - Sin suministros en el período, en lugar de gráficos vacíos: "No hay suministros el 07/10/2026.
   Amplíe el período." (y lo mismo para los recordatorios).
 - Con `prefers-reduced-motion` los gráficos se dibujan sin animación (`skipAnimation`).
 
 ### Descargas
 
-`descargar(ruta, query, nombreDeRespaldo)` en [`api/cliente.ts`](../frontend/src/api/cliente.ts)
+`descargar(ruta, query, nombreDeRespaldo, senal?)` en [`api/cliente.ts`](../frontend/src/api/cliente.ts)
 pide el archivo con la cookie de sesión; si el servidor responde un error, es el mismo `ErrorApi`
-que en cualquier pedido (403, 500, sin conexión, sesión vencida). La pantalla lo entrega con un
-enlace temporal (`URL.createObjectURL`) con el nombre de `Content-Disposition` y libera la memoria
-después. Mientras se arma, el botón dice "Preparando el archivo…" con su indicador (también para
-lectores de pantalla) y el otro formato espera; al terminar, "Se descargó
-reporte-suministros-20261007.pdf." o "No se pudo descargar el PDF. {motivo}". Los botones son
-secundarios: la pantalla no tiene una acción llena.
+que en cualquier pedido (403, 500, sesión vencida). Toda falla de red, **también mientras llega el
+archivo** (`blob()`), es `ErrorApi(0, 'SIN_CONEXION')` con el mensaje de siempre; una descarga
+cancelada con `senal` es `ErrorApi(0, 'CANCELADO')` (E6-06). `mensajeDeError` muestra el mensaje
+solo de un `ErrorApi`: el de cualquier otro error es técnico y se cambia por la falla inesperada.
+
+La pantalla (E6-15):
+
+- Mientras se arma, el botón dice "Preparando el archivo…" con su indicador (también para
+  lectores de pantalla) y el otro formato espera. Ese botón **no desaparece si cambian los
+  filtros**: la descarga sigue y termina.
+- A los **10 s**, un aviso "Sigue preparándose el PDF…" con **Cancelar** (`AbortController`): se
+  corta el pedido, se dice "Se canceló la descarga." y no se baja nada aunque el archivo llegue
+  después.
+- Al terminar, "Se descargó reporte-suministros-20261001-20261007.pdf (01/10 al 07/10)." (el
+  período del pedido; el nombre lo da el servidor, ESC4) o "No se pudo descargar el PDF.
+  {motivo}". El aviso **se va al cambiar los filtros**.
+- Sin datos en el período: "No hay datos para descargar en este período" en lugar de los botones.
+- La entrega es con un enlace temporal (`URL.createObjectURL`) con el nombre de
+  `Content-Disposition`, que se libera 10 s después. Los botones son secundarios: la pantalla no
+  tiene una acción llena.
 
 ### Auditoría
 
-- Filtros: Desde, Hasta, Usuario, Paciente, Acción y Entidad. Acciones y entidades son las de
-  `/api/auditoria/opciones`, **en palabras**
+- Filtros: Desde, Hasta, **Origen** (Personas por defecto, Sistema o Todos: ESC2), Usuario,
+  Paciente, Acción y **Sobre qué** (la misma palabra que la columna, E6-08). Acciones y "sobre
+  qué" son las de `/api/auditoria/opciones`, **en palabras**
   ([`palabras.ts`](../frontend/src/paginas/auditoria/palabras.ts): `TRASLADAR` → "Trasladó",
   `EGRESAR` → "Dio de alta", `Prescripcion` → "Prescripción"…); un código que todavía no tiene
   nombre se muestra tal cual.
-- Tabla de a 50 (la paginación de `Tabla`: "1–50 de 120"): Fecha y hora (24 h, Argentina), Usuario
-  ("Sistema" si no hubo), Acción, Registro ("Paciente n.º 12", "Reporte: suministros") y Paciente
-  con DNI.
+- **Usuario y Paciente se buscan en el servidor** mientras se escribe (E6-09): `Autocomplete` que
+  pide `/api/usuarios?texto=` o `/api/pacientes?texto=` (apellido, nombre o DNI; los pacientes,
+  también los egresados) y muestra las primeras 10 sugerencias, con "Se muestran 10 de N" en la
+  ayuda si hay más. Lo elegido se borra con la cruz para volver a "todos"; uno que llega por un
+  enlace se nombra con lo que trajeron los movimientos (o "Paciente n.º 12").
+- Tabla **"Movimientos"** (cada fila es un movimiento, E6-08), con el título a la vista: Fecha y
+  hora (24 h, Argentina), Usuario ("Sistema" si no hubo), Acción, Sobre qué ("Paciente n.º 12",
+  "Reporte: suministros") y Paciente con DNI. De a **50; 25 en el teléfono**. La paginación está
+  arriba y abajo, con primera y última página y "Página 2 de 3 · 51–100 de 120"; al pasar de
+  página, la vista y el foco vuelven al título (E6-10).
+- Sin movimientos: "Todavía no hay movimientos de personas. Para ver los del sistema, cambie Origen
+  a Todos." o, con filtros, qué se buscó y qué probar, con "Quitar filtros".
 - Al abrir una fila (toque, clic, Enter o Espacio), un diálogo (pantalla completa en teléfono) con
   fecha, usuario, paciente y detalle, y **Antes y después** campo por campo: "Cambiaron 2 de 4
-  campos.", los que cambiaron con ícono, el texto "Cambió" y fondo tenue; `[oculto]` tal cual; lo
-  anidado como pares "Valor: 500"; "Sin valor" donde no había. Sin valores anteriores (lo que se
-  creó con la acción) no se marca nada y se dice.
+  campos.", los que cambiaron con ícono, el texto "Cambió" y fondo tenue; "Sin valor" donde no
+  había. Sin valores anteriores (lo que se creó con la acción) no se marca nada y se dice.
+- **Campos y valores en palabras** (E6-07): cada clave que el backend escribe tiene su nombre con
+  tildes (`motivoCancelacion` → "Motivo de la cancelación", `validadoBiometricamente` →
+  "Confirmado con el rostro"); los valores fijos con las palabras de los chips y del glosario
+  (`PENDIENTE` → "Pendiente", `ALTA` → "Urgente", `MEDICAMENTO` → "Medicamento", `SONDA` → "Por
+  sonda", `insumo` → "Medicamento o insumo"); los ids de otro registro como "n.º 40" bajo su
+  nombre ("Prescripción"); la frecuencia como "cada 8 h"; los permisos con lo que dejan hacer; y
+  en un reporte exportado, sin sala ni tipo es "Todas las salas" y "Medicamentos e insumos".
+- **Datos protegidos** (E6-12): `[oculto]` se lee "Dato protegido (no se muestra)" y una sola nota
+  en el diálogo lo explica; si está de los dos lados, se marca "Cambió" (el servidor solo guarda
+  los campos que cambian).
 
 ### Estados
 
 Cargando, error con Reintentar ("No se pudo cargar el reporte de suministros. {motivo}") y vacío con
 lo que se usó y "Quitar filtros". Un 400 o un 404 dicen qué corregir sin Reintentar ("No se pudo
-armar el reporte de suministros. La sala no existe."); un 400 sobre las fechas además marca el campo.
+armar el reporte de suministros. La sala no existe.") y, si hay filtros, ofrecen **"Quitar
+filtros"** en el mismo aviso (E6-16); un 400 sobre las fechas además marca el campo. Una sala de un
+enlace que ya no existe aparece en el selector como "Sala n.º 99 (no existe)".
 
 ### Decisiones de la interfaz
 
-| #   | Decisión                                                                                                                                                                                                                                                                                                                                     | Por qué                                                                                                                |
-| --- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| D63 | El atajo del período va en la URL (`periodo`) y se cuenta desde el hoy de Argentina al dibujar; elegir una fecha fija las dos. Con una sola fecha se completa como el servidor. El período se valida en el cliente con los mensajes del esquema real (la prueba los compara) y, si es inválido, no se pide nada ni se muestran datos viejos. | Un enlace "últimos 30 días" sirve mañana; el error que se ve es el mismo que daría el 400.                             |
-| D64 | Los colores de los gráficos salen del esquema activo (`useColorScheme`) ya resueltos, no como variables CSS, porque la biblioteca pinta con atributos SVG. Medicamentos `primary`, insumos `secondary`, totales `info`, vencidos sin atender `warning`; nunca `success` ni `error`. Toda serie se nombra con texto.                          | Siguen al tema claro y oscuro sin depender del soporte de `var()` en atributos; ningún color es la única señal.        |
-| D65 | Las descargas se ocultan si no hay datos o si lo que se ve es el resultado anterior mientras llega el nuevo; una sola a la vez. El archivo se libera 10 s después de entregarlo.                                                                                                                                                             | El archivo siempre corresponde a lo que está a la vista; liberarlo enseguida corta la descarga en algunos navegadores. |
-| D66 | En la auditoría, el filtro de usuario usa `/api/usuarios` (pide `usuarios.gestionar`): sin ese permiso no se ofrece. El de paciente lista todos (también los egresados), hasta 100. Un valor elegido que no esté en la lista se agrega como opción.                                                                                          | La auditoría es de toda la historia; un enlace guardado no deja el selector en blanco.                                 |
-| D67 | Un campo "cambió" si los dos lados tienen valores y difieren por contenido (sin importar el orden de las claves); también si aparece o desaparece. Sin valores anteriores no se marca nada.                                                                                                                                                  | Marcar todo lo creado como "cambió" sería ruido; lo que importa es lo modificado.                                      |
-| D68 | Los reportes leen `meta` con `api.lista` (tipado en `api/reportes.ts`); el cliente solo suma `descargar`, que reutiliza el manejo de errores de los demás pedidos.                                                                                                                                                                           | Un solo lugar decide cómo se explica un error, también en las descargas.                                               |
+| #   | Decisión                                                                                                                                                                                                                                                                                                                                     | Por qué                                                                                                         |
+| --- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| D63 | El atajo del período va en la URL (`periodo`) y se cuenta desde el hoy de Argentina al dibujar; elegir una fecha fija las dos. Con una sola fecha se completa como el servidor. El período se valida en el cliente con los mensajes del esquema real (la prueba los compara) y, si es inválido, no se pide nada ni se muestran datos viejos. | Un enlace "últimos 30 días" sirve mañana; el error que se ve es el mismo que daría el 400.                      |
+| D64 | Los colores de los gráficos salen del esquema activo (`useColorScheme`) ya resueltos, no como variables CSS, porque la biblioteca pinta con atributos SVG. Cada color es una serie con el mismo significado en toda la pantalla (ver E6-01 abajo); nunca `success` ni `error`. Toda serie se nombra con texto.                               | Siguen al tema claro y oscuro sin depender del soporte de `var()` en atributos; ningún color es la única señal. |
+| D65 | Las descargas no se ofrecen si no hay datos (se dice) o si lo que se ve es el resultado anterior mientras llega el nuevo, salvo la que está en curso; una sola a la vez. El archivo se libera 10 s después de entregarlo.                                                                                                                    | El archivo siempre corresponde a lo que se pidió; liberarlo enseguida corta la descarga en algunos navegadores. |
+| D66 | En la auditoría, el filtro de usuario busca en `/api/usuarios` (pide `usuarios.gestionar`): sin ese permiso no se ofrece. El de paciente busca en todos (también los egresados). Lo elegido por un enlace se nombra aunque no esté entre las sugerencias.                                                                                    | La auditoría es de toda la historia; un enlace guardado no deja el filtro en blanco.                            |
+| D67 | Un campo "cambió" si los dos lados tienen valores y difieren por contenido (sin importar el orden de las claves); también si aparece o desaparece, y si es un dato protegido de los dos lados. Sin valores anteriores no se marca nada.                                                                                                      | Marcar todo lo creado como "cambió" sería ruido; lo que importa es lo modificado.                               |
+| D68 | Los reportes leen `meta` con `api.lista` (tipado en `api/reportes.ts`); el cliente solo suma `descargar`, que reutiliza el manejo de errores de los demás pedidos.                                                                                                                                                                           | Un solo lugar decide cómo se explica un error, también en las descargas.                                        |
+
+### Decisiones de la interfaz (revisión E6)
+
+| Hallazgo | Decisión                                                                                                                                                                                                                                                                                                                    | Por qué                                                                                                                                                                         |
+| -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| E6-01    | Un color por serie en toda la pantalla: suministros `info`, con medicamentos `primary`, con insumos `secondary`, recordatorios neutro (`text.secondary`) y vencidos sin atender `warning`. Los gráficos de una sola medida (más usados, recordatorios) usan un solo color; consumo por tipo, el de cada serie.              | La torta y la barra apilada se distinguían solo por el matiz y `primary` era "medicamentos" en un gráfico y "a tiempo" en otro. Con el nombre en el eje el color solo acompaña. |
+| E6-02    | El porcentaje del consumo por tipo es sobre `totales.suministros` y no sobre la suma de las dos barras; se dice que puede pasar de 100 %.                                                                                                                                                                                   | Un suministro con medicamento e insumo está en las dos barras: sumarlas lo contaba dos veces.                                                                                   |
+| E6-03    | El eje de los más usados lleva nombre y presentación en dos renglones y mide el renglón más largo (letra de 14 px a 0,6 por carácter), hasta la mitad del ancho; en el teléfono la tabla empieza abierta. El eje recibe una clave corta y un rótulo propio (`axisTickLabel`) pone los dos renglones, ya recortados con "…". | Un ancho fijo de 240 px cortaba "Paracetamol · Comprimidos 500 mg". La biblioteca mide los dos renglones como uno solo y cortaba el segundo aunque entrara (visto en Chromium). |
+| E6-17    | El lugar para el número se hace estirando el máximo del eje (`maximoConLugar`), no con el margen derecho; si ni así entra "31 (64,6 %)", queda "31".                                                                                                                                                                        | La biblioteca recorta las etiquetas en el borde del área de las barras: con más margen el número igual se cortaba ("31 (64").                                                   |
+| E6-05    | La columna se rotula "Volumen (suma de cantidades de distinta unidad)" en lugar de ocultarla, con la nota arriba y el enlace a la agrupación por medicamento o insumo.                                                                                                                                                      | El volumen sirve para comparar pacientes o turnos; ocultarlo perdía ese uso, y la nota de abajo se leía después de los números.                                                 |
+| E6-06    | `mensajeDeError` solo muestra el mensaje de un `ErrorApi`; la descarga envuelve también `blob()` y distingue la cancelación (`CANCELADO`).                                                                                                                                                                                  | "Failed to fetch" o "terminated" no le dicen nada a nadie; una cancelación no es una falla de red.                                                                              |
+| E6-07    | Los valores se traducen por campo (`valorEnPalabras`) y la prueba recorre las 55 claves que escribe el backend (y las sensibles); los ids van como "n.º 40" bajo el nombre del registro ("Prescripción"), no "Prescripción n.º" con "n.º 40".                                                                               | Repetir "n.º" en el rótulo y en el valor se leía dos veces; con el número solo, "40" se confundía con una cantidad.                                                             |
+| E6-09    | Búsqueda en el servidor con `texto` y 10 sugerencias (las primeras al abrir), en lugar de una lista de 100.                                                                                                                                                                                                                 | Con cientos de pacientes o de personal, la lista dejaba afuera a quien se buscaba sin decirlo.                                                                                  |
+| E6-10    | La paginación de `Tabla` dice página y filas en un `role="status"` (uno solo, aunque haya dos barras) y lleva el foco al título visible o a la tabla.                                                                                                                                                                       | Con dos barras, dos anuncios repetían lo mismo; sin mover el foco, al pasar de página se quedaba al pie de una lista nueva.                                                     |
+| E6-13    | Las fechas se confirman al salir del campo o con Enter, y el borrador vive en `useParametrosReporte` (no en el campo).                                                                                                                                                                                                      | Un atajo o "Quitar filtros" tienen que poder descartar lo que se estaba escribiendo y la pantalla tiene que saber si el período está incompleto.                                |
+| E6-15    | Al cancelar, la pantalla vuelve a estar lista enseguida y el archivo que llegue después no se entrega (aunque `fetch` no haya cortado).                                                                                                                                                                                     | Quien canceló no espera un archivo; algunos entornos no cortan el pedido con la señal.                                                                                          |
+| ESC2     | El filtro Origen manda `origen=personas` por defecto, `sistema` o nada (todos); en la URL, "Todos" es `origen=`.                                                                                                                                                                                                            | El temporizador genera y vence recordatorios a toda hora: sin el filtro, los movimientos de las personas quedaban enterrados.                                                   |
+| ESC3     | "Atendidos a tiempo" se calcula en la pantalla con los conteos que ya vienen: `aTiempo / (total − pendientes)`.                                                                                                                                                                                                             | Es la misma base que `porcentajeAtendido` (los pendientes todavía no tuvieron su oportunidad) y no hace falta tocar el contrato.                                                |
 
 ### Pruebas de la interfaz
 
 - [`reportes.test.tsx`](../frontend/src/paginas/reportes/reportes.test.tsx): período por defecto,
-  atajos (pedido, fechas y URL), parámetros desde la URL, validación del período, 400/404 del
-  servidor, las cuatro agrupaciones, unidades por insumo sin sumar, total, vacío con "Quitar
-  filtros", error con Reintentar, permisos (médico sin descargas, enfermería sin menú) y teléfono.
-- [`estadisticas.test.tsx`](../frontend/src/paginas/reportes/estadisticas.test.tsx): indicadores,
-  títulos, "Ver como tabla" con los mismos números, leyendas con texto, pestañas que conservan los
-  parámetros, vacío, error y teléfono;
-  [`graficos.test.tsx`](../frontend/src/paginas/reportes/graficos.test.tsx): `skipAnimation` con
-  movimiento reducido y colores del tema claro y oscuro.
+  atajos (pedido, fechas y URL), parámetros desde la URL, validación del período, fechas que se
+  piden al confirmarlas, vacío sin reponer, error bajo el campo cambiado y "Elija una fecha
+  válida" (E6-13), 400/404 del servidor con "Quitar filtros" y sala que no existe (E6-16), las
+  cuatro agrupaciones, unidades por insumo sin sumar, volumen con su nota arriba y "Ver cada unidad
+  por separado" (E6-05), total, vacío con "Quitar filtros", error con Reintentar, permisos y
+  teléfono.
+- [`estadisticas.test.tsx`](../frontend/src/paginas/reportes/estadisticas.test.tsx): indicadores
+  (con "Atendidos a tiempo" y su explicación, ESC3), títulos, "Ver como tabla" con los mismos
+  números, series con nombre, pestañas que conservan los parámetros, vacío, error y teléfono;
+  [`graficos.test.tsx`](../frontend/src/paginas/reportes/graficos.test.tsx): `skipAnimation`,
+  descripción de cada sección (E6-18), colores por serie en claro y oscuro, un solo color y el de
+  aviso solo para vencidos, nombres en el eje y números al final (E6-01), porcentaje sobre el total
+  (E6-02), dos renglones y tabla abierta en el teléfono (E6-03) y la leyenda y las marcas de la
+  evolución (E6-11); [`medidas.test.ts`](../frontend/src/paginas/reportes/medidas.test.ts): ancho
+  del eje, lugar para el número y etiqueta corta si no entra (E6-03, E6-17);
+  [`formato.test.ts`](../frontend/src/paginas/reportes/formato.test.ts): cantidades con hasta 3
+  decimales y porcentajes con 1 (E6-14).
 - [`descargas.test.tsx`](../frontend/src/paginas/reportes/descargas.test.tsx): ruta y parámetros
-  del pedido, "Preparando el archivo…", enlace con el nombre del servidor, liberación de la memoria
-  y errores 403 y 500; [`cliente.test.ts`](../frontend/src/api/cliente.test.ts): `descargar`.
-- [`periodo.test.ts`](../frontend/src/paginas/reportes/periodo.test.ts): días de Argentina, atajos
-  y la validación comparada con `esquemaReporteSuministros`.
-- [`auditoria.test.tsx`](../frontend/src/paginas/auditoria/auditoria.test.tsx),
+  del pedido, "Preparando el archivo…", enlace con el nombre del servidor, éxito con el período que
+  se va al cambiar los filtros, botón en curso que no desaparece, aviso a los 10 s con Cancelar,
+  sin datos, el médico y errores 403 y 500; [`cliente.test.ts`](../frontend/src/api/cliente.test.ts):
+  `descargar` (también con el cuerpo que falla y cancelada) y `mensajeDeError` con un `Error` común
+  (E6-06).
+- [`periodo.test.ts`](../frontend/src/paginas/reportes/periodo.test.ts): días de Argentina, atajos,
+  la validación comparada con `esquemaReporteSuministros` y el error bajo el campo cambiado.
+- [`auditoria.test.tsx`](../frontend/src/paginas/auditoria/auditoria.test.tsx): columnas, acciones
+  en palabras, filtros en el pedido y la URL, Origen (ESC2), búsqueda de usuario y paciente en el
+  servidor (E6-09), paginación de a 50 y de a 25 en el teléfono con el foco al título (E6-10),
+  vacío, error, validación y permisos;
+  [`detalle.test.tsx`](../frontend/src/paginas/auditoria/detalle.test.tsx): Antes y después
+  (también con teclado y en teléfono), valores en palabras (E6-07) y datos protegidos (E6-12);
   [`comparacion.test.ts`](../frontend/src/paginas/auditoria/comparacion.test.ts) y
-  [`palabras.test.ts`](../frontend/src/paginas/auditoria/palabras.test.ts): columnas, acciones en
-  palabras (y el código si no hay), filtros en el pedido y la URL, paginación, vacío, error,
-  validación, detalle Antes/Después (también con teclado y en teléfono) y permisos.
+  [`palabras.test.ts`](../frontend/src/paginas/auditoria/palabras.test.ts): la prueba que recorre
+  las claves y los códigos del backend y falla si falta alguno.
+- [`Tabla.test.tsx`](../frontend/src/componentes/Tabla.test.tsx): paginación con estado, primera y
+  última, arriba y abajo y foco al título (E6-10).
 - [`menu.test.tsx`](../frontend/src/navegacion/menu.test.tsx) e
-  [`inicio.test.tsx`](../frontend/src/paginas/inicio.test.tsx): menú y tarea por rol.
+  [`inicio.test.tsx`](../frontend/src/paginas/inicio.test.tsx): menú y tareas por rol ("Ver
+  reportes" y "Ver quién cambió algo", E6-19). Los usuarios de prueba de
+  [`datos.ts`](../frontend/src/pruebas/datos.ts) tienen los permisos de E6 de la semilla.

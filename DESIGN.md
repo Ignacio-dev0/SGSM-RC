@@ -220,6 +220,38 @@ panel) y cerrar (ícono). Suena un tono corto y vibra si la tablet no los apagó
 - Al refiltrar, las filas anteriores se atenúan al 50 % (`Recargando`) hasta que llegan las nuevas.
 - Vacío, carga y error son tres estados distintos: un fallo nunca se muestra como "no hay datos".
 
+## Gráficos
+
+Los de Reportes (`@mui/x-charts`, `paginas/reportes/`), siempre dentro de `GraficoConTabla`:
+título, descripción y "Ver como tabla" con los mismos números (ver
+[docs/componentes.md](docs/componentes.md)).
+
+**Un color es una serie, y quiere decir lo mismo en toda la pantalla** (`useColoresGrafico`):
+
+| Serie                                                   | Rol              | Por qué                               |
+| ------------------------------------------------------- | ---------------- | ------------------------------------- |
+| Suministros (todos): la línea "Suministros", más usados | `info`           | Cantidades de suministros             |
+| Con medicamentos                                        | `primary`        | Barra del consumo por tipo y su línea |
+| Con insumos                                             | `secondary`      | Barra del consumo por tipo y su línea |
+| Recordatorios (a tiempo, tarde, no administrados)       | `text.secondary` | Neutro: lo normal no llama la vista   |
+| Vencidos sin atender                                    | `warning`        | Lo único que pide atención            |
+
+- **Una sola paleta por gráfico**: un gráfico de una sola medida (más usados, recordatorios) va de
+  un color; el de aviso solo marca lo que pide atención. Ningún rol se reusa con otro sentido.
+- **Nunca `success` ni `error`**: un "a tiempo" verde o un "vencido" rojo serían un juicio, y el
+  rojo es de errores y acciones de peligro (igual que en los chips).
+- **Cada serie con texto o forma además del color**: las barras llevan el nombre en el eje y el
+  número al final (sin leyenda: el nombre ya está); las líneas, forma de punto y trazo propios
+  (continuo, rayado, punteado) y la leyenda dibuja los dos. Sin tortas ni barras apiladas, que
+  solo se leen por el color.
+- Ejes con letra de 14 px y el de abajo de 56 px de alto; un nombre largo va en dos renglones y el
+  eje se mide con el más largo, hasta la mitad del ancho; el eje de los valores se estira para que
+  el número de la barra más larga entre a su derecha.
+  En el teléfono, si el eje no alcanza, la tabla empieza abierta.
+- Los colores se pasan ya resueltos del esquema activo (claro u oscuro): la biblioteca pinta con
+  atributos SVG.
+- **Sin animación con `prefers-reduced-motion`** (`skipAnimation`).
+
 ## Seguridad clínica
 
 Son parte del diseño, no del contenido:

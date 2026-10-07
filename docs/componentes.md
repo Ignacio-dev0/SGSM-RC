@@ -14,7 +14,7 @@ tamaño táctil, los textos y la accesibilidad sean iguales en todo el sistema.
 | `Boton`              | Cualquier acción                                            | `variante` (`principal`, `secundario`, `peligro`, `peligroConfirmar`, `texto`), `cargando`                                                          |
 | `CampoTexto`         | Entrada de texto con error en línea                         | `etiqueta`, `valor`, `alCambiar`, `error`, `ayuda` (texto, o texto con un contador)                                                                 |
 | `Selector`           | Elegir una opción (usa el selector nativo de la tablet)     | `etiqueta`, `valor`, `opciones`, `alCambiar`, `textoVacio`, `alReintentar`, `errorDeCarga`, `reintentando`                                          |
-| `Tabla`              | Listados con estado vacío, carga y paginación               | `titulo`, `columnas`, `filas`, `claveFila`, `alTocarFila`, `paginacion`                                                                             |
+| `Tabla`              | Listados con estado vacío, carga y paginación               | `titulo`, `columnas`, `filas`, `claveFila`, `alTocarFila`, `paginacion`, `paginacionArriba`, `tituloVisible`                                        |
 | `ModalConfirmacion`  | Confirmar acciones que modifican o eliminan                 | `abierto`, `titulo`, `mensaje`, `textoConfirmar`, `textoCancelar`, `peligroso`, `pedirMotivo`, `ayudaMotivo`, `maxMotivo`, `confirmarDeshabilitado` |
 | `Alerta`             | Cartel de error, advertencia, éxito o info                  | `tipo`, `titulo`, `alCerrar`, `accion`, `enfocar`                                                                                                   |
 | `ChipEstado`         | Estado de un registro (Vigente, Suspendida, Egresado…)      | `estado` (una de las claves de `ESTADOS_CHIP`)                                                                                                      |
@@ -84,6 +84,29 @@ tamaño táctil, los textos y la accesibilidad sean iguales en todo el sistema.
   principal.
 - `Alerta` usa `role="alert"` para errores y advertencias (interrumpe al lector de pantalla) y
   `role="status"` para éxito e información.
+
+## Paginación de `Tabla` (E6-10)
+
+Con `paginacion` (`pagina`, `porPagina`, `total`, `alCambiarPagina`) la tabla lleva al pie:
+
+- **Primera, anterior, siguiente y última página**, con esos nombres ("Primera página"…) y de
+  56 px.
+- **"Página 2 de 3 · 51–100 de 120"** en un `role="status"`: se anuncia al cambiar.
+- `paginacionArriba`: la misma barra también arriba de las filas, para listas largas (el estado se
+  anuncia una sola vez).
+- Al cambiar de página, la vista y el foco van **al título**: con `tituloVisible="h2"` (o `h3`) la
+  tabla muestra su título arriba, la nombra (`aria-labelledby`) y es adonde va el foco; sin él, va
+  a la tabla misma, que lleva el título como nombre.
+
+```tsx
+<Tabla
+  titulo="Movimientos"
+  tituloVisible="h2"
+  paginacionArriba
+  paginacion={{ ...consulta.data.meta, alCambiarPagina: filtros.irAPagina }}
+  …
+/>
+```
 
 ## Formularios con datos sin guardar
 
@@ -239,11 +262,12 @@ archivo para bajar los reutiliza.
 
 ```tsx
 <GraficoConTabla
-  titulo="Insumos más usados" // h2 (o `nivel="h3"`); también nombra la sección y la tabla
-  descripcion="Los 10 que se usaron en más suministros del período, de más a menos."
+  titulo="Medicamentos e insumos más usados" // h2 (o `nivel="h3"`); nombra la sección y la tabla
+  descripcion="Los 10 medicamentos o insumos que se usaron en más suministros del período, de más a menos."
   columnas={COLUMNAS} // las de `Tabla`
   filas={insumos}
   claveFila={(i) => i.insumoId}
+  tablaAbierta={telefono} // la tabla empieza abierta (cuando el gráfico no alcanza)
 >
   <BarChart {...props} height={300} xAxis={[{ label: 'Suministros (cantidad)' }]} … />
 </GraficoConTabla>
@@ -252,17 +276,34 @@ archivo para bajar los reutiliza.
 - Es una `<section>` con borde y título; abajo, "Ver como tabla" (botón `texto` con
   `aria-expanded`/`aria-controls`) despliega los **mismos datos** en una `Tabla` llamada
   "{titulo} (tabla)" (tarjetas en teléfono) y pasa a decir "Ocultar la tabla".
+- La descripción es obligatoria: la sección se describe con ella (`aria-describedby`) y
+  `GraficoConTabla` le agrega "Los mismos números están en Ver como tabla." (E6-18).
 - El gráfico va **sin ancho fijo** (toma el del contenedor: nada de scroll horizontal) y con un
   `height`.
-- Reglas de los gráficos: ejes con su unidad ("Suministros (cantidad)", "Día"); letra de los ejes de
-  14 px y el eje de abajo con `height: 56` (si no, la biblioteca oculta las marcas); cada serie con
-  nombre en la leyenda o un número junto a la barra; nunca solo el color (en las líneas, además la
-  forma del punto y el trazo); números con `numero()`/`porcentaje()` de `paginas/reportes/formato.ts`
+- Reglas de los gráficos (las de color y forma, en [DESIGN.md](../DESIGN.md#gráficos)): ejes con su
+  unidad ("Suministros (cantidad)", "Día"); letra de los ejes de 14 px (`EJE`) y el eje de abajo
+  con `height: 56` (`EJE_X`; si no, la biblioteca oculta las marcas); barras con el nombre en el
+  eje y el número al final (`barLabel`), sin leyenda; un nombre largo en dos renglones (la
+  biblioteca mide el texto del eje como un solo renglón y lo corta: el eje recibe una clave corta
+  en `location === 'tick'` y un rótulo propio, `axisTickLabel`, pone los renglones); el ancho del
+  eje con `anchoDelEje(renglones, ancho)` y el lugar para el número de la barra más larga
+  estirando el eje con `maximoConLugar(...)` (la biblioteca recorta lo que sale del área de las
+  barras; si ni así entra, `etiquetasQueEntran` deja la corta)
+  ([`medidas.ts`](../frontend/src/paginas/reportes/medidas.ts)); en las líneas, forma del punto,
+  trazo y una marca de leyenda que dibuja los dos (`labelMarkType`, en
+  [`evolucion.tsx`](../frontend/src/paginas/reportes/evolucion.tsx)); números con
+  `numero()` (hasta 3 decimales) y `porcentaje()` (1 decimal) de `paginas/reportes/formato.ts`
   (coma decimal, sin separador de miles).
 - Colores: `useColoresGrafico()` ([`usarGraficos.ts`](../frontend/src/paginas/reportes/usarGraficos.ts))
-  devuelve `primario`, `secundario`, `aviso` e `info` **del esquema activo** (claro u oscuro), ya
-  resueltos, porque `@mui/x-charts` pinta con atributos SVG. Nunca `success` ni `error`.
-- Movimiento: `skipAnimation={useSinAnimacion()}` (verdadero con `prefers-reduced-motion`).
+  devuelve un color **por serie**, el mismo en toda la pantalla: `suministros`, `medicamentos`,
+  `insumos`, `recordatorios` (neutro) y `vencidos` (aviso), **del esquema activo** (claro u
+  oscuro), ya resueltos, porque `@mui/x-charts` pinta con atributos SVG. Varias barras de colores
+  distintos en un gráfico van con `colorMap` ordinal en el eje de los nombres.
+- `useComunes()` junta el teléfono, los colores y las props de todos (`skipAnimation` con
+  `prefers-reduced-motion`, textos en castellano); `useAncho()` mide el ancho del gráfico.
+- En las pruebas, `simularAnchoDeGraficos()` ([`datosReportes.ts`](../frontend/src/pruebas/datosReportes.ts))
+  hace que jsdom le dé 800 px al gráfico (si no, la biblioteca cree que mide 100 px y no dibuja
+  las barras).
 
 ### Descargar un archivo de la API
 
@@ -272,26 +313,50 @@ const archivo = await descargar(
   '/api/reportes/suministros/exportar',
   { formato: 'pdf', ...p },
   'reporte.pdf',
+  senal, // opcional: AbortSignal para cancelar
 );
 
-// pantalla: botones "Descargar PDF" / "Descargar Excel" y el aviso de cómo terminó
-const { botones, aviso } = useDescarga((formato) => reportesApi.exportarSuministros(formato, p));
+// pantalla: botones, el aviso de cómo terminó (o de que sigue) y si hay una en curso
+const descarga = useDescarga(
+  (formato, senal) => reportesApi.exportarSuministros(formato, p, senal),
+  { periodo: p, clave: JSON.stringify(p) }, // el período para el aviso; la clave cambia con los filtros
+);
 return (
   <>
-    {puedeExportar && botones}
-    {aviso}
+    <AccionesDeDescarga
+      puedeExportar={tienePermiso('reportes.exportar')}
+      hayDatos={filas.length > 0}
+      actualizando={consulta.isPlaceholderData}
+      descarga={descarga}
+    />
+    {descarga.aviso}
   </>
 );
 ```
 
 - [`descargar`](../frontend/src/api/cliente.ts) usa la cookie de sesión y el mismo manejo de errores
-  que `api.get` (403, error interno explicado, sin conexión, sesión vencida); el nombre sale de
+  que `api.get` (403, error interno explicado, sesión vencida); toda falla de red, también
+  mientras llega el archivo, es `SIN_CONEXION`, y una cancelada, `CANCELADO`. El nombre sale de
   `filename*` o `filename`, y si no viene, del de respaldo.
 - [`useDescarga`](../frontend/src/paginas/reportes/Descargas.tsx): botones `secundario` (la descarga
   no es la acción llena), "Preparando el archivo…" con `cargando` mientras el servidor lo arma (y
-  anunciado a los lectores de pantalla), uno a la vez, y después `Alerta` de éxito ("Se descargó
-  …") o de error ("No se pudo descargar el PDF. {motivo}").
+  anunciado a los lectores de pantalla), uno a la vez; a los 10 s, "Sigue preparándose…" con
+  Cancelar; después `Alerta` de éxito con el período ("Se descargó … (01/10 al 07/10).") o de error
+  ("No se pudo descargar el PDF. {motivo}"), que se va al cambiar la `clave`.
+- [`AccionesDeDescarga`](../frontend/src/paginas/reportes/comunes.tsx): los botones si hay datos (o
+  si una descarga sigue en curso aunque cambien los filtros); si no hay, "No hay datos para
+  descargar en este período"; sin `reportes.exportar`, "Para descargar el archivo, pídaselo a un
+  administrador.".
 - `bajarArchivo(archivo)` lo entrega con un enlace temporal (`URL.createObjectURL`) y libera la
   memoria a los 10 s.
 - En las pruebas, `simularDescargas()` ([`datosReportes.ts`](../frontend/src/pruebas/datosReportes.ts))
   anota los enlaces que se tocan (`href` y `download`) en lugar de bajar nada.
+
+### Buscar en el servidor mientras se escribe
+
+[`BuscadorEnServidor`](../frontend/src/paginas/auditoria/BuscadorEnServidor.tsx) (filtros de
+Usuario y Paciente de la auditoría, E6-09): un `Autocomplete` que pide al servidor lo que coincide
+con lo escrito (con `useRetardo`) y muestra las primeras sugerencias; la ayuda dice con qué se
+busca y "Se muestran 10 de N" si hay más. Lo elegido se borra con la cruz ("Borrar Usuario") para
+volver a "todos"; uno que llega por un enlace se nombra con `etiquetaDelValor`. Para una lista que
+puede tener cientos de opciones, en lugar de un `Selector` con las primeras 100.
