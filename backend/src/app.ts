@@ -3,6 +3,7 @@ import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
 import { manejarErrores, rutaNoEncontrada } from './comun/middleware-errores';
 import { autenticar } from './modulos/auth/auth.middleware';
+import { rutasAuditoria } from './modulos/auditoria/auditoria.rutas';
 import { rutasAuth } from './modulos/auth/auth.rutas';
 import { rutasBiometria } from './modulos/biometria/biometria.rutas';
 import { rutasCamas, rutasSalas } from './modulos/camas/camas.rutas';
@@ -55,6 +56,7 @@ export function crearApp() {
   app.use('/api/tipos-estudio', autenticar, rutasTiposEstudio);
   app.use('/api/estudios', autenticar, rutasEstudios);
   app.use('/api/reportes', autenticar, rutasReportes);
+  app.use('/api/auditoria', autenticar, rutasAuditoria);
 
   app.use(rutaNoEncontrada);
   app.use(manejarErrores);
