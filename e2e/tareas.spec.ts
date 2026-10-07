@@ -184,6 +184,9 @@ test('T15 · averiguar quién cambió algo y cuándo', async ({ page }) => {
   await expect(page.getByRole('heading', { level: 1, name: 'Auditoría' })).toBeVisible();
   const tabla = page.getByRole('table', { name: 'Movimientos' });
   await expect(tabla).toBeVisible();
+  // Lo que cambió: se filtran los movimientos que modificaron algo y se abre el primero.
+  await page.getByLabel('Acción').selectOption({ label: 'Modificó' });
+  await esperarPantalla(page);
   await tabla.getByRole('row').nth(1).click();
   await expect(page.getByRole('table', { name: 'Antes y después' })).toBeVisible();
 });
