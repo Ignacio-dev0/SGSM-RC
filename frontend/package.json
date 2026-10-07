@@ -5,12 +5,14 @@
   "description": "Interfaz web del SGSM-RC para tablets (React + Vite + MUI)",
   "type": "module",
   "scripts": {
+    "predev": "node scripts/copiar-modelos.mjs",
     "dev": "vite",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
     "typecheck": "tsc -b --noEmit",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "prebuild": "node scripts/copiar-modelos.mjs"
   },
   "devDependencies": {
     "@testing-library/dom": "^10.4.2",
@@ -33,6 +35,7 @@
     "@mui/icons-material": "^7.3.11",
     "@mui/material": "^7.3.11",
     "@tanstack/react-query": "^5.104.1",
+    "@vladmandic/face-api": "^1.7.15",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
     "react-router-dom": "^7.18.4"
