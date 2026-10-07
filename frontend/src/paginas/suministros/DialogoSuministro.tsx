@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useId, useState, type ReactNode } from 'react';
 import { Box, Dialog, DialogActions, DialogContent, DialogTitle, Typography } from '@mui/material';
 import FaceRetouchingNaturalIcon from '@mui/icons-material/FaceRetouchingNatural';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
@@ -27,6 +27,10 @@ function Dato({ etiqueta, children }: { etiqueta: string; children: ReactNode })
   );
 }
 
+/** "a", "a y b", "a, b y c" */
+const unir = (partes: string[]) =>
+  partes.length < 2 ? (partes[0] ?? '') : `${partes.slice(0, -1).join(', ')} y ${partes.at(-1)}`;
+
 /**
  * Detalle de un suministro (T415) con su corrección (T416 · CU23): dentro de las 24 horas,
  * con motivo obligatorio y confirmación con la cara.
@@ -46,6 +50,7 @@ export function DialogoSuministro({
   const [cantidad, setCantidad] = useState('');
   const [items, setItems] = useState<ItemCantidad[]>([]);
   const [motivo, setMotivo] = useState('');
+  const idFalta = useId();
 
   useEffect(() => setS(inicial), [inicial]);
 
@@ -79,18 +84,49 @@ export function DialogoSuministro({
     },
   });
 
+  const esMedicamento = s.tipo === 'MEDICAMENTO';
+  const motivoValido = motivo.trim().length >= 3;
+  const cantidadesValidas = esMedicamento
+    ? Number(cantidad) > 0
+    : // Una cantidad vacía queda en 0 en la lista: no se puede mandar.
+      items.length > 0 && items.every((i) => i.cantidad >= 1);
+  const valida = motivoValido && cantidadesValidas;
+
+  // Qué falta para confirmar, dicho junto al botón deshabilitado (UX-17).
+  const falta: string[] = [];
+  if (!cantidadesValidas) {
+    falta.push(
+      esMedicamento
+        ? 'la cantidad (mayor que 0)'
+        : items.length === 0
+          ? 'al menos un insumo'
+          : 'una cantidad de 1 o más en cada insumo',
+    );
+  }
+  if (!motivoValido) falta.push('el motivo (mínimo 3 letras)');
+
   const confirmar = async () => {
+    // Lo que cambia (antes → después) se ve mientras se mira a la cámara (UX-08).
+    const despues = esMedicamento
+      ? `${s.detalles[0]?.insumo ?? ''} × ${formatearDosis(Number(cantidad), s.detalles[0]?.unidad ?? '')}`
+      : items.map((i) => `${i.nombre} × ${formatearDosis(i.cantidad, i.unidad)}`).join(', ');
     const token = await pedirValidacion(
       `Corrección del suministro de ${s.paciente.apellido}, ${s.paciente.nombre}`,
+      <>
+        <Typography sx={{ fontWeight: 700 }}>
+          {s.paciente.apellido}, {s.paciente.nombre} · DNI {s.paciente.dni}
+          {s.paciente.cama ? ` · Cama ${s.paciente.cama}` : ''}
+        </Typography>
+        <Typography>Antes: {detalleDe(s)}</Typography>
+        <Typography sx={{ fontWeight: 700 }}>Después: {despues}</Typography>
+        <Typography>Motivo: {motivo.trim()}</Typography>
+      </>,
     );
     if (token) corregir.mutate(token);
   };
 
   const enPlazo = new Date(s.corregibleHasta) > new Date();
   const puedeCorregir = tienePermiso('suministros.corregir') && enPlazo;
-  const valida =
-    motivo.trim().length >= 3 &&
-    (s.tipo === 'MEDICAMENTO' ? Number(cantidad) > 0 : items.length > 0);
 
   return (
     <Dialog
@@ -156,6 +192,7 @@ export function DialogoSuministro({
               etiqueta="Motivo de la corrección"
               valor={motivo}
               alCambiar={setMotivo}
+              ayuda="Escriba el motivo (mínimo 3 letras)"
               required
               multiline
               minRows={2}
@@ -171,15 +208,25 @@ export function DialogoSuministro({
           )
         )}
       </DialogContent>
-      <DialogActions sx={{ px: 3, pb: 3, gap: 1 }}>
+      <DialogActions sx={{ px: 3, pb: 3, gap: 1, flexWrap: 'wrap' }}>
         {corrigiendo ? (
           <>
+            {!valida && (
+              <Typography
+                id={idFalta}
+                color="text.secondary"
+                sx={{ flex: '1 1 240px', textAlign: { sm: 'right' } }}
+              >
+                Falta indicar {unir(falta)}.
+              </Typography>
+            )}
             <Boton variante="texto" onClick={() => setCorrigiendo(false)}>
               Cancelar
             </Boton>
             <Boton
               startIcon={<FaceRetouchingNaturalIcon />}
               disabled={!valida}
+              {...(!valida ? { 'aria-describedby': idFalta } : {})}
               cargando={corregir.isPending}
               onClick={() => void confirmar()}
             >
