@@ -24,7 +24,11 @@ const tamano = z.coerce
   .max(TAMANO_MAXIMO, `Se pueden pedir hasta ${TAMANO_MAXIMO} registros por página`)
   .optional();
 
-/** GET /api/auditoria?desde&hasta&usuarioId&pacienteId&accion&entidad&pagina&tamano */
+/** De dónde viene el movimiento (D101): personas = con usuario; sistema = sin usuario. */
+export const ORIGENES = ['personas', 'sistema'] as const;
+export type OrigenAuditoria = (typeof ORIGENES)[number];
+
+/** GET /api/auditoria?desde&hasta&usuarioId&pacienteId&accion&entidad&origen&pagina&tamano */
 export const esquemaBusquedaAuditoria = z
   .object({
     /** Días en hora de Argentina, los dos incluidos (como en los reportes). */
@@ -34,6 +38,8 @@ export const esquemaBusquedaAuditoria = z
     pacienteId: id('Elija un paciente'),
     accion: texto('Elija una acción'),
     entidad: texto('Elija una entidad'),
+    /** Sin él, todos (ESC2 · D101). */
+    origen: z.enum(ORIGENES, { error: 'El origen debe ser "personas" o "sistema"' }).optional(),
     pagina: z.coerce
       .number({ error: 'La página empieza en 1' })
       .int('La página empieza en 1')

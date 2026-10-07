@@ -41,7 +41,7 @@ describe('esquema de la base (T101)', () => {
     expect(filas[0]?.definicion).toMatch(/\(fecha_hora\)$/);
   });
 
-  it('los índices del volumen de un año (T702 · D71–D73)', async () => {
+  it('los índices del volumen de un año (T702 · D71–D73, D101)', async () => {
     const filas = await prisma.$queryRaw<{ nombre: string; definicion: string }[]>`
       SELECT indexname AS nombre, indexdef AS definicion FROM pg_indexes
       WHERE tablename IN ('auditoria', 'detalles_suministro', 'suministros')`;
@@ -50,9 +50,13 @@ describe('esquema de la base (T101)', () => {
     expect(definicion('suministros_prescripcion_id_fecha_hora_idx')).toMatch(
       /\(prescripcion_id, fecha_hora\)$/,
     );
-    expect(definicion('auditoria_fecha_hora_id_idx')).toMatch(/\(fecha_hora, id\)$/);
     expect(definicion('auditoria_accion_fecha_hora_id_idx')).toMatch(/\(accion, fecha_hora, id\)$/);
-    // El de fecha_hora sola quedó reemplazado por el de (fecha_hora, id).
+    // El de fecha_hora sola quedó reemplazado por el de (fecha_hora, id) (D72) y este, por el que
+    // además lleva usuario_id para filtrar por origen sin leer la tabla (D101).
     expect(definicion('auditoria_fecha_hora_idx')).toBeUndefined();
+    expect(definicion('auditoria_fecha_hora_id_idx')).toBeUndefined();
+    expect(definicion('auditoria_fecha_hora_id_usuario_id_idx')).toMatch(
+      /\(fecha_hora, id, usuario_id\)$/,
+    );
   });
 });

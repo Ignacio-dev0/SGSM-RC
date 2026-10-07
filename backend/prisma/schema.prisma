@@ -457,8 +457,9 @@ model Auditoria {
   usuario Usuario? @relation(fields: [usuarioId], references: [id])
 
   @@index([entidad, entidadId])
-  /// Orden de la consulta (fecha y id): páginas lejanas por el índice solo (T702).
-  @@index([fechaHora, id])
+  /// Orden de la consulta (fecha y id) y el origen (usuario o sistema): páginas lejanas por el
+  /// índice solo, también con el filtro de origen (T702 · D72, D101).
+  @@index([fechaHora, id, usuarioId])
   /// Filtro por acción en ese orden y acciones distintas para los filtros (T702).
   @@index([accion, fechaHora, id])
   @@index([usuarioId])

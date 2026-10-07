@@ -29,6 +29,16 @@ describe('filtros de la auditoría (T604 · contrato con el frontend)', () => {
     });
   });
 
+  it('origen: personas (con usuario) o sistema (sin usuario); sin él, todos (D101)', () => {
+    expect(esquemaBusquedaAuditoria.parse({ origen: 'personas' })).toEqual({
+      origen: 'personas',
+      pagina: 1,
+      tamano: 50,
+    });
+    expect(esquemaBusquedaAuditoria.parse({ origen: 'sistema' }).origen).toBe('sistema');
+    expect(esquemaBusquedaAuditoria.parse({}).origen).toBeUndefined();
+  });
+
   it('acepta también porPagina, el nombre de la convención de la API (D48)', () => {
     expect(esquemaBusquedaAuditoria.parse({ porPagina: '20' }).tamano).toBe(20);
     expect(esquemaBusquedaAuditoria.parse({ porPagina: '20', tamano: '30' }).tamano).toBe(30);
@@ -41,6 +51,8 @@ describe('filtros de la auditoría (T604 · contrato con el frontend)', () => {
     ['un usuario que no es un número', { usuarioId: 'ana' }, 'usuarioId', /usuario/],
     ['un paciente que no es positivo', { pacienteId: '0' }, 'pacienteId', /paciente/],
     ['una acción vacía', { accion: '  ' }, 'accion', /acción/],
+    ['un origen que no existe', { origen: 'todos' }, 'origen', /personas.*sistema/],
+    ['un origen vacío', { origen: '' }, 'origen', /personas.*sistema/],
     [
       '"hasta" antes que "desde"',
       { desde: '2026-10-05', hasta: '2026-10-04' },

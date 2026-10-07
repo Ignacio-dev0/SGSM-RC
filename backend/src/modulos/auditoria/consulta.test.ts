@@ -144,6 +144,22 @@ describe('consulta de la auditoría (T604)', () => {
     });
   });
 
+  it('origen: personas son las que tienen usuario; sistema, las que no (D101)', async () => {
+    expect(ids(await consultar({ origen: 'personas' }))).toEqual([e.login, e.e5, e.e4, e.e2, e.e1]);
+    const sistema = await consultar({ origen: 'sistema' });
+    expect(ids(sistema)).toEqual([e.e3]);
+    expect(sistema.data[0]).toMatchObject({ usuario: { id: null, nombre: 'Sistema' } });
+    expect(sistema.meta).toEqual({ pagina: 1, porPagina: 50, total: 1, totalPaginas: 1 });
+  });
+
+  it('origen se combina con los otros filtros', async () => {
+    expect(ids(await consultar({ origen: 'personas', pacienteId: beto.id }))).toEqual([e.e4]);
+    expect(ids(await consultar({ origen: 'sistema', pacienteId: beto.id }))).toEqual([e.e3]);
+    expect(ids(await consultar({ origen: 'personas', usuarioId: lucas.id }))).toEqual([e.e5, e.e2]);
+    // Un usuario y "sin usuario" a la vez: no hay ninguna.
+    expect(ids(await consultar({ origen: 'sistema', usuarioId: lucas.id }))).toEqual([]);
+  });
+
   it('pagina con pagina y tamano (o porPagina)', async () => {
     const r = await consultar({ pagina: 2, tamano: 2 });
     expect(ids(r)).toEqual([e.e4, e.e3]);
@@ -155,6 +171,15 @@ describe('consulta de la auditoría (T604)', () => {
     const res = await admin.agente.get('/api/auditoria').query({ tamano: 500 });
     expect(res.status).toBe(400);
     expect(res.body.error.detalles[0].campo).toBe('tamano');
+  });
+
+  it.each(['todos', 'PERSONAS', ''])('origen "%s" no es válido: 400 VALIDACION', async (origen) => {
+    const res = await admin.agente.get('/api/auditoria').query({ origen });
+    expect(res.status).toBe(400);
+    expect(res.body.error.codigo).toBe('VALIDACION');
+    expect(res.body.error.detalles).toEqual([
+      { campo: 'origen', mensaje: 'El origen debe ser "personas" o "sistema"' },
+    ]);
   });
 
   it('opciones: las acciones y entidades que hay en la base, ordenadas', async () => {

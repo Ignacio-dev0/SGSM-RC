@@ -2,7 +2,7 @@ import { Prisma } from '@prisma/client';
 import { inicioDelDia, sumarDias } from '../../comun/fechas';
 import { respuestaPaginada } from '../../comun/paginacion';
 import { prisma } from '../../db';
-import type { BusquedaAuditoria } from './auditoria.esquemas';
+import type { BusquedaAuditoria, OrigenAuditoria } from './auditoria.esquemas';
 
 /**
  * Consulta de la auditoría (T604 · CU35 · RNF10): filtros, paginación y, por las dudas, las
@@ -32,8 +32,16 @@ export function ocultarSensibles(valor: Prisma.JsonValue): Prisma.JsonValue {
 
 const nombreDe = (p: { apellido: string; nombre: string }) => `${p.apellido}, ${p.nombre}`;
 
+/** Personas: con usuario; sistema: sin usuario (el temporizador, el instalador). D101. */
+const POR_ORIGEN: Record<OrigenAuditoria, Prisma.AuditoriaWhereInput> = {
+  personas: { usuarioId: { not: null } },
+  sistema: { usuarioId: null },
+};
+
 function filtros(f: BusquedaAuditoria): Prisma.AuditoriaWhereInput {
   return {
+    // En AND para no pisar a usuarioId: un usuario con origen=sistema no trae nada.
+    ...(f.origen ? { AND: [POR_ORIGEN[f.origen]] } : {}),
     ...(f.usuarioId ? { usuarioId: f.usuarioId } : {}),
     ...(f.pacienteId ? { pacienteId: f.pacienteId } : {}),
     ...(f.accion ? { accion: f.accion } : {}),
@@ -53,8 +61,9 @@ const ORDEN: Prisma.AuditoriaOrderByWithRelationInput[] = [{ fechaHora: 'desc' }
 
 export async function consultarAuditoria(f: BusquedaAuditoria) {
   const where = filtros(f);
-  // En dos pasos (D72): primero los ids de la página, que salen solo del índice (fecha_hora, id)
-  // aunque la página sea lejana; después, las filas completas de esos ids.
+  // En dos pasos (D72): primero los ids de la página, que salen solo del índice
+  // (fecha_hora, id, usuario_id) aunque la página sea lejana y se filtre por origen (D101);
+  // después, las filas completas de esos ids.
   const [, pagina, total] = await prisma.$transaction([
     // Las acciones son muy desparejas (REGISTRAR es 2/3 de la tabla, EXPORTAR casi nada): se
     // planifica cada vez con los valores pedidos, no con el plan genérico que PostgreSQL adopta

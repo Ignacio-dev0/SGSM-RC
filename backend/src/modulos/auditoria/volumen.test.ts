@@ -1,5 +1,6 @@
 import { prisma } from '../../db';
 import { limpiarBase } from '../../../tests/soporte/base';
+import { crearUsuarioBasico } from '../../../tests/soporte/fabricas';
 import { prepararBaseConSeguridad } from '../../../tests/soporte/sesion';
 import { esquemaBusquedaAuditoria } from './auditoria.esquemas';
 import { consultarAuditoria, opcionesDeAuditoria } from './consulta.servicio';
@@ -16,13 +17,16 @@ describe('consulta de la auditoría con volumen (T702)', () => {
 
   beforeAll(async () => {
     await prepararBaseConSeguridad();
-    // 23 entradas, varias a la misma hora: el orden a igual hora es por id.
+    const persona = await crearUsuarioBasico();
+    // 23 entradas, varias a la misma hora: el orden a igual hora es por id. Una de cada tres la
+    // hizo el sistema (sin usuario).
     await prisma.auditoria.createMany({
       data: Array.from({ length: 23 }, (_, i) => ({
         fechaHora: new Date(Date.UTC(2021, 0, 1, Math.floor(i / 4))),
         accion: ACCIONES[i % ACCIONES.length]!,
         entidad: ENTIDADES[i % ENTIDADES.length]!,
         entidadId: String(i),
+        usuarioId: i % 3 === 0 ? null : persona.id,
       })),
     });
   });
@@ -59,6 +63,27 @@ describe('consulta de la auditoría con volumen (T702)', () => {
         ids: registrar.map((e) => e.id),
         total: registrar.length,
       });
+    },
+  );
+
+  it.each([
+    ['personas', { usuarioId: { not: null } }],
+    ['sistema', { usuarioId: null }],
+  ] as const)(
+    'por origen (%s), cada página es el tramo que le toca del orden completo (D101)',
+    async (origen, where) => {
+      const completo = await prisma.auditoria.findMany({
+        where,
+        orderBy: [{ fechaHora: 'desc' }, { id: 'desc' }],
+        select: { id: true },
+      });
+      expect(completo.length).toBeGreaterThan(5);
+      for (const tamano of [1, 3, 7, 100]) {
+        expect(await recorrer({ origen }, tamano)).toEqual({
+          ids: completo.map((e) => e.id),
+          total: completo.length,
+        });
+      }
     },
   );
 
