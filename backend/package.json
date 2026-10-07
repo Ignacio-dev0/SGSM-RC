@@ -9,7 +9,7 @@
     "build": "tsc -p tsconfig.build.json",
     "start": "node dist/server.js",
     "typecheck": "tsc --noEmit",
-    "test": "jest --runInBand",
+    "test": "jest",
     "postinstall": "prisma generate",
     "db:migrar": "prisma migrate dev",
     "db:aplicar": "prisma migrate deploy",
