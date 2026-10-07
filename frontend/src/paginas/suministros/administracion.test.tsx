@@ -20,6 +20,9 @@ import { formatearHora } from '../../utilidades/formato';
 beforeEach(prepararSuministros);
 afterEach(() => vi.unstubAllEnvs());
 
+/** La cama con guion que no corta (E5-18): "A-01" nunca queda partida en "A-" y "01". */
+const A01 = `A${String.fromCharCode(0x2011)}01`;
+
 describe('administración de medicamento (T413 · CU20)', () => {
   it('elige la prescripción, confirma con el rostro y registra la toma', async () => {
     let enviado: Record<string, unknown> | undefined;
@@ -171,7 +174,7 @@ describe('administración de medicamento (T413 · CU20)', () => {
     await userEvent.click(await screen.findByRole('button', { name: /Paracetamol 500\smg/ }));
     const resumen = screen.getByRole('region', { name: 'Revise antes de confirmar' });
     expect(resumen).toHaveTextContent('Benítez, Rosa');
-    expect(resumen).toHaveTextContent('Cama A-01');
+    expect(resumen).toHaveTextContent(`Cama ${A01}`);
     expect(resumen).toHaveTextContent('Paracetamol 500 mg');
     expect(resumen).toHaveTextContent('Oral');
     expect(resumen).toHaveTextContent(/Toma de las \d\d:\d\d/);
@@ -179,7 +182,7 @@ describe('administración de medicamento (T413 · CU20)', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Confirmar con mi rostro' }));
     const dialogo = await screen.findByRole('dialog', { name: /Confirmar con su rostro/ });
     expect(dialogo).toHaveTextContent('Benítez, Rosa');
-    expect(dialogo).toHaveTextContent('Cama A-01');
+    expect(dialogo).toHaveTextContent(`Cama ${A01}`);
     expect(dialogo).toHaveTextContent('Paracetamol 500 mg');
   });
 
@@ -264,7 +267,7 @@ describe('administración de medicamento (T413 · CU20)', () => {
     const alerta = await screen.findByRole('alert');
     expect(alerta).toHaveTextContent(/no se sabe si quedó registrada/);
     expect(alerta).toHaveTextContent(/revise el historial/);
-    expect(alerta).toHaveTextContent('Benítez, Rosa (cama A-01)');
+    expect(alerta).toHaveTextContent(`Benítez, Rosa (cama ${A01})`);
     expect(within(alerta).getByRole('button', { name: 'Ver el historial' })).toBeInTheDocument();
   });
 
@@ -560,7 +563,7 @@ describe('el resultado de confirmar se ve y se anuncia (UX-01)', () => {
 
       const alerta = await screen.findByRole('alert');
       expect(alerta).toHaveTextContent('No se sabe si quedó registrada');
-      expect(alerta).toHaveTextContent('Benítez, Rosa (cama A-01)');
+      expect(alerta).toHaveTextContent(`Benítez, Rosa (cama ${A01})`);
       expect(alerta).toHaveTextContent(/revise el historial/);
       expect(within(alerta).getByRole('button', { name: 'Ver el historial' })).toBeInTheDocument();
       expect(alerta.closest('[tabindex="-1"]')).toHaveFocus();
@@ -674,7 +677,7 @@ describe('al cambiar de paciente no queda el intento anterior (UX-05)', () => {
     soltar();
 
     const alerta = await screen.findByRole('alert');
-    expect(alerta).toHaveTextContent('Benítez, Rosa (cama A-01)');
+    expect(alerta).toHaveTextContent(`Benítez, Rosa (cama ${A01})`);
     expect(alerta).not.toHaveTextContent('Suárez');
     await userEvent.click(within(alerta).getByRole('button', { name: 'Ver el historial' }));
     expect(
@@ -815,5 +818,58 @@ describe('volver al panel de recordatorios (desde=recordatorios)', () => {
     expect(
       await screen.findByRole('heading', { level: 1, name: 'Recordatorios' }),
     ).toBeInTheDocument();
+  });
+});
+
+describe('la toma del recordatorio (E5-01)', () => {
+  /** Administración abierta con "Administrar" desde el recordatorio de la toma `toma`. */
+  const desdeElRecordatorio = (toma: string) =>
+    `/suministros/medicamento?pacienteId=7&prescripcionId=40&desde=recordatorios&toma=${encodeURIComponent(toma)}`;
+
+  it('una toma vencida se administra como esa toma: atrasada, sin el aviso de adelantar la siguiente', async () => {
+    const toma = enMinutos(-75);
+    // El servidor ya da como próxima la siguiente toma (pasaron más de 30 min de la vencida).
+    conPrescripciones({ ...vigente, proximaToma: enMinutos(8 * 60 - 75) });
+    renderizarApp(desdeElRecordatorio(toma), ENFERMERO);
+
+    const resumen = await screen.findByRole('region', { name: 'Revise antes de confirmar' });
+    expect(resumen).toHaveTextContent(
+      `Toma de las ${formatearHora(toma)} · atrasada 1 h 15 min (recordatorio)`,
+    );
+    expect(screen.queryByText(/Verifique que corresponda adelantarla/)).not.toBeInTheDocument();
+    // La tarjeta dice lo mismo que el resumen.
+    expect(screen.getByRole('button', { name: /Paracetamol 500\smg/ })).toHaveTextContent(
+      /Atrasada 1 h 15 min/,
+    );
+    expect(screen.getByRole('button', { name: 'Confirmar con mi rostro' })).toBeEnabled();
+  });
+
+  it('si esa toma ya se dio, lo sigue diciendo y pide confirmar que corresponde otra', async () => {
+    conPrescripciones({
+      ...vigente,
+      proximaToma: enMinutos(8 * 60 - 20),
+      ultimasAdministraciones: [
+        { id: 1, fechaHora: enMinutos(-10), cantidad: 500, usuario: 'Acosta, Sofía' },
+      ],
+    });
+    renderizarApp(desdeElRecordatorio(enMinutos(-20)), ENFERMERO);
+
+    expect(await screen.findByText(/ya se dio a las \d\d:\d\d \(Acosta, Sofía\)/)).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Confirmar con mi rostro' })).toBeDisabled();
+  });
+
+  it('al elegir otra prescripción, esa no toma la hora del recordatorio', async () => {
+    conPrescripciones(
+      { ...vigente, proximaToma: enMinutos(400) },
+      otraVigente(41, 'Enalapril', 10, { proximaToma: enMinutos(185) }),
+    );
+    renderizarApp(desdeElRecordatorio(enMinutos(-75)), ENFERMERO);
+
+    await userEvent.click(await screen.findByRole('button', { name: /Enalapril 10\smg/ }));
+
+    expect(screen.getByText(/Faltan 3 h 5 min para la toma de las \d\d:\d\d/)).toBeVisible();
+    expect(screen.getByRole('region', { name: 'Revise antes de confirmar' })).not.toHaveTextContent(
+      '(recordatorio)',
+    );
   });
 });

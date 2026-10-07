@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState } from 'react';
+import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { Box, Checkbox, FormControlLabel, Paper, Typography } from '@mui/material';
 import FaceRetouchingNaturalIcon from '@mui/icons-material/FaceRetouchingNatural';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -20,6 +20,7 @@ import { soltarAlGirarLaRueda } from '../../utilidades/campoNumerico';
 import { formatearHora } from '../../utilidades/formato';
 import { useAhora } from '../../utilidades/useAhora';
 import { useCambiosSinGuardar } from '../../utilidades/useCambiosSinGuardar';
+import { formatearCama } from '../pacientes/etiquetas';
 import { IdentidadPaciente } from '../pacientes/IdentidadPaciente';
 import { etiquetaVia, formatearDosis } from '../prescripciones/etiquetas';
 import { SelectorPaciente } from './comunes';
@@ -82,6 +83,12 @@ function rutaRecordatorios(estado: unknown) {
   return typeof volverA === 'string' && /^\/recordatorios(\?|$)/.test(volverA)
     ? volverA
     : '/recordatorios';
+}
+
+/** La hora de la toma que trae la dirección (`toma`), si es una fecha; si no, null. */
+function tomaDeLaDireccion(valor: string | null) {
+  const ms = valor ? Date.parse(valor) : Number.NaN;
+  return Number.isFinite(ms) ? new Date(ms).toISOString() : null;
 }
 
 /** A quién se intentó registrar: el aviso de un fallo habla de él aunque la pantalla ya muestre a otro. */
@@ -160,6 +167,19 @@ export function AdministracionMedicamento() {
 
   // Si se llegó con "Administrar" desde una prescripción, queda elegida (una sola vez).
   const prescripcionPedida = Number(parametros.get('prescripcionId')) || 0;
+  // Desde un recordatorio, su toma es la que se da aunque esté atrasada o vencida (E5-01): el
+  // servidor ya puede dar como próxima la siguiente, y la pantalla avisaría "Faltan 7 h… adelantarla".
+  // El aviso de toma ya dada sigue igual: lo decide la última administración.
+  const tomaRecordatorio = desdeRecordatorios ? tomaDeLaDireccion(parametros.get('toma')) : null;
+  const prescripciones = useMemo(
+    () =>
+      (vigentes.data ?? []).map((x) =>
+        tomaRecordatorio && x.id === prescripcionPedida
+          ? { ...x, proximaToma: tomaRecordatorio }
+          : x,
+      ),
+    [vigentes.data, tomaRecordatorio, prescripcionPedida],
+  );
   const yaPreelegida = useRef(false);
   useEffect(() => {
     if (yaPreelegida.current || !prescripcionPedida) return;
@@ -188,7 +208,8 @@ export function AdministracionMedicamento() {
   };
 
   const p = paciente.data;
-  const elegida = vigentes.data?.find((x) => x.id === elegidaId) ?? null;
+  const elegida = prescripciones.find((x) => x.id === elegidaId) ?? null;
+  const esTomaDelRecordatorio = tomaRecordatorio !== null && elegidaId === prescripcionPedida;
   // Elegir el medicamento no es un cambio; sí lo son la cantidad distinta de la prescripta, una
   // nota o marcar otra toma. Registrar vacía todo eso, así que después de guardar no hay nada.
   const { dialogo } = useCambiosSinGuardar(
@@ -217,14 +238,14 @@ export function AdministracionMedicamento() {
         </Typography>
         <Typography>
           {p.apellido}, {p.nombre} · DNI {p.dni}
-          {p.cama ? ` · Cama ${p.cama.numero}` : ''}
+          {p.cama ? ` · Cama ${formatearCama(p.cama.numero)}` : ''}
         </Typography>
       </>,
     );
     if (!token) return;
     setIntento({
       pacienteId: p.id,
-      nombre: `${p.apellido}, ${p.nombre}${p.cama ? ` (cama ${p.cama.numero})` : ''}`,
+      nombre: `${p.apellido}, ${p.nombre}${p.cama ? ` (cama ${formatearCama(p.cama.numero)})` : ''}`,
     });
     registrando.current = true;
     registrar.mutate({
@@ -368,7 +389,7 @@ export function AdministracionMedicamento() {
               </Typography>
             )}
             <Box sx={{ display: 'grid', gap: 1.5, mb: 3 }}>
-              {(vigentes.data ?? []).map((x) => (
+              {prescripciones.map((x) => (
                 <TarjetaPrescripcion
                   key={x.id}
                   p={x}
@@ -421,7 +442,7 @@ export function AdministracionMedicamento() {
                 antes de confirmar.
               </Alerta>
             )}
-            {estado.tipo === 'falta' && (
+            {estado.tipo === 'falta' && !esTomaDelRecordatorio && (
               <Alerta tipo="advertencia">
                 Faltan {duracion(estado.minutos)} para la toma de las {formatearHora(estado.toma)}.
                 Verifique que corresponda adelantarla.
@@ -448,6 +469,7 @@ export function AdministracionMedicamento() {
               cantidad={cantidadNumero}
               observaciones={observaciones}
               estado={estado}
+              tomaDelRecordatorio={esTomaDelRecordatorio}
             />
             <BotonConfirmar
               habilitado={puedeConfirmar}

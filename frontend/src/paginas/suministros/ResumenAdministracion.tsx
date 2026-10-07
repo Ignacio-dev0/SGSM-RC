@@ -2,10 +2,19 @@ import { useId, type ReactNode } from 'react';
 import { Box, Typography } from '@mui/material';
 import type { Paciente, Prescripcion } from '../../api/tipos';
 import { formatearHora } from '../../utilidades/formato';
+import { formatearCama } from '../pacientes/etiquetas';
 import { etiquetaVia, formatearDosis } from '../prescripciones/etiquetas';
 import { duracion, type EstadoToma } from './estadoToma';
 
-function textoToma(e: EstadoToma) {
+/** "Toma de las 08:00 · atrasada 1 h 15 min", con "(recordatorio)" si es la del recordatorio. */
+function textoToma(e: EstadoToma, delRecordatorio: boolean) {
+  const texto = textoEstado(e);
+  return delRecordatorio && e.tipo !== 'dada' && e.tipo !== 'sin-tomas'
+    ? `${texto} (recordatorio)`
+    : texto;
+}
+
+function textoEstado(e: EstadoToma) {
   switch (e.tipo) {
     case 'dada':
       return `Ya se dio a las ${formatearHora(e.fechaHora)} (${e.usuario})`;
@@ -40,12 +49,15 @@ export function ResumenAdministracion({
   cantidad,
   observaciones,
   estado,
+  tomaDelRecordatorio = false,
 }: {
   paciente: Paciente;
   prescripcion: Prescripcion;
   cantidad: number;
   observaciones: string;
   estado: EstadoToma;
+  /** La toma es la del recordatorio desde el que se llegó (E5-01): se aclara al lado. */
+  tomaDelRecordatorio?: boolean;
 }) {
   const titulo = useId();
   const distinta = cantidad !== prescripcion.dosis;
@@ -69,7 +81,7 @@ export function ResumenAdministracion({
           {p.apellido}, {p.nombre}
           <Typography component="span" sx={{ display: 'block', fontWeight: 400 }}>
             DNI {p.dni}
-            {p.cama ? ` · Cama ${p.cama.numero}` : ''}
+            {p.cama ? ` · Cama ${formatearCama(p.cama.numero)}` : ''}
           </Typography>
         </Fila>
         <Fila titulo="Dar">
@@ -82,7 +94,7 @@ export function ResumenAdministracion({
           )}
         </Fila>
         <Fila titulo="Vía">{etiquetaVia(prescripcion.via)}</Fila>
-        <Fila titulo="Toma">{textoToma(estado)}</Fila>
+        <Fila titulo="Toma">{textoToma(estado, tomaDelRecordatorio)}</Fila>
         <Fila titulo="Observaciones">{observaciones.trim() || 'Sin observaciones'}</Fila>
       </Box>
     </Box>
