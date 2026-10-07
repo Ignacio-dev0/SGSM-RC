@@ -36,3 +36,6 @@ npm-debug.log*
 # Resultados de Playwright
 test-results/
 playwright-report/
+
+# Informes locales de UX-Pilot
+ux-pilot/

@@ -11,3 +11,4 @@ frontend/public/models
 .ux-governance/state.local.json
 test-results
 playwright-report
+ux-pilot
