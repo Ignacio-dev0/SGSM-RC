@@ -322,6 +322,8 @@ model Suministro {
 
   @@index([pacienteId, fechaHora])
   @@index([usuarioId])
+  /// Reportes de todo el hospital por período (E6).
+  @@index([fechaHora])
   @@map("suministros")
 }
 

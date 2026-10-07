@@ -32,4 +32,12 @@ describe('esquema de la base (T101)', () => {
       ORDER BY table_name`;
     expect(filas.map((f) => f.tabla)).toEqual(TABLAS_DEL_DER);
   });
+
+  it('los reportes por período tienen índice por la fecha y hora del suministro (E6)', async () => {
+    const filas = await prisma.$queryRaw<{ definicion: string }[]>`
+      SELECT indexdef AS definicion FROM pg_indexes
+      WHERE tablename = 'suministros' AND indexname = 'suministros_fecha_hora_idx'`;
+    expect(filas).toHaveLength(1);
+    expect(filas[0]?.definicion).toMatch(/\(fecha_hora\)$/);
+  });
 });
