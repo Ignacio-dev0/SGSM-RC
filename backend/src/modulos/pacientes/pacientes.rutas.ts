@@ -6,9 +6,12 @@ import { requierePermiso } from '../seguridad/permisos';
 import {
   esquemaAltaPaciente,
   esquemaBusquedaPacientes,
+  esquemaEgreso,
   esquemaModificacionPaciente,
   esquemaReingreso,
+  esquemaTraslado,
 } from './pacientes.esquemas';
+import { egresarPaciente, trasladarPaciente } from './movimientos.servicio';
 import {
   buscarPacientes,
   crearPaciente,
@@ -48,4 +51,16 @@ rutasPacientes.post('/:id/reingresar', gestionar, async (req, res) => {
   res.json({
     data: await reingresarPaciente(idDeRuta(req.params.id), datos, usuarioActual(req).id),
   });
+});
+
+rutasPacientes.post('/:id/trasladar', gestionar, async (req, res) => {
+  const { camaId } = validar(esquemaTraslado, req.body);
+  res.json({
+    data: await trasladarPaciente(idDeRuta(req.params.id), camaId, usuarioActual(req).id),
+  });
+});
+
+rutasPacientes.post('/:id/egresar', gestionar, async (req, res) => {
+  const datos = validar(esquemaEgreso, req.body);
+  res.json({ data: await egresarPaciente(idDeRuta(req.params.id), datos, usuarioActual(req).id) });
 });
