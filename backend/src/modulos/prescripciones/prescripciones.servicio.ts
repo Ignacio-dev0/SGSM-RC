@@ -3,6 +3,7 @@ import { conflicto, noEncontrado, reglaNegocio } from '../../comun/errores';
 import { reloj } from '../../comun/reloj';
 import { prisma, type ClienteDb } from '../../db';
 import { cambios, registrarAuditoria } from '../auditoria/auditoria.servicio';
+import { esperarCandadoDelCiclo } from '../recordatorios/ciclo.servicio';
 import { avisarCambioRecordatorios } from '../tiempo-real/bus';
 import { proximaTomaPendiente, tomasEntre } from './agenda';
 import type { AltaPrescripcion, ModificacionPrescripcion } from './prescripciones.esquemas';
@@ -221,6 +222,8 @@ export async function modificarPrescripcion(
   actorId: number,
 ) {
   const resultado = await prisma.$transaction(async (tx) => {
+    // D30: no cruzarse con un ciclo que está generando un recordatorio de esta prescripción.
+    await esperarCandadoDelCiclo(tx);
     const antes = await obtenerDb(tx, id);
     if (antes.estado !== 'VIGENTE') {
       throw conflicto(
@@ -270,6 +273,7 @@ export async function cambiarEstadoPrescripcion(
   actorId: number,
 ) {
   const resultado = await prisma.$transaction(async (tx) => {
+    await esperarCandadoDelCiclo(tx); // D30
     const antes = await obtenerDb(tx, id);
     const accion = TRANSICIONES[antes.estado][estado];
     if (!accion) {

@@ -3,6 +3,7 @@ import { reloj } from '../../comun/reloj';
 import { prisma } from '../../db';
 import { registrarAuditoria } from '../auditoria/auditoria.servicio';
 import { asignacionActiva, asignarCama, liberarCama } from '../camas/camas.servicio';
+import { esperarCandadoDelCiclo } from '../recordatorios/ciclo.servicio';
 import { avisarCambioRecordatorios } from '../tiempo-real/bus';
 import { aDtoPaciente, obtenerPacienteDb } from './pacientes.servicio';
 
@@ -45,6 +46,8 @@ export async function egresarPaciente(
   actorId: number,
 ) {
   const { dto, cancelados } = await prisma.$transaction(async (tx) => {
+    // D30: si un ciclo está generando recordatorios de este paciente, se espera y se cancelan.
+    await esperarCandadoDelCiclo(tx);
     const paciente = await obtenerPacienteDb(tx, id);
     if (paciente.estado !== 'INTERNADO') throw noInternado();
 

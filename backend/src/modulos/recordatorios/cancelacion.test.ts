@@ -97,6 +97,45 @@ describe('aviso al tiempo real cuando se cancelan recordatorios', () => {
     expect(publicar).not.toHaveBeenCalled();
   });
 
+  /**
+   * D30: una transacción toma el candado del ciclo y crea un recordatorio pendiente sin
+   * confirmar, como un ciclo que lo está generando. El cambio tiene que esperar a que termine y
+   * cancelar también ese; si no esperara, quedaría un pendiente de algo que ya no corresponde.
+   */
+  it.each(cambios)('%s espera al ciclo que está generando un recordatorio', async (_c, hacer) => {
+    let generado!: () => void;
+    const listo = new Promise<void>((r) => (generado = r));
+    let soltar!: () => void;
+    const suelto = new Promise<void>((r) => (soltar = r));
+    const ciclo = prisma.$transaction(
+      async (tx) => {
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(50501::bigint)`;
+        await tx.recordatorio.create({
+          data: {
+            tipo: 'MEDICAMENTO',
+            pacienteId,
+            prescripcionId,
+            fechaHoraObjetivo: new Date(Date.now() + 7 * HORA),
+            prioridad: 'BAJA',
+          },
+        });
+        generado();
+        await suelto;
+      },
+      { timeout: 10_000 },
+    );
+    await listo;
+
+    const resultado = hacer().then((r) => r.status);
+    await new Promise((r) => setTimeout(r, 300));
+    soltar();
+    await ciclo;
+
+    expect(await resultado).toBe(200);
+    const [r] = await prisma.recordatorio.findMany();
+    expect(r?.estado).toBe('CANCELADO');
+  });
+
   it('un cambio que no toca la agenda (la dosis) no cancela ni avisa', async () => {
     await recordarPendiente();
     const { publicar } = espiarBus();
