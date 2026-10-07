@@ -204,6 +204,63 @@ describe('ModalConfirmacion', () => {
     await userEvent.click(confirmar);
     expect(alConfirmar).toHaveBeenCalledWith('Error de carga');
   });
+
+  it('el motivo necesita al menos 3 letras (como pide el servidor) y lo dice', async () => {
+    render(
+      <ModalConfirmacion
+        abierto
+        titulo="Corregir"
+        mensaje="Indique el motivo"
+        textoConfirmar="Confirmar"
+        pedirMotivo
+        ayudaMotivo="Por ejemplo: error de carga"
+        alConfirmar={() => {}}
+        alCancelar={() => {}}
+      />,
+    );
+    const motivo = screen.getByLabelText(/Motivo/);
+    expect(motivo).toHaveAccessibleDescription('Por ejemplo: error de carga');
+    await userEvent.type(motivo, 'ab');
+    expect(motivo).toHaveAccessibleDescription('Escriba al menos 3 letras');
+    expect(screen.getByRole('button', { name: 'Confirmar' })).toBeDisabled();
+    await userEvent.type(motivo, 'c');
+    expect(screen.getByRole('button', { name: 'Confirmar' })).toBeEnabled();
+  });
+
+  it('no se cierra tocando afuera: hay que elegir Cancelar (o Escape)', async () => {
+    const alCancelar = vi.fn();
+    render(
+      <ModalConfirmacion
+        abierto
+        titulo="Dar de alta"
+        mensaje="¿Confirma?"
+        textoConfirmar="Dar de alta"
+        pedirMotivo
+        alConfirmar={() => {}}
+        alCancelar={alCancelar}
+      />,
+    );
+    await userEvent.type(screen.getByLabelText(/Motivo/), 'Alta médica');
+    await userEvent.click(document.querySelector('.MuiBackdrop-root')!);
+    expect(alCancelar).not.toHaveBeenCalled();
+    await userEvent.keyboard('{Escape}');
+    expect(alCancelar).toHaveBeenCalled();
+  });
+
+  it('se puede bloquear la confirmación desde afuera (por ejemplo, falta un dato)', () => {
+    render(
+      <ModalConfirmacion
+        abierto
+        titulo="Trasladar"
+        mensaje="Elija la cama"
+        textoConfirmar="Trasladar"
+        confirmarDeshabilitado
+        alConfirmar={() => {}}
+        alCancelar={() => {}}
+      />,
+    );
+    expect(screen.getByRole('button', { name: 'Trasladar' })).toBeDisabled();
+  });
 });
 
 describe('Alerta', () => {

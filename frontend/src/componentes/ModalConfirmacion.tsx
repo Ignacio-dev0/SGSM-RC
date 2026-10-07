@@ -13,6 +13,10 @@ interface Props {
   /** Pide un motivo obligatorio antes de confirmar. */
   pedirMotivo?: boolean;
   etiquetaMotivo?: string;
+  /** Ejemplo o aclaración debajo del motivo. */
+  ayudaMotivo?: string;
+  /** Impide confirmar mientras falte algo del contenido adicional (una fecha, una cama…). */
+  confirmarDeshabilitado?: boolean;
   cargando?: boolean;
   /** Contenido adicional (por ejemplo, campos de fecha) debajo del mensaje. */
   children?: ReactNode;
@@ -20,7 +24,14 @@ interface Props {
   alCancelar: () => void;
 }
 
-/** Modal de confirmación estándar (T010) para acciones que modifican o eliminan datos. */
+/** Largo mínimo del motivo: el mismo que exige el servidor. */
+const MINIMO_MOTIVO = 3;
+
+/**
+ * Modal de confirmación estándar (T010) para acciones que modifican o eliminan datos. No se
+ * cierra tocando afuera (se perdería el motivo escrito por un toque accidental): se sale con
+ * Cancelar o Escape.
+ */
 export function ModalConfirmacion({
   abierto,
   titulo,
@@ -29,6 +40,8 @@ export function ModalConfirmacion({
   peligroso = false,
   pedirMotivo = false,
   etiquetaMotivo = 'Motivo',
+  ayudaMotivo,
+  confirmarDeshabilitado = false,
   cargando = false,
   children,
   alConfirmar,
@@ -41,12 +54,16 @@ export function ModalConfirmacion({
     if (!abierto) setMotivo('');
   }, [abierto]);
 
-  const faltaMotivo = pedirMotivo && motivo.trim() === '';
+  const largoMotivo = motivo.trim().length;
+  const faltaMotivo = pedirMotivo && largoMotivo < MINIMO_MOTIVO;
 
   return (
     <Dialog
       open={abierto}
-      onClose={cargando ? undefined : alCancelar}
+      onClose={(_evento, razon) => {
+        if (cargando || razon === 'backdropClick') return;
+        alCancelar();
+      }}
       aria-labelledby={idTitulo}
       fullWidth
       maxWidth="sm"
@@ -60,6 +77,12 @@ export function ModalConfirmacion({
             etiqueta={etiquetaMotivo}
             valor={motivo}
             alCambiar={setMotivo}
+            error={
+              largoMotivo > 0 && largoMotivo < MINIMO_MOTIVO
+                ? `Escriba al menos ${MINIMO_MOTIVO} letras`
+                : undefined
+            }
+            {...(ayudaMotivo ? { ayuda: ayudaMotivo } : {})}
             required
             multiline
             minRows={2}
@@ -74,7 +97,7 @@ export function ModalConfirmacion({
         <Boton
           variante={peligroso ? 'peligro' : 'principal'}
           cargando={cargando}
-          disabled={faltaMotivo}
+          disabled={faltaMotivo || confirmarDeshabilitado}
           onClick={() => alConfirmar(pedirMotivo ? motivo.trim() : undefined)}
         >
           {textoConfirmar}
