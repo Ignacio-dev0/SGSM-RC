@@ -4,6 +4,7 @@ import cookieParser from 'cookie-parser';
 import { manejarErrores, rutaNoEncontrada } from './comun/middleware-errores';
 import { autenticar } from './modulos/auth/auth.middleware';
 import { rutasAuth } from './modulos/auth/auth.rutas';
+import { rutasBiometria } from './modulos/biometria/biometria.rutas';
 import { rutasCamas, rutasSalas } from './modulos/camas/camas.rutas';
 import { rutasPacientes } from './modulos/pacientes/pacientes.rutas';
 import {
@@ -39,6 +40,7 @@ export function crearApp() {
   app.use('/api/pacientes', autenticar, rutasPacientes);
   app.use('/api/prescripciones', autenticar, rutasPrescripciones);
   app.use('/api/insumos', autenticar, rutasInsumos);
+  app.use('/api/biometria', autenticar, rutasBiometria);
 
   app.use(rutaNoEncontrada);
   app.use(manejarErrores);
