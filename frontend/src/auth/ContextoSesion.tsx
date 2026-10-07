@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 import { useQueryClient } from '@tanstack/react-query';
 import { alExpirarSesion, api } from '../api/cliente';
 import type { UsuarioSesion } from '../api/tipos';
+import { AvisoInactividad } from './AvisoInactividad';
 import { useInactividad } from './useInactividad';
 import { Contexto, type ValorSesion } from './useSesion';
 
@@ -59,9 +60,17 @@ export function ProveedorSesion({ children }: { children: ReactNode }) {
     [terminarSesionLocal],
   );
 
-  useInactividad(usuario ? usuario.inactividadMinutos : null, () => {
-    void cerrarSesion('La sesión se cerró por inactividad. Vuelva a ingresar.');
-  });
+  // Renueva la sesión del servidor mientras se usa la tablet sin hacer pedidos (leyendo una
+  // ficha): si no, el servidor la vencería aunque la persona esté trabajando.
+  const renovarEnServidor = useCallback(() => {
+    void api.get('/api/auth/sesion').catch(() => undefined);
+  }, []);
+
+  const { segundosRestantes, seguir } = useInactividad(
+    usuario ? usuario.inactividadMinutos : null,
+    () => void cerrarSesion('La sesión se cerró por inactividad. Vuelva a ingresar.'),
+    { alHaberActividad: renovarEnServidor },
+  );
 
   const valor = useMemo<ValorSesion>(
     () => ({
@@ -75,5 +84,19 @@ export function ProveedorSesion({ children }: { children: ReactNode }) {
     [usuario, aviso, iniciarSesion, cerrarSesion, refrescarSesion],
   );
 
-  return <Contexto.Provider value={valor}>{children}</Contexto.Provider>;
+  return (
+    <Contexto.Provider value={valor}>
+      {children}
+      {segundosRestantes !== null && (
+        <AvisoInactividad
+          segundos={segundosRestantes}
+          alSeguir={() => {
+            seguir();
+            renovarEnServidor();
+          }}
+          alSalir={() => void cerrarSesion()}
+        />
+      )}
+    </Contexto.Provider>
+  );
 }
