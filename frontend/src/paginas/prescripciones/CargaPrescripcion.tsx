@@ -183,9 +183,14 @@ export function CargaPrescripcion() {
             etiqueta="Medicamento"
             valor={f.insumoId}
             alCambiar={cambiar('insumoId')}
-            error={errores.insumoId}
+            error={
+              errores.insumoId ??
+              (medicamentos.isError
+                ? 'No se pudo cargar la lista de medicamentos. Revise la conexión y vuelva a entrar a esta pantalla.'
+                : undefined)
+            }
             required
-            textoVacio="Elegir…"
+            textoVacio={medicamentos.isLoading ? 'Cargando medicamentos…' : 'Elegir…'}
             opciones={(medicamentos.data ?? []).map((m) => ({
               valor: String(m.id),
               etiqueta: `${m.nombre} — ${m.presentacion}`,

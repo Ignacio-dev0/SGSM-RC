@@ -231,6 +231,44 @@ describe('modificación de prescripción (T306 · CU19)', () => {
     expect(enviado).toMatchObject({ dosis: 1000, motivo: 'Dolor persistente' });
   });
 
+  it('si la prescripción no se puede cargar lo dice y deja reintentar', async () => {
+    let fallar = true;
+    servidor.use(
+      http.get('*/api/prescripciones/40', () =>
+        fallar
+          ? HttpResponse.json(
+              { error: { codigo: 'ERROR_INTERNO', mensaje: 'Error inesperado del servidor' } },
+              { status: 500 },
+            )
+          : HttpResponse.json({ data: prescripcion() }),
+      ),
+    );
+    renderizarApp('/prescripciones/40', MEDICO);
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(/No se pudo cargar la prescripción/);
+    fallar = false;
+    await userEvent.click(screen.getByRole('button', { name: 'Reintentar' }));
+    expect(await screen.findByRole('heading', { name: /Paracetamol/ })).toBeInTheDocument();
+  });
+
+  it('si no se pueden cargar los medicamentos, el selector lo dice', async () => {
+    servidor.use(
+      http.get('*/api/insumos', () =>
+        HttpResponse.json(
+          { error: { codigo: 'ERROR_INTERNO', mensaje: 'Error inesperado del servidor' } },
+          { status: 500 },
+        ),
+      ),
+    );
+    renderizarApp('/pacientes/7/prescripciones/nueva', MEDICO);
+
+    await waitFor(() =>
+      expect(screen.getByLabelText(/^Medicamento/)).toHaveAccessibleDescription(
+        /No se pudo cargar la lista de medicamentos/,
+      ),
+    );
+  });
+
   it('muestra de qué paciente es la prescripción', async () => {
     servidor.use(
       http.get('*/api/prescripciones/40', () => HttpResponse.json({ data: prescripcion() })),

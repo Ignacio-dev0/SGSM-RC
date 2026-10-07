@@ -102,6 +102,33 @@ describe('registro de paciente con cama (T205 · CU11 · CU15)', () => {
     });
   });
 
+  it('si no hay camas libres para internar, lo dice en el campo', async () => {
+    servidor.use(http.get('*/api/camas', () => HttpResponse.json({ data: [] })));
+    renderizarApp('/pacientes/nuevo', MEDICO);
+
+    await waitFor(() =>
+      expect(screen.getByLabelText(/^Cama/)).toHaveAccessibleDescription(/No hay camas libres/),
+    );
+  });
+
+  it('si no se pueden cargar las camas, lo dice en el campo', async () => {
+    servidor.use(
+      http.get('*/api/camas', () =>
+        HttpResponse.json(
+          { error: { codigo: 'ERROR_INTERNO', mensaje: 'Error inesperado del servidor' } },
+          { status: 500 },
+        ),
+      ),
+    );
+    renderizarApp('/pacientes/nuevo', MEDICO);
+
+    await waitFor(() =>
+      expect(screen.getByLabelText(/^Cama/)).toHaveAccessibleDescription(
+        /No se pudo cargar la lista de camas/,
+      ),
+    );
+  });
+
   it('pide los datos obligatorios y la cama', async () => {
     renderizarApp('/pacientes/nuevo', MEDICO);
     await userEvent.click(await screen.findByRole('button', { name: 'Internar' }));
@@ -178,6 +205,23 @@ describe('ficha del paciente: modificación, traslado y baja (T207 · T208 · CU
     expect(screen.getAllByText(/A-01/).length).toBeGreaterThan(0);
     expect(screen.getByText('ACV isquémico')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Trasladar' })).not.toBeInTheDocument();
+  });
+
+  it('si los datos a editar no se pueden cargar, no muestra el formulario vacío', async () => {
+    servidor.use(
+      http.get('*/api/pacientes/7', () =>
+        HttpResponse.json(
+          { error: { codigo: 'ERROR_INTERNO', mensaje: 'Error inesperado del servidor' } },
+          { status: 500 },
+        ),
+      ),
+    );
+    renderizarApp('/pacientes/7/editar', MEDICO);
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      /No se pudieron cargar los datos del paciente/,
+    );
+    expect(screen.queryByLabelText(/^Apellido/)).not.toBeInTheDocument();
   });
 
   it('edita los datos personales', async () => {
@@ -258,6 +302,28 @@ describe('ficha del paciente: modificación, traslado y baja (T207 · T208 · CU
     expect(await screen.findByText('Egresado')).toBeInTheDocument();
     expect(enviado).toMatchObject({ motivo: 'Alta médica' });
     expect(enviado?.fechaEgreso).toEqual(expect.any(String));
+  });
+
+  it('si la ficha no se puede cargar lo dice y deja reintentar (no queda en blanco)', async () => {
+    let fallar = true;
+    servidor.use(
+      http.get('*/api/pacientes/7', () =>
+        fallar
+          ? HttpResponse.json(
+              { error: { codigo: 'ERROR_INTERNO', mensaje: 'Error inesperado del servidor' } },
+              { status: 500 },
+            )
+          : HttpResponse.json({ data: paciente() }),
+      ),
+    );
+    renderizarApp('/pacientes/7', ENFERMERO);
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      /No se pudo cargar la ficha del paciente/,
+    );
+    fallar = false;
+    await userEvent.click(screen.getByRole('button', { name: 'Reintentar' }));
+    expect(await screen.findByRole('heading', { name: /Benítez, Rosa/ })).toBeInTheDocument();
   });
 
   it('el encabezado de la ficha dice la cama primero, igual que en el resto de las pantallas', async () => {

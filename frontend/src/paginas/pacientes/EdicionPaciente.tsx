@@ -7,6 +7,7 @@ import { pacientesApi, usePaciente, type DatosPaciente } from '../../api/pacient
 import { Alerta } from '../../componentes/Alerta';
 import { Boton } from '../../componentes/Boton';
 import { EncabezadoPagina } from '../../componentes/EncabezadoPagina';
+import { Cargando, ErrorDeCarga } from '../../componentes/EstadoDeCarga';
 import { CamposPaciente } from './CamposPaciente';
 import {
   PACIENTE_VACIO,
@@ -56,28 +57,37 @@ export function EdicionPaciente() {
         titulo={p ? `Editar: ${p.apellido}, ${p.nombre}` : 'Editar paciente'}
         volverA={`/pacientes/${id}`}
       />
-      {paciente.isError && <Alerta tipo="error">{mensajeDeError(paciente.error)}</Alerta>}
       {guardar.isError && Object.keys(errores).length === 0 && (
         <Alerta tipo="error">{mensajeDeError(guardar.error)}</Alerta>
       )}
-      <Paper variant="outlined" component="form" noValidate onSubmit={enviar} sx={{ p: 3 }}>
-        <CamposPaciente
-          datos={datos}
-          errores={errores}
-          alCambiar={(campo, valor) => {
-            setDatos((d) => ({ ...d, [campo]: valor }));
-            setErrores((e) => ({ ...e, [campo]: undefined }));
-          }}
+      {paciente.isError ? (
+        <ErrorDeCarga
+          que="los datos del paciente"
+          error={paciente.error}
+          alReintentar={() => void paciente.refetch()}
         />
-        <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, mt: 4 }}>
-          <Boton variante="texto" onClick={() => navegar(`/pacientes/${id}`)}>
-            Cancelar
-          </Boton>
-          <Boton type="submit" cargando={guardar.isPending} disabled={!p}>
-            Guardar
-          </Boton>
-        </Box>
-      </Paper>
+      ) : !p ? (
+        <Cargando texto="Cargando los datos del paciente…" />
+      ) : (
+        <Paper variant="outlined" component="form" noValidate onSubmit={enviar} sx={{ p: 3 }}>
+          <CamposPaciente
+            datos={datos}
+            errores={errores}
+            alCambiar={(campo, valor) => {
+              setDatos((d) => ({ ...d, [campo]: valor }));
+              setErrores((e) => ({ ...e, [campo]: undefined }));
+            }}
+          />
+          <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, mt: 4 }}>
+            <Boton variante="texto" onClick={() => navegar(`/pacientes/${id}`)}>
+              Cancelar
+            </Boton>
+            <Boton type="submit" cargando={guardar.isPending} disabled={!p}>
+              Guardar
+            </Boton>
+          </Box>
+        </Paper>
+      )}
     </>
   );
 }

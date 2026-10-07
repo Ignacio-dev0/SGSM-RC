@@ -156,3 +156,22 @@ describe('prueba de concepto del reconocimiento facial (T401)', () => {
     expect(screen.getByLabelText('Luz')).toHaveTextContent(/Buena/);
   });
 });
+
+describe('estados de carga del rostro de un usuario', () => {
+  it('si no se puede cargar lo dice y deja reintentar', async () => {
+    servidor.use(
+      http.get('*/api/biometria/usuarios/3', () =>
+        HttpResponse.json(
+          { error: { codigo: 'ERROR_INTERNO', mensaje: 'Error inesperado del servidor' } },
+          { status: 500 },
+        ),
+      ),
+    );
+    renderizarApp('/biometria/3', ADMIN);
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      /No se pudo cargar el registro facial/,
+    );
+    expect(screen.getByRole('button', { name: 'Reintentar' })).toBeInTheDocument();
+  });
+});

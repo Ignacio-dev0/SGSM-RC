@@ -6,13 +6,13 @@ import MedicationOutlinedIcon from '@mui/icons-material/MedicationOutlined';
 import SwapHorizIcon from '@mui/icons-material/SwapHoriz';
 import { useQueryClient } from '@tanstack/react-query';
 import { useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { mensajeDeError } from '../../api/cliente';
 import { usePaciente } from '../../api/pacientes';
 import type { Paciente } from '../../api/tipos';
 import { useSesion } from '../../auth/useSesion';
 import { Alerta } from '../../componentes/Alerta';
 import { Boton } from '../../componentes/Boton';
 import { EncabezadoPagina } from '../../componentes/EncabezadoPagina';
+import { Cargando, ErrorDeCarga } from '../../componentes/EstadoDeCarga';
 import { edad, formatearFechaHora, formatearFechaSinZona } from '../../utilidades/formato';
 import { PrescripcionesPaciente } from '../prescripciones/PrescripcionesPaciente';
 import { DialogoEgreso, DialogoTraslado } from './DialogosPaciente';
@@ -96,8 +96,16 @@ export function FichaPaciente() {
     setAviso(mensaje);
   };
 
-  if (paciente.isError) return <Alerta tipo="error">{mensajeDeError(paciente.error)}</Alerta>;
-  if (!p) return null;
+  if (paciente.isError) {
+    return (
+      <ErrorDeCarga
+        que="la ficha del paciente"
+        error={paciente.error}
+        alReintentar={() => void paciente.refetch()}
+      />
+    );
+  }
+  if (!p) return <Cargando texto="Cargando la ficha del paciente…" />;
 
   const gestiona = tienePermiso('pacientes.gestionar') && p.estado === 'INTERNADO';
   const suministra = tienePermiso('suministros.registrar') && p.estado === 'INTERNADO';

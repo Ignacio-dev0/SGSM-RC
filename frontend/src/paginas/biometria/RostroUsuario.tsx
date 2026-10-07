@@ -17,6 +17,7 @@ import { CapturaRostro, type RostroCapturado } from '../../biometria/CapturaRost
 import { Alerta } from '../../componentes/Alerta';
 import { Boton } from '../../componentes/Boton';
 import { EncabezadoPagina } from '../../componentes/EncabezadoPagina';
+import { Cargando, ErrorDeCarga } from '../../componentes/EstadoDeCarga';
 import { ModalConfirmacion } from '../../componentes/ModalConfirmacion';
 import { formatearFechaHora } from '../../utilidades/formato';
 
@@ -61,9 +62,17 @@ export function RostroUsuario() {
     },
   });
 
-  if (consulta.isError) return <Alerta tipo="error">{mensajeDeError(consulta.error)}</Alerta>;
+  if (consulta.isError) {
+    return (
+      <ErrorDeCarga
+        que="el registro facial"
+        error={consulta.error}
+        alReintentar={() => void consulta.refetch()}
+      />
+    );
+  }
   const u = consulta.data;
-  if (!u) return null;
+  if (!u) return <Cargando texto="Cargando el registro facial…" />;
   const nombre = `${u.nombre} ${u.apellido}`;
 
   return (

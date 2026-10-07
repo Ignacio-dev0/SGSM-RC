@@ -27,6 +27,7 @@ import { Alerta } from '../../componentes/Alerta';
 import { Boton } from '../../componentes/Boton';
 import { CampoTexto } from '../../componentes/CampoTexto';
 import { EncabezadoPagina } from '../../componentes/EncabezadoPagina';
+import { Cargando, ErrorDeCarga } from '../../componentes/EstadoDeCarga';
 import { ModalConfirmacion } from '../../componentes/ModalConfirmacion';
 import { Selector } from '../../componentes/Selector';
 import { formatearFechaHora, formatearHora } from '../../utilidades/formato';
@@ -197,8 +198,16 @@ export function DetallePrescripcion() {
     },
   });
 
-  if (consulta.isError) return <Alerta tipo="error">{mensajeDeError(consulta.error)}</Alerta>;
-  if (!p || !edicion) return null;
+  if (consulta.isError) {
+    return (
+      <ErrorDeCarga
+        que="la prescripción"
+        error={consulta.error}
+        alReintentar={() => void consulta.refetch()}
+      />
+    );
+  }
+  if (!p || !edicion) return <Cargando texto="Cargando la prescripción…" />;
 
   const gestiona = tienePermiso('prescripciones.gestionar');
   const editable = gestiona && p.estado === 'VIGENTE';

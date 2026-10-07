@@ -204,6 +204,24 @@ describe('administración de medicamento (T413 · CU20)', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent(/prescripción está suspendida/);
   });
 
+  it('si no se puede cargar la lista de pacientes, el selector lo dice', async () => {
+    servidor.use(
+      http.get('*/api/pacientes', () =>
+        HttpResponse.json(
+          { error: { codigo: 'ERROR_INTERNO', mensaje: 'Error inesperado del servidor' } },
+          { status: 500 },
+        ),
+      ),
+    );
+    renderizarApp('/suministros/medicamento', ENFERMERO);
+
+    await waitFor(() =>
+      expect(screen.getByLabelText('Paciente')).toHaveAccessibleDescription(
+        /No se pudo cargar la lista de pacientes/,
+      ),
+    );
+  });
+
   it('identifica al paciente con DNI, edad y cama (la cara valida a quien registra, no al paciente)', async () => {
     renderizarApp('/suministros/medicamento?pacienteId=7', ENFERMERO);
 
@@ -415,6 +433,23 @@ describe('registro de insumos (T414 · CU21)', () => {
 
     await waitFor(() => expect(screen.getByLabelText('Observaciones')).toHaveValue(''));
     expect(screen.queryByRole('list', { name: 'Insumos a registrar' })).not.toBeInTheDocument();
+  });
+
+  it('si no se puede cargar el catálogo de insumos, lo dice y deja reintentar', async () => {
+    servidor.use(
+      http.get('*/api/insumos', () =>
+        HttpResponse.json(
+          { error: { codigo: 'ERROR_INTERNO', mensaje: 'Error inesperado del servidor' } },
+          { status: 500 },
+        ),
+      ),
+    );
+    renderizarApp('/suministros/insumos?pacienteId=7', ENFERMERO);
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      /No se pudo cargar el catálogo de insumos/,
+    );
+    expect(screen.getByRole('button', { name: 'Reintentar' })).toBeInTheDocument();
   });
 
   it('no deja confirmar sin insumos', async () => {

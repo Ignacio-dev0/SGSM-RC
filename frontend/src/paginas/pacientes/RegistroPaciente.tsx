@@ -125,7 +125,14 @@ export function RegistroPaciente() {
               setCamaId(v);
               setErrores((e) => ({ ...e, camaId: undefined }));
             }}
-            error={errores.camaId}
+            error={
+              errores.camaId ??
+              (camas.isError
+                ? 'No se pudo cargar la lista de camas. Revise la conexión y vuelva a entrar a esta pantalla.'
+                : camas.isSuccess && camas.data.length === 0
+                  ? 'No hay camas libres. Hay que liberar o habilitar una antes de internar.'
+                  : undefined)
+            }
             required
             textoVacio={camas.isLoading ? 'Cargando camas…' : 'Elegir una cama libre…'}
             opciones={opcionesDeCamas(camas.data ?? [])}

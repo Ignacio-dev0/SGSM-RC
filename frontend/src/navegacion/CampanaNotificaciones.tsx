@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import {
   Badge,
   Dialog,
+  DialogActions,
   DialogContent,
   DialogTitle,
   IconButton,
@@ -15,6 +16,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../api/cliente';
 import type { Notificacion } from '../api/tipos';
 import { Boton } from '../componentes/Boton';
+import { Cargando, ErrorDeCarga } from '../componentes/EstadoDeCarga';
 import { formatearFechaHora } from '../utilidades/formato';
 
 interface RespuestaNotificaciones {
@@ -25,8 +27,9 @@ interface RespuestaNotificaciones {
 /** Avisos al usuario (bloqueos de cuentas, validaciones faciales fallidas): T112 · T407. */
 export function CampanaNotificaciones() {
   const [abierta, setAbierta] = useState(false);
+  const titulo = useId();
   const cliente = useQueryClient();
-  const { data } = useQuery({
+  const consulta = useQuery({
     queryKey: ['notificaciones'],
     queryFn: async () => {
       const r = await api.lista<Notificacion>('/api/notificaciones');
@@ -39,6 +42,7 @@ export function CampanaNotificaciones() {
     onSuccess: () => cliente.invalidateQueries({ queryKey: ['notificaciones'] }),
   });
 
+  const data = consulta.data;
   const noLeidas = data?.meta.noLeidas ?? 0;
 
   return (
@@ -52,10 +56,24 @@ export function CampanaNotificaciones() {
           <NotificationsOutlinedIcon />
         </Badge>
       </IconButton>
-      <Dialog open={abierta} onClose={() => setAbierta(false)} fullWidth maxWidth="sm">
-        <DialogTitle>Notificaciones</DialogTitle>
+      <Dialog
+        open={abierta}
+        onClose={() => setAbierta(false)}
+        fullWidth
+        maxWidth="sm"
+        aria-labelledby={titulo}
+      >
+        <DialogTitle id={titulo}>Notificaciones</DialogTitle>
         <DialogContent>
-          {data?.data.length ? (
+          {consulta.isError ? (
+            <ErrorDeCarga
+              que="las notificaciones"
+              error={consulta.error}
+              alReintentar={() => void consulta.refetch()}
+            />
+          ) : consulta.isLoading ? (
+            <Cargando texto="Cargando notificaciones…" />
+          ) : data?.data.length ? (
             <List>
               {data.data.map((n) => (
                 <ListItem
@@ -82,6 +100,11 @@ export function CampanaNotificaciones() {
             <Typography color="text.secondary">No hay notificaciones.</Typography>
           )}
         </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 3 }}>
+          <Boton variante="texto" onClick={() => setAbierta(false)}>
+            Cerrar
+          </Boton>
+        </DialogActions>
       </Dialog>
     </>
   );

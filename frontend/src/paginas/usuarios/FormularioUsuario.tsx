@@ -11,6 +11,7 @@ import { Alerta } from '../../componentes/Alerta';
 import { Boton } from '../../componentes/Boton';
 import { CampoTexto } from '../../componentes/CampoTexto';
 import { EncabezadoPagina } from '../../componentes/EncabezadoPagina';
+import { Cargando, ErrorDeCarga } from '../../componentes/EstadoDeCarga';
 import { ModalConfirmacion } from '../../componentes/ModalConfirmacion';
 import { Selector } from '../../componentes/Selector';
 import { formatearFechaHora } from '../../utilidades/formato';
@@ -173,96 +174,105 @@ export function FormularioUsuario() {
         </Alerta>
       )}
       {errorGeneral && <Alerta tipo="error">{errorGeneral}</Alerta>}
-      {existente.isError && <Alerta tipo="error">{mensajeDeError(existente.error)}</Alerta>}
 
-      <Paper variant="outlined" component="form" noValidate onSubmit={enviar} sx={{ p: 3 }}>
-        <Typography variant="h6" component="h2" sx={{ mb: 2 }}>
-          Datos personales
-        </Typography>
-        <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' } }}>
-          <CampoTexto
-            etiqueta="Nombre"
-            valor={datos.nombre}
-            alCambiar={actualizar('nombre')}
-            error={errores.nombre}
-            required
-          />
-          <CampoTexto
-            etiqueta="Apellido"
-            valor={datos.apellido}
-            alCambiar={actualizar('apellido')}
-            error={errores.apellido}
-            required
-          />
-          <CampoTexto
-            etiqueta="DNI"
-            valor={datos.dni}
-            alCambiar={actualizar('dni')}
-            error={errores.dni}
-            required
-            slotProps={{ htmlInput: { inputMode: 'numeric', maxLength: 8 } }}
-          />
-          <CampoTexto
-            etiqueta="Matrícula"
-            valor={datos.matricula}
-            alCambiar={actualizar('matricula')}
-            error={errores.matricula}
-          />
-          <CampoTexto
-            etiqueta="Email"
-            valor={datos.email}
-            alCambiar={actualizar('email')}
-            error={errores.email}
-            type="email"
-          />
-        </Box>
+      {!esAlta && existente.isError ? (
+        <ErrorDeCarga
+          que="los datos del usuario"
+          error={existente.error}
+          alReintentar={() => void existente.refetch()}
+        />
+      ) : !esAlta && !u ? (
+        <Cargando texto="Cargando los datos del usuario…" />
+      ) : (
+        <Paper variant="outlined" component="form" noValidate onSubmit={enviar} sx={{ p: 3 }}>
+          <Typography variant="h6" component="h2" sx={{ mb: 2 }}>
+            Datos personales
+          </Typography>
+          <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' } }}>
+            <CampoTexto
+              etiqueta="Nombre"
+              valor={datos.nombre}
+              alCambiar={actualizar('nombre')}
+              error={errores.nombre}
+              required
+            />
+            <CampoTexto
+              etiqueta="Apellido"
+              valor={datos.apellido}
+              alCambiar={actualizar('apellido')}
+              error={errores.apellido}
+              required
+            />
+            <CampoTexto
+              etiqueta="DNI"
+              valor={datos.dni}
+              alCambiar={actualizar('dni')}
+              error={errores.dni}
+              required
+              slotProps={{ htmlInput: { inputMode: 'numeric', maxLength: 8 } }}
+            />
+            <CampoTexto
+              etiqueta="Matrícula"
+              valor={datos.matricula}
+              alCambiar={actualizar('matricula')}
+              error={errores.matricula}
+            />
+            <CampoTexto
+              etiqueta="Email"
+              valor={datos.email}
+              alCambiar={actualizar('email')}
+              error={errores.email}
+              type="email"
+            />
+          </Box>
 
-        <Typography variant="h6" component="h2" sx={{ mt: 4, mb: 2 }}>
-          Acceso al sistema
-        </Typography>
-        <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' } }}>
-          <CampoTexto
-            etiqueta="Nombre de usuario"
-            valor={datos.nombreUsuario}
-            alCambiar={actualizar('nombreUsuario')}
-            error={errores.nombreUsuario}
-            required
-            autoCapitalize="none"
-          />
-          <Selector
-            etiqueta="Rol"
-            valor={datos.rol}
-            alCambiar={actualizar('rol')}
-            error={errores.rol}
-            required
-            textoVacio="Elegir…"
-            opciones={(roles.data ?? []).map((r) => ({ valor: r.codigo, etiqueta: r.nombre }))}
-          />
-          <CampoTexto
-            etiqueta={esAlta ? 'Contraseña' : 'Contraseña nueva'}
-            valor={datos.contrasena ?? ''}
-            alCambiar={actualizar('contrasena')}
-            error={errores.contrasena}
-            required={esAlta}
-            type="password"
-            autoComplete="new-password"
-            ayuda={
-              esAlta
-                ? 'Al menos 8 caracteres, con letras y números'
-                : 'Dejar vacío para no cambiarla'
-            }
-          />
-        </Box>
+          <Typography variant="h6" component="h2" sx={{ mt: 4, mb: 2 }}>
+            Acceso al sistema
+          </Typography>
+          <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' } }}>
+            <CampoTexto
+              etiqueta="Nombre de usuario"
+              valor={datos.nombreUsuario}
+              alCambiar={actualizar('nombreUsuario')}
+              error={errores.nombreUsuario}
+              required
+              autoCapitalize="none"
+            />
+            <Selector
+              etiqueta="Rol"
+              valor={datos.rol}
+              alCambiar={actualizar('rol')}
+              error={errores.rol}
+              required
+              textoVacio="Elegir…"
+              opciones={(roles.data ?? []).map((r) => ({ valor: r.codigo, etiqueta: r.nombre }))}
+            />
+            <CampoTexto
+              etiqueta={esAlta ? 'Contraseña' : 'Contraseña nueva'}
+              valor={datos.contrasena ?? ''}
+              alCambiar={actualizar('contrasena')}
+              error={errores.contrasena}
+              required={esAlta}
+              type="password"
+              autoComplete="new-password"
+              ayuda={
+                esAlta
+                  ? 'Al menos 8 caracteres, con letras y números'
+                  : 'Dejar vacío para no cambiarla'
+              }
+            />
+          </Box>
 
-        <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, mt: 4 }}>
-          <Boton variante="texto" onClick={() => navegar('/usuarios')}>
-            Cancelar
-          </Boton>
-          <Boton type="submit" cargando={guardar.isPending}>
-            Guardar
-          </Boton>
-        </Box>
-      </Paper>
+          <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, mt: 4 }}>
+            <Boton variante="texto" onClick={() => navegar('/usuarios')}>
+              Cancelar
+            </Boton>
+            <Boton type="submit" cargando={guardar.isPending}>
+              Guardar
+            </Boton>
+          </Box>
+        </Paper>
+      )}
 
       <ModalConfirmacion
         abierto={confirmandoBaja}

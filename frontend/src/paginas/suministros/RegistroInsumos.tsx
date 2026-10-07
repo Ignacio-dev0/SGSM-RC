@@ -14,6 +14,7 @@ import { Alerta } from '../../componentes/Alerta';
 import { Boton } from '../../componentes/Boton';
 import { CampoTexto } from '../../componentes/CampoTexto';
 import { EncabezadoPagina } from '../../componentes/EncabezadoPagina';
+import { Cargando, ErrorDeCarga } from '../../componentes/EstadoDeCarga';
 import { ListaCantidades, SelectorPaciente, type ItemCantidad } from './comunes';
 
 /**
@@ -111,6 +112,14 @@ export function RegistroInsumos() {
               type="search"
               sx={{ mb: 2 }}
             />
+            {catalogo.isError && (
+              <ErrorDeCarga
+                que="el catálogo de insumos"
+                error={catalogo.error}
+                alReintentar={() => void catalogo.refetch()}
+              />
+            )}
+            {catalogo.isLoading && <Cargando texto="Cargando el catálogo…" />}
             <Box
               sx={{
                 display: 'grid',

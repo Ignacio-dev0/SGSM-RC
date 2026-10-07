@@ -26,7 +26,12 @@ export function SelectorPaciente({
       etiqueta="Paciente"
       valor={valor}
       alCambiar={alCambiar}
-      textoVacio={textoVacio}
+      textoVacio={internados.isLoading ? 'Cargando pacientes…' : textoVacio}
+      error={
+        internados.isError
+          ? 'No se pudo cargar la lista de pacientes. Revise la conexión y vuelva a entrar a esta pantalla.'
+          : undefined
+      }
       opciones={(internados.data?.data ?? []).map((p) => ({
         valor: String(p.id),
         etiqueta: `${p.cama ? `${p.cama.numero} · ` : ''}${p.apellido}, ${p.nombre}`,

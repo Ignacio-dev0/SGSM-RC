@@ -176,6 +176,23 @@ describe('gestión de usuarios (T110 · CU01–CU04)', () => {
     expect(within(tabla).queryByText('Inactivo')).not.toBeInTheDocument();
   });
 
+  it('si el usuario a editar no se puede cargar, no muestra el formulario vacío', async () => {
+    servidor.use(
+      http.get('*/api/usuarios/10', () =>
+        HttpResponse.json(
+          { error: { codigo: 'ERROR_INTERNO', mensaje: 'Error inesperado del servidor' } },
+          { status: 500 },
+        ),
+      ),
+    );
+    renderizarApp('/usuarios/10', ADMIN);
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      /No se pudieron cargar los datos del usuario/,
+    );
+    expect(screen.queryByLabelText(/^Nombre/)).not.toBeInTheDocument();
+  });
+
   it('da de baja un usuario con confirmación', async () => {
     const baja = vi.fn(() => HttpResponse.json({ data: usuario({ activo: false }) }));
     servidor.use(
