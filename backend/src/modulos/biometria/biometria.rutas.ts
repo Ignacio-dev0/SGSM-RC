@@ -1,16 +1,14 @@
 import { Router } from 'express';
-import { z } from 'zod';
 import { idDeRuta } from '../../comun/parametros';
 import { validar } from '../../comun/validacion';
 import { usuarioActual } from '../auth/sesion';
 import { requierePermiso } from '../seguridad/permisos';
+import { esquemaRegistroBiometrico, esquemaValidacion } from './biometria.esquemas';
 import {
   eliminarBiometria,
-  esquemaRegistroBiometrico,
   estadoBiometrico,
   fotoDeReferencia,
   guardarBiometria,
-  esquemaPatron,
   listarPersonal,
 } from './biometria.servicio';
 import { validarRostro } from './validacion.servicio';
@@ -40,11 +38,6 @@ rutasBiometria.put('/usuarios/:id', gestionar, async (req, res) => {
 
 rutasBiometria.delete('/usuarios/:id', gestionar, async (req, res) => {
   res.json({ data: await eliminarBiometria(idDeRuta(req.params.id), usuarioActual(req).id) });
-});
-
-const esquemaValidacion = z.object({
-  patron: esquemaPatron,
-  operacion: z.string().trim().max(80).optional(),
 });
 
 /**

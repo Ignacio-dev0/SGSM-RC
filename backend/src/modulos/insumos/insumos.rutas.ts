@@ -4,11 +4,13 @@ import { validar } from '../../comun/validacion';
 import { usuarioActual } from '../auth/sesion';
 import { requierePermiso } from '../seguridad/permisos';
 import {
-  crearInsumo,
-  darDeBajaInsumo,
   esquemaAltaInsumo,
   esquemaFiltrosInsumos,
   esquemaModificacionInsumo,
+} from './insumos.esquemas';
+import {
+  crearInsumo,
+  darDeBajaInsumo,
   listarInsumos,
   modificarInsumo,
   obtenerInsumo,

@@ -1,5 +1,4 @@
 import { Router } from 'express';
-import { z } from 'zod';
 import { reloj } from '../../comun/reloj';
 import { validar } from '../../comun/validacion';
 import { config } from '../../config';
@@ -10,14 +9,10 @@ import {
   borrarCookieSesion,
   fijarCookieSesion,
 } from './auth.middleware';
+import { esquemaLogin } from './auth.esquemas';
 import { cerrarSesion, iniciarSesion } from './auth.servicio';
 import { cargarUsuarioSesion, usuarioActual } from './sesion';
 import { emitirToken, verificarToken } from './tokens';
-
-const esquemaLogin = z.object({
-  nombreUsuario: z.string().trim().min(1, 'Ingrese el usuario').max(30),
-  contrasena: z.string().min(1, 'Ingrese la contraseña').max(100),
-});
 
 const conDatosDeSesion = <T extends object>(usuario: T) => ({
   ...usuario,
