@@ -33,6 +33,11 @@ interface Props {
    * fija bajo la barra superior mientras se desplaza el contenido.
    */
   aviso?: ReactNode;
+  /**
+   * Lo que va al pie del cajón del menú en el teléfono (por ejemplo, el tema): así la barra
+   * angosta deja lugar al nombre del sistema (riesgo R10).
+   */
+  pieDelCajon?: ReactNode;
   children: ReactNode;
 }
 
@@ -116,7 +121,7 @@ function ListaMenu({
  * - Tablet vertical: riel con ícono y etiqueta corta, para no tapar el contenido.
  * - Teléfono: el menú se abre en un cajón con el botón de menú y deja todo el ancho al contenido.
  */
-export function PlantillaTablet({ opciones, acciones, aviso, children }: Props) {
+export function PlantillaTablet({ opciones, acciones, aviso, pieDelCajon, children }: Props) {
   const tema = useTheme();
   const telefono = useMediaQuery(tema.breakpoints.down('sm'));
   const riel = useMediaQuery(tema.breakpoints.down('md'));
@@ -207,6 +212,11 @@ export function PlantillaTablet({ opciones, acciones, aviso, children }: Props) 
         >
           <Toolbar />
           <ListaMenu opciones={opciones} compacto={false} alElegir={() => setAbierto(false)} />
+          {pieDelCajon && (
+            <Box sx={{ mt: 'auto', px: 2, py: 1, borderTop: 1, borderColor: 'divider' }}>
+              {pieDelCajon}
+            </Box>
+          )}
         </Drawer>
       ) : (
         <Drawer

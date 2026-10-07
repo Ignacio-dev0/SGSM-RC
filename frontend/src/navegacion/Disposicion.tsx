@@ -30,10 +30,19 @@ export function Disposicion() {
       <PlantillaTablet
         opciones={opcionesDelMenu(usuario.permisos)}
         {...(modoBiometria() === 'simulado' ? { aviso: AVISO_DEMOSTRACION } : {})}
+        // En el teléfono el tema va al cajón del menú: la barra deja lugar a "SGSM-RC" (R10).
+        pieDelCajon={
+          telefono && (
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <Typography sx={{ fontWeight: 600 }}>Tema de la pantalla</Typography>
+              <SelectorTema />
+            </Box>
+          )
+        }
         acciones={
           // En el teléfono sin separación extra: la barra es angosta (riesgo R10).
           <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 0, sm: 1 } }}>
-            <SelectorTema />
+            {!telefono && <SelectorTema />}
             {tienePermiso('recordatorios.ver') && <InsigniaRecordatorios />}
             <CampanaNotificaciones />
             <Box sx={{ textAlign: 'right', display: { xs: 'none', sm: 'block' } }}>
