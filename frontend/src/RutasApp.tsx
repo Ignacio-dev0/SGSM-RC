@@ -2,7 +2,10 @@ import { Navigate, Outlet, Route, Routes } from 'react-router-dom';
 import { ConPermiso, RutaProtegida } from './auth/RutaProtegida';
 import { Disposicion } from './navegacion/Disposicion';
 import { Ingreso } from './paginas/Ingreso';
+import { CatalogoInsumos } from './paginas/catalogo/CatalogoInsumos';
 import { Inicio } from './paginas/Inicio';
+import { CargaPrescripcion } from './paginas/prescripciones/CargaPrescripcion';
+import { DetallePrescripcion } from './paginas/prescripciones/DetallePrescripcion';
 import { BusquedaPacientes } from './paginas/pacientes/BusquedaPacientes';
 import { EdicionPaciente } from './paginas/pacientes/EdicionPaciente';
 import { FichaPaciente } from './paginas/pacientes/FichaPaciente';
@@ -43,6 +46,14 @@ export function RutasApp() {
           />
           <Route path=":id" element={<FichaPaciente />} />
           <Route
+            path=":id/prescripciones/nueva"
+            element={
+              <ConPermiso permiso="prescripciones.gestionar">
+                <CargaPrescripcion />
+              </ConPermiso>
+            }
+          />
+          <Route
             path=":id/editar"
             element={
               <ConPermiso permiso="pacientes.gestionar">
@@ -51,6 +62,22 @@ export function RutasApp() {
             }
           />
         </Route>
+        <Route
+          path="prescripciones/:id"
+          element={
+            <ConPermiso permiso="prescripciones.ver">
+              <DetallePrescripcion />
+            </ConPermiso>
+          }
+        />
+        <Route
+          path="catalogo"
+          element={
+            <ConPermiso permiso="catalogo.gestionar">
+              <CatalogoInsumos />
+            </ConPermiso>
+          }
+        />
         <Route
           path="usuarios"
           element={

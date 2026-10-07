@@ -12,6 +12,7 @@ import { Alerta } from '../../componentes/Alerta';
 import { Boton } from '../../componentes/Boton';
 import { EncabezadoPagina } from '../../componentes/EncabezadoPagina';
 import { edad, formatearFechaHora, formatearFechaSinZona } from '../../utilidades/formato';
+import { PrescripcionesPaciente } from '../prescripciones/PrescripcionesPaciente';
 import { DialogoEgreso, DialogoTraslado } from './DialogosPaciente';
 import { HistorialPaciente } from './HistorialPaciente';
 import { descripcionCama, etiquetaSexo } from './etiquetas';
@@ -61,12 +62,12 @@ function DatosDelPaciente({ p }: { p: Paciente }) {
   );
 }
 
-const PESTANAS = ['datos', 'historial'] as const;
+const PESTANAS = ['datos', 'prescripciones', 'historial'] as const;
 type Pestana = (typeof PESTANAS)[number];
 
 /**
  * Ficha del paciente: datos, cama actual y acciones (editar T207, trasladar T207, dar de alta
- * T208), con la pestaña de historial (T209).
+ * T208), con las pestañas de prescripciones (T305) e historial (T209).
  */
 export function FichaPaciente() {
   const id = Number(useParams().id);
@@ -151,10 +152,14 @@ export function FichaPaciente() {
         sx={{ mb: 2, borderBottom: 1, borderColor: 'divider' }}
       >
         <Tab value="datos" label="Datos" />
+        {tienePermiso('prescripciones.ver') && (
+          <Tab value="prescripciones" label="Prescripciones" />
+        )}
         <Tab value="historial" label="Historial" />
       </Tabs>
 
       {pestana === 'datos' && <DatosDelPaciente p={p} />}
+      {pestana === 'prescripciones' && <PrescripcionesPaciente paciente={p} />}
       {pestana === 'historial' && <HistorialPaciente pacienteId={id} />}
 
       <DialogoTraslado
