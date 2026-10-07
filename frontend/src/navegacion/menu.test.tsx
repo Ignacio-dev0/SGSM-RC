@@ -2,6 +2,7 @@ import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { ADMIN, ENFERMERO, MEDICO } from '../pruebas/datos';
+import { ADMIN_E6, MEDICO_E6 } from '../pruebas/datosReportes';
 import { renderizarApp } from '../pruebas/renderizar';
 import { servidor } from '../pruebas/servidor';
 import { opcionesDelMenu } from './menu';
@@ -34,6 +35,33 @@ describe('menú principal por rol (T108 · CU06 · RF15)', () => {
   it('sin recordatorios.ver no ve Recordatorios', () => {
     const permisos = ENFERMERO.permisos.filter((p) => !p.startsWith('recordatorios.'));
     expect(etiquetas(permisos)).not.toContain('Recordatorios');
+  });
+
+  it('Reportes para quien ve reportes (administrador y médico) y Auditoría solo con auditoria.ver (E6 · S17)', () => {
+    expect(etiquetas(ADMIN_E6.permisos)).toEqual(expect.arrayContaining(['Reportes', 'Auditoría']));
+    expect(etiquetas(MEDICO_E6.permisos)).toContain('Reportes');
+    expect(etiquetas(MEDICO_E6.permisos)).not.toContain('Auditoría');
+    expect(etiquetas(ENFERMERO.permisos)).not.toContain('Reportes');
+    expect(etiquetas(ENFERMERO.permisos)).not.toContain('Auditoría');
+  });
+
+  it('Reportes va después de Suministros y Auditoría al final, cada uno con su ícono', () => {
+    const opciones = opcionesDelMenu(ADMIN_E6.permisos);
+    const orden = opciones.map((o) => o.etiqueta);
+    expect(orden.indexOf('Reportes')).toBe(orden.indexOf('Suministros') + 1);
+    expect(orden.at(-1)).toBe('Auditoría');
+    expect(opciones.find((o) => o.etiqueta === 'Reportes')?.ruta).toBe('/reportes');
+    expect(opciones.find((o) => o.etiqueta === 'Auditoría')?.ruta).toBe('/auditoria');
+    for (const o of opciones) expect(o.icono).toBeTruthy();
+  });
+
+  it.each([
+    ['enfermería', '/reportes', ENFERMERO],
+    ['enfermería', '/auditoria', ENFERMERO],
+    ['el médico', '/auditoria', MEDICO_E6],
+  ])('%s no entra a %s aunque escriba la dirección', async (_rol, ruta, usuario) => {
+    renderizarApp(ruta, usuario);
+    expect(await screen.findByText(/No tiene permiso para ver esta pantalla/)).toBeInTheDocument();
   });
 
   it('un permiso adicional habilita su opción aunque el rol no la traiga', () => {

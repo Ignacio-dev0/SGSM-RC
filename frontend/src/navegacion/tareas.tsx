@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import AlarmOutlinedIcon from '@mui/icons-material/AlarmOutlined';
+import AssessmentOutlinedIcon from '@mui/icons-material/AssessmentOutlined';
 import FaceOutlinedIcon from '@mui/icons-material/FaceOutlined';
 import HistoryOutlinedIcon from '@mui/icons-material/HistoryOutlined';
 import Inventory2OutlinedIcon from '@mui/icons-material/Inventory2Outlined';
@@ -67,6 +68,15 @@ export const TAREAS: Tarea[] = [
     descripcion: 'Medicamentos e insumos dados, por paciente, fecha o responsable',
     icono: <HistoryOutlinedIcon />,
     permiso: 'suministros.ver',
+  },
+  {
+    // E6: no es de todos los días, por eso va al final de las clínicas.
+    ruta: '/reportes',
+    etiqueta: 'Ver reportes',
+    descripcion:
+      'Lo que se dio en un período, por paciente, insumo, personal o día, con estadísticas',
+    icono: <AssessmentOutlinedIcon />,
+    permiso: 'reportes.ver',
   },
   {
     ruta: '/usuarios/nuevo',

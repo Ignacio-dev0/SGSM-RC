@@ -1,6 +1,7 @@
 import { Outlet, Route, Routes } from 'react-router-dom';
 import { ConPermiso, RutaProtegida } from './auth/RutaProtegida';
 import { Disposicion } from './navegacion/Disposicion';
+import { Auditoria } from './paginas/auditoria/Auditoria';
 import { Ingreso } from './paginas/Ingreso';
 import { GestionBiometria } from './paginas/biometria/GestionBiometria';
 import { PruebaReconocimiento } from './paginas/biometria/PruebaReconocimiento';
@@ -11,6 +12,7 @@ import { NoEncontrada } from './paginas/NoEncontrada';
 import { CargaPrescripcion } from './paginas/prescripciones/CargaPrescripcion';
 import { DetallePrescripcion } from './paginas/prescripciones/DetallePrescripcion';
 import { PanelRecordatorios } from './paginas/recordatorios/PanelRecordatorios';
+import { Reportes } from './paginas/reportes/Reportes';
 import { AdministracionMedicamento } from './paginas/suministros/AdministracionMedicamento';
 import { HistorialSuministros } from './paginas/suministros/HistorialSuministros';
 import { RegistroInsumos } from './paginas/suministros/RegistroInsumos';
@@ -112,6 +114,22 @@ export function RutasApp() {
             }
           />
         </Route>
+        <Route
+          path="reportes"
+          element={
+            <ConPermiso permiso="reportes.ver">
+              <Reportes />
+            </ConPermiso>
+          }
+        />
+        <Route
+          path="auditoria"
+          element={
+            <ConPermiso permiso="auditoria.ver">
+              <Auditoria />
+            </ConPermiso>
+          }
+        />
         <Route
           path="biometria"
           element={

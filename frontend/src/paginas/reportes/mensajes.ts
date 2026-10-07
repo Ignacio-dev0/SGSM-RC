@@ -1,0 +1,35 @@
+import { erroresPorCampo } from '../../api/cliente';
+import type { PedidoPeriodo } from '../../api/reportes';
+import { formatearFechaSinZona } from '../../utilidades/formato';
+import { oracionDe, pasosParaProbar } from '../../utilidades/sinResultados';
+
+// Textos de los reportes que dependen del período y de los filtros usados.
+
+/** Los errores de fecha que devolvió el servidor (un 400 que igual llegó), para mostrarlos en su campo. */
+export function erroresDeFecha(error: unknown) {
+  const { desde, hasta } = erroresPorCampo(error);
+  return { desde, hasta };
+}
+
+/** "del 01/10/2026 al 07/10/2026" o "el 07/10/2026", para armar oraciones. */
+export const periodoEnFrase = (desde: string, hasta: string) =>
+  desde === hasta
+    ? `el ${formatearFechaSinZona(desde)}`
+    : `del ${formatearFechaSinZona(desde)} al ${formatearFechaSinZona(hasta)}`;
+
+/** Qué no se encontró y qué probar, con el período y los filtros usados. */
+export function mensajeSinSuministros(p: PedidoPeriodo, sala: string) {
+  const causa = oracionDe([
+    'No hay suministros',
+    p.tipo === 'MEDICAMENTO' && 'de medicamentos',
+    p.tipo === 'INSUMO' && 'de insumos',
+    p.salaId && `en ${sala}`,
+    periodoEnFrase(p.desde, p.hasta),
+  ]);
+  const pasos = pasosParaProbar([
+    'amplíe el período',
+    p.tipo && 'cambie Tipo a Todos',
+    p.salaId && 'elija otra sala',
+  ]);
+  return `${causa} ${pasos}`;
+}

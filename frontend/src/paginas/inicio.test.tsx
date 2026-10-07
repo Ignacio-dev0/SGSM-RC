@@ -4,6 +4,7 @@ import { http } from 'msw';
 import { ADMIN, ENFERMERO, MEDICO } from '../pruebas/datos';
 import { listaDePacientes, paciente } from '../pruebas/datosPacientes';
 import { simularRecordatorios } from '../pruebas/datosRecordatorios';
+import { ADMIN_E6, MEDICO_E6, prepararReportes } from '../pruebas/datosReportes';
 import { renderizarApp } from '../pruebas/renderizar';
 import { servidor } from '../pruebas/servidor';
 
@@ -99,6 +100,36 @@ describe('tareas de gestión primero para quien administra (F34)', () => {
       expect.stringMatching(/^Internar paciente/),
       expect.stringMatching(/^Ver lo que se registró/),
     ]);
+  });
+});
+
+describe('reportes desde el inicio (E6)', () => {
+  it('quien ve reportes tiene "Ver reportes" al final de sus tareas y llega en un toque', async () => {
+    prepararReportes();
+    renderizarApp('/', MEDICO_E6);
+    await screen.findByRole('heading', { name: /Hola, Martín/ });
+
+    expect(tareasDeLaPantalla()).toEqual([
+      expect.stringMatching(/^Buscar paciente/),
+      expect.stringMatching(/^Internar paciente/),
+      expect.stringMatching(/^Ver lo que se registró/),
+      expect.stringMatching(/^Ver reportes/),
+    ]);
+    await userEvent.click(screen.getByRole('link', { name: /Ver reportes/ }));
+    expect(await screen.findByRole('heading', { name: 'Reportes', level: 1 })).toBeInTheDocument();
+  });
+
+  it('enfermería no la tiene', async () => {
+    renderizarApp('/', ENFERMERO);
+    await screen.findByRole('heading', { name: /Hola, Sofía/ });
+    expect(screen.queryByRole('link', { name: /Ver reportes/ })).not.toBeInTheDocument();
+  });
+
+  it('para el administrador va después de las clínicas, no entre las de gestión', async () => {
+    renderizarApp('/', ADMIN_E6);
+    await screen.findByRole('heading', { name: /Hola, Laura/ });
+    expect(tareasDeLaPantalla().at(-1)).toMatch(/^Ver reportes/);
+    expect(tareasDeLaPantalla()[0]).toMatch(/^Nuevo usuario/);
   });
 });
 

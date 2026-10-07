@@ -1,10 +1,12 @@
 import type { ReactNode } from 'react';
 import AlarmOutlinedIcon from '@mui/icons-material/AlarmOutlined';
+import AssessmentOutlinedIcon from '@mui/icons-material/AssessmentOutlined';
 import FaceOutlinedIcon from '@mui/icons-material/FaceOutlined';
 import HomeOutlinedIcon from '@mui/icons-material/HomeOutlined';
 import HotelOutlinedIcon from '@mui/icons-material/HotelOutlined';
 import Inventory2OutlinedIcon from '@mui/icons-material/Inventory2Outlined';
 import ManageAccountsOutlinedIcon from '@mui/icons-material/ManageAccountsOutlined';
+import ManageSearchOutlinedIcon from '@mui/icons-material/ManageSearchOutlined';
 import MedicationOutlinedIcon from '@mui/icons-material/MedicationOutlined';
 
 export interface OpcionDelMenu {
@@ -37,6 +39,13 @@ export const OPCIONES_DEL_MENU: OpcionDelMenu[] = [
     permiso: 'suministros.ver',
   },
   {
+    // E6: lo que se consumió en un período, para el administrador y el médico (S17).
+    ruta: '/reportes',
+    etiqueta: 'Reportes',
+    icono: <AssessmentOutlinedIcon />,
+    permiso: 'reportes.ver',
+  },
+  {
     ruta: '/catalogo',
     etiqueta: 'Catálogo',
     icono: <Inventory2OutlinedIcon />,
@@ -53,6 +62,13 @@ export const OPCIONES_DEL_MENU: OpcionDelMenu[] = [
     etiqueta: 'Usuarios',
     icono: <ManageAccountsOutlinedIcon />,
     permiso: 'usuarios.gestionar',
+  },
+  {
+    // E6: quién hizo qué y cuándo, con los valores de antes y después (CU35).
+    ruta: '/auditoria',
+    etiqueta: 'Auditoría',
+    icono: <ManageSearchOutlinedIcon />,
+    permiso: 'auditoria.ver',
   },
 ];
 
