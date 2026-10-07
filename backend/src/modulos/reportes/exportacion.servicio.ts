@@ -1,4 +1,4 @@
-import { fechaEnArgentina, fechaLegible } from '../../comun/fechas';
+import { fechaLegible } from '../../comun/fechas';
 import { reloj } from '../../comun/reloj';
 import { prisma } from '../../db';
 import { registrarAuditoria } from '../auditoria/auditoria.servicio';
@@ -27,7 +27,7 @@ import type {
 export interface ArchivoExportado {
   contenido: Buffer;
   tipoContenido: string;
-  /** reporte-suministros-AAAAMMDD.pdf, estadisticas-AAAAMMDD.xlsx (fecha de emisión, D46). */
+  /** reporte-suministros-AAAAMMDD-AAAAMMDD.pdf, estadisticas-…xlsx: el período (D46 · ESC4). */
   nombre: string;
 }
 
@@ -188,12 +188,13 @@ async function entregar(
       .join(' · ')
       .slice(0, 255),
   });
-  const fecha = fechaEnArgentina(documento.emitido).replaceAll('-', '');
+  // Desde y hasta ya son días de Argentina (normalizados por el esquema).
+  const dia = (fecha: string) => fecha.replaceAll('-', '');
   const base = que === 'suministros' ? 'reporte-suministros' : 'estadisticas';
   return {
     contenido,
     tipoContenido: TIPO_CONTENIDO[parametros.formato],
-    nombre: `${base}-${fecha}.${parametros.formato}`,
+    nombre: `${base}-${dia(parametros.desde)}-${dia(parametros.hasta)}.${parametros.formato}`,
   };
 }
 

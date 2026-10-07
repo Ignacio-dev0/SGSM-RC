@@ -57,7 +57,7 @@ describe('exportar el reporte y las estadísticas (T603 · T608)', () => {
       expect(res.status).toBe(200);
       expect(res.headers['content-type']).toBe('application/pdf');
       expect(res.headers['content-disposition']).toBe(
-        'attachment; filename="reporte-suministros-20261007.pdf"',
+        'attachment; filename="reporte-suministros-20261001-20261007.pdf"',
       );
       expect(res.headers['cache-control']).toBe('no-store');
       const pdf = res.body as Buffer;
@@ -82,7 +82,7 @@ describe('exportar el reporte y las estadísticas (T603 · T608)', () => {
       expect(res.status).toBe(200);
       expect(res.headers['content-type']).toBe(XLSX);
       expect(res.headers['content-disposition']).toBe(
-        'attachment; filename="reporte-suministros-20261007.xlsx"',
+        'attachment; filename="reporte-suministros-20261001-20261007.xlsx"',
       );
       const libro = await abrirXlsx(res.body);
       const hoja = libro.getWorksheet('Reporte') as ExcelJS.Worksheet;
@@ -171,7 +171,7 @@ describe('exportar el reporte y las estadísticas (T603 · T608)', () => {
 
       expect(res.status).toBe(200);
       expect(res.headers['content-disposition']).toBe(
-        'attachment; filename="estadisticas-20261007.pdf"',
+        'attachment; filename="estadisticas-20261001-20261007.pdf"',
       );
       const texto = textoDelPdf(res.body);
       expect(texto).toContain('Hospital El Dique · SGSM-RC');
@@ -190,7 +190,7 @@ describe('exportar el reporte y las estadísticas (T603 · T608)', () => {
       expect(res.status).toBe(200);
       expect(res.headers['content-type']).toBe(XLSX);
       expect(res.headers['content-disposition']).toBe(
-        'attachment; filename="estadisticas-20261007.xlsx"',
+        'attachment; filename="estadisticas-20261001-20261007.xlsx"',
       );
       const libro = await abrirXlsx(res.body);
       expect(libro.worksheets.map((h) => h.name)).toEqual([
@@ -241,6 +241,44 @@ describe('exportar el reporte y las estadísticas (T603 · T608)', () => {
         detalle:
           'Estadísticas de suministros en Excel · 02/10/2026 al 02/10/2026 · Sala: Todas · Tipo: Todos',
       });
+    });
+  });
+
+  describe('nombre del archivo (D46 · ESC4)', () => {
+    const nombre = (res: { headers: Record<string, string> }) =>
+      /filename="(.+)"/.exec(res.headers['content-disposition'] ?? '')?.[1];
+
+    it('lleva el período pedido (desde y hasta), no la fecha de emisión', async () => {
+      const query = { desde: '2026-09-01', hasta: '2026-09-30' };
+      expect(nombre(await exportar('suministros', { ...query, formato: 'pdf' }))).toBe(
+        'reporte-suministros-20260901-20260930.pdf',
+      );
+      expect(nombre(await exportar('estadisticas', { ...query, formato: 'xlsx' }))).toBe(
+        'estadisticas-20260901-20260930.xlsx',
+      );
+    });
+
+    it('sin fechas, el período por defecto en días de Argentina (a las 22:00 sigue siendo hoy)', async () => {
+      // 07/10 a las 22:00 de Argentina: en UTC ya es el 08/10.
+      jest.spyOn(reloj, 'ahora').mockReturnValue(new Date('2026-10-08T01:00:00Z'));
+      // Sesión iniciada a esa hora (la de las 12:00 ya venció por inactividad).
+      const { agente } = await agenteConRol('ADMINISTRADOR');
+      const res = await agente
+        .get('/api/reportes/suministros/exportar')
+        .query({ formato: 'xlsx' })
+        .buffer(true)
+        .parse(binario);
+      expect(res.status).toBe(200);
+      expect(nombre(res)).toBe('reporte-suministros-20261001-20261007.xlsx');
+    });
+
+    it('un solo día: desde y hasta iguales', async () => {
+      const res = await exportar('suministros', {
+        desde: '2026-10-03',
+        hasta: '2026-10-03',
+        formato: 'pdf',
+      });
+      expect(nombre(res)).toBe('reporte-suministros-20261003-20261003.pdf');
     });
   });
 
