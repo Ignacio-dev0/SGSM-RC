@@ -10,16 +10,17 @@ sobre las prescripciones que carga el equipo médico.
 
 ## Estado del prototipo
 
-| Etapa | Contenido                                                       | Estado                                                                   |
-| ----- | --------------------------------------------------------------- | ------------------------------------------------------------------------ |
-| E0    | Entorno de trabajo, convenciones, componentes base              | ✅ (despliegue en la nube fuera de alcance)                              |
-| E1    | Base de datos, inicio de sesión, permisos, auditoría, usuarios  | ✅                                                                       |
-| E2    | Pacientes y camas                                               | ✅                                                                       |
-| E3    | Prescripciones y catálogo                                       | ✅                                                                       |
-| E4    | Biometría y registro de suministros                             | ✅ (falta la prueba en la tablet real)                                   |
-| E5    | Recordatorios de tomas en tiempo real y estudios (mínimo)       | ✅ (falta la prueba en la tablet real)                                   |
-| E6    | Reportes, estadísticas, exportación y auditoría                 | 🔧 servidor listo (PDF con pdfkit, Excel con exceljs); interfaz en curso |
-| E7–E8 | Integración, rendimiento, seguridad, despliegue local, manuales | pendiente                                                                |
+| Etapa | Contenido                                                      | Estado                                                                                                      |
+| ----- | -------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| E0    | Entorno de trabajo, convenciones, componentes base             | ✅ (despliegue en la nube fuera de alcance)                                                                 |
+| E1    | Base de datos, inicio de sesión, permisos, auditoría, usuarios | ✅                                                                                                          |
+| E2    | Pacientes y camas                                              | ✅                                                                                                          |
+| E3    | Prescripciones y catálogo                                      | ✅                                                                                                          |
+| E4    | Biometría y registro de suministros                            | ✅ (falta la prueba en la tablet real)                                                                      |
+| E5    | Recordatorios de tomas en tiempo real y estudios (mínimo)      | ✅ (falta la prueba en la tablet real)                                                                      |
+| E6    | Reportes, estadísticas, exportación y auditoría                | 🔧 servidor listo (PDF con pdfkit, Excel con exceljs); interfaz en curso                                    |
+| E7    | Integración, rendimiento, seguridad                            | 🔧 seguridad lista (rostro cifrado, encabezados, límite por IP); e2e de recordatorios; rendimiento en curso |
+| E8    | Despliegue local, manuales, documentación técnica              | 🔧 HTTPS local, respaldos y monitoreo listos; manuales pendientes                                           |
 
 El detalle de qué tarea del plan cubre cada parte está en [docs/trazabilidad.md](docs/trazabilidad.md).
 
@@ -64,13 +65,18 @@ VITE_BIOMETRIA_MODO=simulado
 
 Los usuarios de prueba ya tienen un rostro simulado registrado. Detalle en [docs/biometria.md](docs/biometria.md).
 
-### Todo el sistema en Docker
+### Todo el sistema en Docker (servidor del hospital)
 
 ```bash
-docker compose --profile completo up --build -d
+cp .env.ejemplo .env          # completar secretos, nombre e IP del servidor
+bash scripts/certificado.sh   # CA local y certificado (la cámara de las tablets exige HTTPS)
+docker compose --profile completo up --build -d --wait
 ```
 
-Interfaz en <http://localhost:8080>. Ver [docs/despliegue.md](docs/despliegue.md).
+Interfaz en <https://localhost:8443> (o `https://<nombre-del-servidor>:8443` desde las tablets,
+con la CA instalada). Incluye el respaldo diario de la base y chequeos de salud; `bash
+scripts/estado.sh` muestra cómo está todo. Paso a paso, instalación de la CA en las tablets,
+restauración y actualización en [docs/despliegue.md](docs/despliegue.md).
 
 ## Pruebas y calidad
 
