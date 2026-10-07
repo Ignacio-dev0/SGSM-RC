@@ -66,7 +66,7 @@ erDiagram
 | `tipos_estudio`       | Catálogo de tipos de estudio                                                                           | T103 (E5)        |
 | `estudios`            | Estudios por paciente: tipo, hora, preparación, observaciones, estado y quién confirmó que se realizó  | E5 (T509–T513)   |
 | `recordatorios`       | Recordatorios de tomas y estudios: prioridad, estado, atención (administración o motivo) y vencimiento | E5               |
-| `auditoria`           | Quién, cuándo, qué acción, sobre qué entidad, valor anterior y nuevo                                   | T104             |
+| `auditoria`           | Quién, cuándo, qué acción, sobre qué entidad, valor anterior y nuevo                                   | T104, T604       |
 | `notificaciones`      | Avisos al administrador (bloqueos, validaciones faciales fallidas)                                     | T112, T407       |
 
 Las tablas de estudios y recordatorios se crean ya en E1 porque el plan pide el esquema completo
@@ -105,6 +105,25 @@ sus reglas, en [estudios.md](estudios.md). En `estudios`, `realizado_en` es el m
 confirmación con el rostro (D29). Prisma no conoce los índices
 parciales ni los `CHECK`: al crear una migración con `--create-only` hay que revisar que no los
 borre.
+
+## Índices para reportes y auditoría (E6)
+
+Los reportes y las estadísticas filtran los suministros de **todo el hospital** por período
+([reportes.md](reportes.md)). Los índices que había empiezan por paciente
+(`suministros(paciente_id, fecha_hora)`) o por usuario, así que la migración
+[`reportes_e6`](../backend/prisma/migrations/20261007173927_reportes_e6/migration.sql) agrega
+`suministros(fecha_hora)` (`suministros_fecha_hora_idx`). El resto ya existía:
+
+| Consulta                                        | Índice                                                                     |
+| ----------------------------------------------- | -------------------------------------------------------------------------- |
+| Reporte y estadísticas: suministros del período | `suministros(fecha_hora)` (nuevo en E6)                                    |
+| Recordatorios del período                       | `recordatorios(estado, fecha_hora_objetivo)`                               |
+| Sala del paciente en un momento dado            | `asignaciones_cama(paciente_id)`                                           |
+| Auditoría por fecha, usuario, paciente          | `auditoria(fecha_hora)`, `auditoria(usuario_id)`, `auditoria(paciente_id)` |
+| Auditoría por entidad                           | `auditoria(entidad, entidad_id)`                                           |
+
+Los días se agrupan en hora de Argentina en la base (`fecha_hora AT TIME ZONE
+'America/Argentina/Buenos_Aires'`), no en UTC (S18).
 
 **Decisión sobre el DNI.** El plan habla de índices _parciales_ también para el DNI. Se optó por
 un índice único total: cuando un paciente egresado vuelve a internarse, el sistema **reutiliza

@@ -61,13 +61,20 @@ Fuente de verdad: [`backend/src/modulos/seguridad/catalogo-permisos.ts`](../back
 | `estudios.ver`             |       ✔       |   ✔    |     ✔     |
 | `estudios.gestionar`       |       ✔       |   ✔    |           |
 | `estudios.confirmar`       |       ✔       |        |     ✔     |
+| `reportes.ver`             |       ✔       |   ✔    |           |
+| `reportes.exportar`        |       ✔       |        |           |
+| `auditoria.ver`            |       ✔       |        |           |
 
 El reparto entre Médico y Enfermero es un **supuesto** (ver [supuestos.md](supuestos.md)): si
 enfermería también interna pacientes, alcanza con darle `pacientes.gestionar` como permiso
 adicional a quien corresponda, o moverlo al rol en el catálogo. Los permisos de recordatorios y
 estudios (E5) siguen los supuestos S14 y S15 de [diseno-e5.md](diseno-e5.md): ven los tres roles,
 atiende y confirma enfermería, programa el médico. `recordatorios.ver` también decide quién
-recibe los avisos del tiempo real ([recordatorios.md](recordatorios.md)).
+recibe los avisos del tiempo real ([recordatorios.md](recordatorios.md)). Los de reportes y
+auditoría (E6) siguen el supuesto S17 de [diseno-e6.md](diseno-e6.md): ven reportes el
+administrador y el médico, exporta solo el administrador y la auditoría la consulta solo el
+administrador; un enfermero jefe los recibe como permiso adicional (CU05). Ver
+[reportes.md](reportes.md).
 
 El frontend oculta las opciones del menú y las pantallas sin permiso, pero eso es solo
 comodidad: **la seguridad real está en el backend**, que valida el permiso en cada endpoint.
@@ -81,6 +88,9 @@ comodidad: **la seguridad real está en el backend**, que valida el permiso en c
   los valores **anterior y nuevo, solo de los campos que cambiaron**.
 - Contraseñas, patrones faciales y fotos se reemplazan por `[oculto]`.
 - Un **trigger** en la base rechaza cualquier `UPDATE` o `DELETE` sobre la tabla `auditoria`.
+- La consulta (`GET /api/auditoria`, solo con `auditoria.ver`) vuelve a ocultar, a cualquier
+  profundidad, toda clave que parezca sensible (contraseña, hash, patrón, foto, token, secreto)
+  aunque una entrada vieja o cargada a mano la tuviera (D49 de [reportes.md](reportes.md)).
 
 Acciones registradas hasta ahora:
 
@@ -92,6 +102,7 @@ Acciones registradas hasta ahora:
 | `CERRAR_SESION`              | Usuario                   | Salida voluntaria                     |
 | `CREAR`, `MODIFICAR`, `BAJA` | Usuario y demás entidades | Altas, modificaciones y bajas lógicas |
 | `MODIFICAR_PERMISOS`         | Usuario                   | Cambio de permisos adicionales        |
+| `EXPORTAR`                   | Reporte                   | Descarga de un reporte en PDF o Excel |
 
 Las acciones de los módulos clínicos, biometría y suministros se listan en
 [endpoints.md](endpoints.md).

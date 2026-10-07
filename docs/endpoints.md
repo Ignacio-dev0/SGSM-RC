@@ -189,3 +189,30 @@ Errores: `409 PACIENTE_NO_INTERNADO`, `409 ESTUDIO_NO_PROGRAMADO` (`detalles.est
 `PROGRAMAR`, `REPROGRAMAR`, `CANCELAR`, `CONFIRMAR` (Estudio); `CANCELAR`, `ATENDER`
 (Recordatorio). Reprogramar, cancelar y confirmar avisan al tiempo real si cambiaron
 recordatorios.
+
+## Reportes y estadísticas — T601–T603 · CU32–CU34
+
+Contrato completo (parámetros, forma de las respuestas, archivos exportados y decisiones
+D40–D49) en [reportes.md](reportes.md). Parámetros comunes: `desde` y `hasta` (días `AAAA-MM-DD`
+en hora de Argentina, ambos incluidos; por defecto los últimos 7 días; como mucho 366), `salaId`
+(sala en la que estaba el paciente en ese momento) y `tipo` (`MEDICAMENTO` o `INSUMO`).
+
+| Método | Ruta                                            | Permiso             | Descripción                                                                                                                    |
+| ------ | ----------------------------------------------- | ------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| GET    | `/api/reportes/suministros?…&agruparPor`        | `reportes.ver`      | Filas por `paciente` (por defecto), `insumo`, `usuario` o `dia` con suministros y unidades; `meta.parametros` y `meta.totales` |
+| GET    | `/api/reportes/estadisticas?…`                  | `reportes.ver`      | Totales, 10 insumos más usados, consumo por tipo, evolución diaria (días en cero incluidos) y recordatorios del período        |
+| GET    | `/api/reportes/suministros/exportar?formato&…`  | `reportes.exportar` | Archivo `pdf` o `xlsx` del reporte: `Content-Disposition: attachment; filename="reporte-suministros-AAAAMMDD.pdf"`             |
+| GET    | `/api/reportes/estadisticas/exportar?formato&…` | `reportes.exportar` | Archivo `pdf` o `xlsx` de las estadísticas: `estadisticas-AAAAMMDD.xlsx`                                                       |
+
+Errores: `400 VALIDACION` (fechas, rango de más de 366 días, agrupación o formato),
+`404 NO_ENCONTRADO` (la sala no existe). Acción de auditoría: `EXPORTAR` (Reporte, con los
+parámetros en `valorNuevo` y en `detalle`).
+
+## Auditoría — T604 · CU35
+
+| Método | Ruta                                                                           | Permiso         | Descripción                                                                                                                                                           |
+| ------ | ------------------------------------------------------------------------------ | --------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| GET    | `/api/auditoria?desde&hasta&usuarioId&pacienteId&accion&entidad&pagina&tamano` | `auditoria.ver` | De la más reciente a la más vieja; `tamano` 50 por defecto, 100 como mucho (acepta también `porPagina`); usuario, paciente y valores con las claves sensibles ocultas |
+| GET    | `/api/auditoria/opciones`                                                      | `auditoria.ver` | `{ acciones, entidades }` que hay en la base, para armar los filtros                                                                                                  |
+
+Contrato en [reportes.md](reportes.md#auditoría).
