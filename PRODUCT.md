@@ -20,25 +20,25 @@ y avisar a tiempo de cada toma y de cada estudio.
 
 ## Tareas núcleo (con las palabras de quien las hace)
 
-| Tarea                                                        | Actor                  | Frecuencia | Criticidad                                                |
-| ------------------------------------------------------------ | ---------------------- | ---------- | --------------------------------------------------------- |
-| Darle a un paciente la medicación que le toca                | Enfermería             | Muy alta   | Alta (paciente, medicamento, dosis, vía y hora correctos) |
-| Anotar los insumos que usé con un paciente (pañales, gasas…) | Enfermería             | Alta       | Media                                                     |
-| Ver qué medicación le toca a un paciente y a qué hora        | Enfermería, médicos    | Alta       | Alta                                                      |
-| Encontrar a un paciente por su cama o apellido               | Todos                  | Muy alta   | Media                                                     |
-| Corregir algo que cargué mal                                 | Enfermería             | Baja       | Media                                                     |
-| Internar a un paciente en una cama libre                     | Médicos                | Media      | Media                                                     |
-| Indicar un medicamento (cargar una prescripción)             | Médicos                | Alta       | Alta                                                      |
-| Cambiar o suspender una indicación                           | Médicos                | Media      | Alta                                                      |
-| Cambiar de cama a un paciente                                | Médicos                | Baja       | Baja                                                      |
-| Dar de alta a un paciente                                    | Médicos                | Media      | Alta (libera la cama y suspende indicaciones)             |
-| Dar de alta a un enfermero nuevo y registrar su cara         | Administrador          | Baja       | Media                                                     |
-| Agregar un insumo o medicamento al catálogo                  | Administrador          | Baja       | Baja                                                      |
-| Ver qué tomas y estudios hay que atender ahora               | Enfermería             | Muy alta   | Alta (que ninguna toma pase sin verse)                    |
-| Anotar que una toma no se dio y por qué                      | Enfermería             | Media      | Alta                                                      |
-| Programar un estudio y confirmar que se hizo                 | Médicos, Enfermería    | Media      | Media                                                     |
-| Ver cuánto se usó en un período y descargarlo                | Administrador, médicos | Baja       | Baja                                                      |
-| Averiguar quién cambió algo y cuándo                         | Administrador          | Baja       | Media                                                     |
+| Tarea                                                             | Actor                  | Frecuencia | Criticidad                                                |
+| ----------------------------------------------------------------- | ---------------------- | ---------- | --------------------------------------------------------- |
+| Darle a un paciente la medicación que le toca                     | Enfermería             | Muy alta   | Alta (paciente, medicamento, dosis, vía y hora correctos) |
+| Anotar los insumos que usé con un paciente (pañales, gasas…)      | Enfermería             | Alta       | Media                                                     |
+| Ver qué medicación le toca a un paciente y a qué hora             | Enfermería, médicos    | Alta       | Alta                                                      |
+| Encontrar a un paciente por su cama o apellido                    | Todos                  | Muy alta   | Media                                                     |
+| Corregir algo que cargué mal                                      | Enfermería             | Baja       | Media                                                     |
+| Internar a un paciente en una cama libre                          | Médicos                | Media      | Media                                                     |
+| Indicar un medicamento (cargar una prescripción)                  | Médicos                | Alta       | Alta                                                      |
+| Cambiar o suspender una indicación                                | Médicos                | Media      | Alta                                                      |
+| Cambiar de cama a un paciente                                     | Médicos                | Baja       | Baja                                                      |
+| Dar de alta a un paciente                                         | Médicos                | Media      | Alta (libera la cama y suspende indicaciones)             |
+| Dar de alta a un enfermero nuevo y registrar su cara              | Administrador          | Baja       | Media                                                     |
+| Agregar un insumo o medicamento al catálogo                       | Administrador          | Baja       | Baja                                                      |
+| Ver qué tomas y estudios hay que atender ahora                    | Enfermería             | Muy alta   | Alta (que ninguna toma pase sin verse)                    |
+| Anotar que una toma no se dio y por qué                           | Enfermería             | Media      | Alta                                                      |
+| Programar un estudio y confirmar que se hizo                      | Médicos, Enfermería    | Media      | Media                                                     |
+| Ver cuánto se usó en un período (y descargarlo, el administrador) | Administrador, médicos | Baja       | Baja                                                      |
+| Averiguar quién cambió algo y cuándo                              | Administrador          | Baja       | Media                                                     |
 
 ## Glosario
 
@@ -95,7 +95,8 @@ se registró, Nuevo usuario, Registrar el rostro del personal, Agregar al catál
 la **insignia de recordatorios** (cuántos hay para atender y cuántos urgentes) a un toque desde
 cualquier pantalla. La ficha del paciente abre en sus **prescripciones**, con **Administrar** en
 cada una, y tiene la pestaña **Estudios**; donde se ve un registro, se puede abrir y corregir.
-**Reportes** y **Auditoría** están en el menú de quien los puede ver.
+**Reportes** (Ver reportes) y **Auditoría** (Ver quién cambió algo) están en el menú y en el
+inicio de quien los puede ver; el médico ve los reportes y el administrador además los descarga.
 
 ## Fuera del alcance actual
 
