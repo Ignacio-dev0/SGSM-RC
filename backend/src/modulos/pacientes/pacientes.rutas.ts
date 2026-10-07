@@ -11,6 +11,8 @@ import {
   esquemaReingreso,
   esquemaTraslado,
 } from './pacientes.esquemas';
+import { z } from 'zod';
+import { historialPaciente } from './historial.servicio';
 import { egresarPaciente, trasladarPaciente } from './movimientos.servicio';
 import {
   buscarPacientes,
@@ -63,4 +65,14 @@ rutasPacientes.post('/:id/trasladar', gestionar, async (req, res) => {
 rutasPacientes.post('/:id/egresar', gestionar, async (req, res) => {
   const datos = validar(esquemaEgreso, req.body);
   res.json({ data: await egresarPaciente(idDeRuta(req.params.id), datos, usuarioActual(req).id) });
+});
+
+const esquemaRango = z.object({
+  desde: z.coerce.date().optional(),
+  hasta: z.coerce.date().optional(),
+});
+
+rutasPacientes.get('/:id/historial', ver, async (req, res) => {
+  const rango = validar(esquemaRango, req.query);
+  res.json({ data: await historialPaciente(idDeRuta(req.params.id), rango) });
 });
