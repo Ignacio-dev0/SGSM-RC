@@ -14,6 +14,8 @@ import { Alerta } from '../componentes/Alerta';
 import { Boton } from '../componentes/Boton';
 import { CapturaRostro, type RostroCapturado } from './CapturaRostro';
 import { cerrarSinTocarAfuera } from '../componentes/dialogos';
+import { tinte } from '../tema';
+import { modoBiometria } from './motor';
 
 type Respuesta =
   | { valido: true; validacionToken: string; similitud: number }
@@ -33,16 +35,26 @@ const LARGO_OPERACION = 80;
 const recortar = (texto: string) =>
   texto.length <= LARGO_OPERACION ? texto : `${texto.slice(0, LARGO_OPERACION - 1)}…`;
 
+/** El servidor no recibió el rostro (sin red) o falló por su cuenta: no cuenta como un intento. */
+const fallaDeConexion = (e: unknown) =>
+  e instanceof ErrorApi && (e.estado === 0 || e.estado >= 500);
+
 /**
  * Validación facial reutilizable (T405 · CU10): pide el rostro del usuario de la sesión, lo
  * valida en el backend y devuelve el comprobante que exige la operación. Tres fallos cancelan
  * la operación (T407). Se usa en suministros y, más adelante, en estudios.
+ *
+ * Tras un fallo la captura NO se reabre sola: con la persona mal encuadrada se gastarían los
+ * tres intentos en segundos y se avisaría al administrador de un falso evento (UX-04). Se
+ * muestra el motivo y un botón "Intentar de nuevo".
  */
 export function ModalValidacionFacial({ operacion, detalle, alValidar, alCancelar }: Props) {
   const usuario = useUsuario();
   const [intento, setIntento] = useState(0);
   const [enviando, setEnviando] = useState(false);
   const [aviso, setAviso] = useState<string | null>(null);
+  /** Tras un fallo se espera a que la persona toque "Intentar de nuevo". */
+  const [esperando, setEsperando] = useState(false);
   const [final, setFinal] = useState<string | null>(
     usuario.tieneBiometria
       ? null
@@ -70,16 +82,23 @@ export function ModalValidacionFacial({ operacion, detalle, alValidar, alCancela
       setAviso(
         `No se reconoció su rostro. Le quedan ${r.intentosRestantes} ${r.intentosRestantes === 1 ? 'intento' : 'intentos'}.`,
       );
-      setIntento((i) => i + 1);
+      setEsperando(true);
     } catch (e) {
       if (e instanceof ErrorApi && e.codigo === 'SIN_BIOMETRIA') setFinal(e.message);
       else {
-        setAviso(mensajeDeError(e));
-        setIntento((i) => i + 1);
+        setAviso(
+          fallaDeConexion(e) ? 'No se pudo verificar: revise la conexión.' : mensajeDeError(e),
+        );
+        setEsperando(true);
       }
     } finally {
       setEnviando(false);
     }
+  };
+
+  const intentarDeNuevo = () => {
+    setEsperando(false);
+    setIntento((i) => i + 1);
   };
 
   return (
@@ -95,6 +114,26 @@ export function ModalValidacionFacial({ operacion, detalle, alValidar, alCancela
         <Typography color="text.secondary">{operacion}</Typography>
       </DialogTitle>
       <DialogContent>
+        {modoBiometria() === 'simulado' && (
+          // El diálogo tapa la franja de la pantalla: el aviso se repite acá (F27).
+          <Box
+            role="note"
+            sx={(t) => ({
+              mb: 2,
+              px: 2,
+              py: 0.75,
+              borderRadius: 2,
+              border: 1,
+              borderColor: 'warning.main',
+              bgcolor: tinte(t, 'warning', 0.14),
+              color: 'text.primary',
+              fontWeight: 700,
+              fontSize: '0.95rem',
+            })}
+          >
+            Modo demostración: el rostro se simula.
+          </Box>
+        )}
         {detalle && (
           <Box
             sx={{
@@ -119,6 +158,10 @@ export function ModalValidacionFacial({ operacion, detalle, alValidar, alCancela
                 <CircularProgress />
                 <Typography>Verificando…</Typography>
               </Box>
+            ) : esperando ? (
+              <Boton onClick={intentarDeNuevo} autoFocus>
+                Intentar de nuevo
+              </Boton>
             ) : (
               <CapturaRostro
                 key={intento}

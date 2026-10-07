@@ -206,8 +206,105 @@ describe('validación facial reutilizable (T405 · CU10)', () => {
     await userEvent.click(screen.getByRole('button', { name: /Simular otro rostro/ }));
     expect(await screen.findByRole('alert')).toHaveTextContent(/Le quedan 2 intentos/);
 
+    // UX-04: no se reintenta sola; la captura vuelve recién al tocar "Intentar de nuevo".
+    expect(
+      screen.queryByRole('button', { name: /Simular el rostro de enfermero/ }),
+    ).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Intentar de nuevo' }));
+
     await userEvent.click(screen.getByRole('button', { name: /Simular el rostro de enfermero/ }));
     expect(await screen.findByText('Resultado: tok-2')).toBeInTheDocument();
+  });
+
+  it('con un error de red avisa que revise la conexión, sin descontar un intento', async () => {
+    let pedidos = 0;
+    servidor.use(
+      http.post('*/api/biometria/validar', () => {
+        pedidos += 1;
+        return pedidos === 1
+          ? HttpResponse.error()
+          : HttpResponse.json({
+              data: { valido: true, validacionToken: 'tok-red', similitud: 0.9 },
+            });
+      }),
+    );
+    conProveedores(<Operacion />);
+
+    await userEvent.click(screen.getByRole('button', { name: 'Confirmar' }));
+    await userEvent.click(screen.getByRole('button', { name: /Simular el rostro de enfermero/ }));
+
+    const alerta = await screen.findByRole('alert');
+    expect(alerta).toHaveTextContent('No se pudo verificar: revise la conexión');
+    expect(alerta).not.toHaveTextContent(/Le quedan|intento/);
+    expect(
+      screen.queryByRole('button', { name: /Simular el rostro de enfermero/ }),
+    ).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Intentar de nuevo' }));
+    await userEvent.click(screen.getByRole('button', { name: /Simular el rostro de enfermero/ }));
+    expect(await screen.findByText('Resultado: tok-red')).toBeInTheDocument();
+    expect(pedidos).toBe(2);
+  });
+
+  it('con un error del servidor (5xx) tampoco reintenta solo ni cuenta un intento', async () => {
+    servidor.use(
+      http.post('*/api/biometria/validar', () =>
+        HttpResponse.json(
+          { error: { codigo: 'ERROR_INTERNO', mensaje: 'Error inesperado del servidor' } },
+          { status: 503 },
+        ),
+      ),
+    );
+    conProveedores(<Operacion />);
+
+    await userEvent.click(screen.getByRole('button', { name: 'Confirmar' }));
+    await userEvent.click(screen.getByRole('button', { name: /Simular el rostro de enfermero/ }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'No se pudo verificar: revise la conexión',
+    );
+    expect(screen.getByRole('button', { name: 'Intentar de nuevo' })).toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: /Simular el rostro de enfermero/ }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('mientras espera el reintento se puede cancelar la operación', async () => {
+    responder({ valido: false, intentosRestantes: 2, cancelada: false });
+    conProveedores(<Operacion />);
+
+    await userEvent.click(screen.getByRole('button', { name: 'Confirmar' }));
+    await userEvent.click(screen.getByRole('button', { name: /Simular otro rostro/ }));
+    await screen.findByRole('button', { name: 'Intentar de nuevo' });
+
+    await userEvent.click(screen.getByRole('button', { name: 'Cancelar' }));
+    expect(await screen.findByText('Resultado: cancelada')).toBeInTheDocument();
+  });
+
+  it('en modo demostración lo repite dentro del diálogo, porque tapa la franja de la pantalla (F27)', async () => {
+    conProveedores(<Operacion />);
+
+    await userEvent.click(screen.getByRole('button', { name: 'Confirmar' }));
+
+    const dialogo = screen.getByRole('dialog', { name: /Confirmar con su rostro/ });
+    expect(within(dialogo).getByRole('note')).toHaveTextContent(
+      'Modo demostración: el rostro se simula.',
+    );
+  });
+
+  it('con la cámara real no muestra el aviso de demostración en el diálogo', async () => {
+    vi.stubEnv('VITE_BIOMETRIA_MODO', 'camara');
+    Object.defineProperty(navigator, 'mediaDevices', {
+      configurable: true,
+      value: { getUserMedia: vi.fn(async () => ({ getTracks: () => [{ stop: vi.fn() }] })) },
+    });
+    conProveedores(<Operacion />, { motor: motorFalso([{ rostros: 0, descriptor: null }]) });
+
+    await userEvent.click(screen.getByRole('button', { name: 'Confirmar' }));
+
+    expect(
+      within(screen.getByRole('dialog', { name: /Confirmar con su rostro/ })).queryByRole('note'),
+    ).not.toBeInTheDocument();
   });
 
   it('tras tres fallos cancela la operación y avisa que se notificó al administrador', async () => {
@@ -234,5 +331,76 @@ describe('validación facial reutilizable (T405 · CU10)', () => {
       await userEvent.click(screen.getByRole('button', { name: 'Entendido' }));
     });
     expect(await screen.findByText('Resultado: cancelada')).toBeInTheDocument();
+  });
+});
+
+describe('validación facial con cámara: sin reintento automático (UX-04)', () => {
+  beforeEach(() => {
+    Object.defineProperty(navigator, 'mediaDevices', {
+      configurable: true,
+      value: { getUserMedia: vi.fn(async () => ({ getTracks: () => [{ stop: vi.fn() }] })) },
+    });
+    vi.spyOn(HTMLMediaElement.prototype, 'play').mockResolvedValue(undefined);
+    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue({
+      drawImage: vi.fn(),
+    } as never);
+    vi.spyOn(HTMLCanvasElement.prototype, 'toDataURL').mockReturnValue(
+      'data:image/jpeg;base64,AAAA',
+    );
+  });
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.unstubAllEnvs();
+  });
+
+  function Operacion() {
+    const { pedirValidacion, modalValidacion } = useValidacionFacial();
+    const [resultado, setResultado] = useState('sin pedir');
+    return (
+      <>
+        <button
+          onClick={async () =>
+            setResultado((await pedirValidacion('Administración de medicamento')) ?? 'cancelada')
+          }
+        >
+          Confirmar
+        </button>
+        <p>Resultado: {resultado}</p>
+        {modalValidacion}
+      </>
+    );
+  }
+
+  it('tras un rostro no reconocido espera el botón: no vuelve a capturar ni gasta intentos', async () => {
+    let pedidos = 0;
+    servidor.use(
+      http.post('*/api/biometria/validar', () => {
+        pedidos += 1;
+        return HttpResponse.json({
+          data:
+            pedidos === 1
+              ? { valido: false, intentosRestantes: 2, cancelada: false }
+              : { valido: true, validacionToken: 'tok-camara', similitud: 0.9 },
+        });
+      }),
+    );
+    const motor = motorFalso([{ rostros: 1, descriptor: PATRON }]);
+    conProveedores(<Operacion />, { motor });
+
+    await userEvent.click(screen.getByRole('button', { name: 'Confirmar' }));
+    expect(await screen.findByRole('alert', {}, { timeout: 3000 })).toHaveTextContent(
+      /Le quedan 2 intentos/,
+    );
+    expect(pedidos).toBe(1);
+    const detecciones = vi.mocked(motor.detectar).mock.calls.length;
+
+    // Mucho más que el intervalo de captura (250 ms): la cámara sigue apagada y no hay otro pedido.
+    await new Promise((r) => setTimeout(r, 1200));
+    expect(pedidos).toBe(1);
+    expect(vi.mocked(motor.detectar).mock.calls.length).toBe(detecciones);
+
+    await userEvent.click(screen.getByRole('button', { name: 'Intentar de nuevo' }));
+    expect(await screen.findByText('Resultado: tok-camara', {}, { timeout: 3000 })).toBeVisible();
+    expect(pedidos).toBe(2);
   });
 });
