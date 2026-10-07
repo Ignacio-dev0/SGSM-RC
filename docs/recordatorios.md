@@ -36,7 +36,9 @@
   administró"** con el motivo. No se pide el rostro para el motivo: queda auditado con el usuario.
 - **Cancelar**: suspender, finalizar o modificar la frecuencia o el fin de una prescripción, o
   egresar al paciente, cancela sus recordatorios `PENDIENTE`. Si después se reanuda o cambia la
-  agenda, el temporizador vuelve a generar los de las tomas nuevas.
+  agenda, el temporizador vuelve a generar los de las tomas nuevas. Esos cambios esperan el candado del ciclo
+  dentro de su transacción (D30 de [estudios.md](estudios.md)), así una cancelación no se cruza con
+  un ciclo que está generando el recordatorio de la misma toma.
 - **Estudios** (T504): un recordatorio por estudio `PROGRAMADO` de un paciente internado, en la
   misma ventana que las tomas, siempre con prioridad `MEDIA`. Se atiende confirmando el estudio con
   el rostro (`POST /api/estudios/:id/confirmar`); reprogramarlo o cancelarlo cancela sus
@@ -353,3 +355,6 @@ son del contrato (fase 0); D20–D25, de la implementación del backend (fase 1)
 | D23 | La atención por administración toma como `atendidoEn` la hora del suministro y solo atiende el pendiente o vencido de su toma más cercana; uno ya atendido con motivo no cambia. Toda actualización de estado lleva el estado esperado en el `WHERE`. | Misma regla que el historial (`tomaMasCercana`). Una atención, un vencimiento y un "No se administró" simultáneos no se pisan: el segundo no encuentra la fila en el estado esperado. |
 | D24 | "No se administró" se puede registrar antes de la hora de la toma.                                                                                                                                                                                    | Enfermería puede saber de antemano que una toma no se va a dar (ayuno, estudio, rechazo).                                                                                             |
 | D25 | El temporizador y el tiempo real los arranca `levantarServidor()` en `servidor.ts`; `server.ts` solo la llama y apaga ordenado con SIGTERM o SIGINT (las conexiones cierran con 1001).                                                                | `crearApp()` sigue sin efectos: las pruebas de la API no corren el temporizador.                                                                                                      |
+
+Cómo se cuentan los recordatorios en las estadísticas (a tiempo, tarde, no administrados, vencidos
+sin atender): [reportes.md](reportes.md), D45 y supuesto S20.
