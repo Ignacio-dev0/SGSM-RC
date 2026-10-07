@@ -9,20 +9,20 @@
 Todas las pantallas usan estos componentes en lugar de los de MUI directamente, para que el
 tamaño táctil, los textos y la accesibilidad sean iguales en todo el sistema.
 
-| Componente           | Para qué                                                    | Props principales                                                                                                                      |
-| -------------------- | ----------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
-| `Boton`              | Cualquier acción                                            | `variante` (`principal`, `secundario`, `peligro`, `peligroConfirmar`, `texto`), `cargando`                                             |
-| `CampoTexto`         | Entrada de texto con error en línea                         | `etiqueta`, `valor`, `alCambiar`, `error`, `ayuda`                                                                                     |
-| `Selector`           | Elegir una opción (usa el selector nativo de la tablet)     | `etiqueta`, `valor`, `opciones`, `alCambiar`, `textoVacio`, `alReintentar`, `reintentando`                                             |
-| `Tabla`              | Listados con estado vacío, carga y paginación               | `titulo`, `columnas`, `filas`, `claveFila`, `alTocarFila`, `paginacion`                                                                |
-| `ModalConfirmacion`  | Confirmar acciones que modifican o eliminan                 | `abierto`, `titulo`, `mensaje`, `textoConfirmar`, `textoCancelar`, `peligroso`, `pedirMotivo`, `ayudaMotivo`, `confirmarDeshabilitado` |
-| `Alerta`             | Cartel de error, advertencia, éxito o info                  | `tipo`, `titulo`, `alCerrar`, `accion`, `enfocar`                                                                                      |
-| `ChipEstado`         | Estado de un registro (Vigente, Suspendida, Egresado…)      | `estado` (una de las claves de `ESTADOS_CHIP`)                                                                                         |
-| `AccionesFormulario` | Botonera al pie de un formulario                            | `children` (los botones; la acción principal al final)                                                                                 |
-| `Cargando`           | Mientras llegan los datos (nunca pantalla en blanco)        | `texto`                                                                                                                                |
-| `ErrorDeCarga`       | Los datos no llegaron: qué faltó, por qué y Reintentar      | `que` (con artículo), `error`, `alReintentar`                                                                                          |
-| `IdentidadPaciente`  | Nombre, DNI, edad y cama del paciente sobre el que se actúa | `paciente` (en `paginas/pacientes/`)                                                                                                   |
-| `PlantillaTablet`    | Estructura de toda pantalla autenticada                     | `opciones`, `acciones`                                                                                                                 |
+| Componente           | Para qué                                                    | Props principales                                                                                                                                   |
+| -------------------- | ----------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Boton`              | Cualquier acción                                            | `variante` (`principal`, `secundario`, `peligro`, `peligroConfirmar`, `texto`), `cargando`                                                          |
+| `CampoTexto`         | Entrada de texto con error en línea                         | `etiqueta`, `valor`, `alCambiar`, `error`, `ayuda` (texto, o texto con un contador)                                                                 |
+| `Selector`           | Elegir una opción (usa el selector nativo de la tablet)     | `etiqueta`, `valor`, `opciones`, `alCambiar`, `textoVacio`, `alReintentar`, `reintentando`                                                          |
+| `Tabla`              | Listados con estado vacío, carga y paginación               | `titulo`, `columnas`, `filas`, `claveFila`, `alTocarFila`, `paginacion`                                                                             |
+| `ModalConfirmacion`  | Confirmar acciones que modifican o eliminan                 | `abierto`, `titulo`, `mensaje`, `textoConfirmar`, `textoCancelar`, `peligroso`, `pedirMotivo`, `ayudaMotivo`, `maxMotivo`, `confirmarDeshabilitado` |
+| `Alerta`             | Cartel de error, advertencia, éxito o info                  | `tipo`, `titulo`, `alCerrar`, `accion`, `enfocar`                                                                                                   |
+| `ChipEstado`         | Estado de un registro (Vigente, Suspendida, Egresado…)      | `estado` (una de las claves de `ESTADOS_CHIP`)                                                                                                      |
+| `AccionesFormulario` | Botonera al pie de un formulario                            | `children` (los botones; la acción principal al final)                                                                                              |
+| `Cargando`           | Mientras llegan los datos (nunca pantalla en blanco)        | `texto`                                                                                                                                             |
+| `ErrorDeCarga`       | Los datos no llegaron: qué faltó, por qué y Reintentar      | `que` (con artículo), `error`, `alReintentar`                                                                                                       |
+| `IdentidadPaciente`  | Nombre, DNI, edad y cama del paciente sobre el que se actúa | `paciente` (en `paginas/pacientes/`)                                                                                                                |
+| `PlantillaTablet`    | Estructura de toda pantalla autenticada                     | `opciones`, `acciones`                                                                                                                              |
 
 ## Reglas de uso
 
@@ -37,6 +37,11 @@ tamaño táctil, los textos y la accesibilidad sean iguales en todo el sistema.
 - **El mínimo del motivo se dice desde el principio** (F52): con `pedirMotivo` el campo ya muestra
   "Escriba el motivo (mínimo 3 letras)"; si se pasa `ayudaMotivo`, el modal le agrega
   "(mínimo 3 letras)". El error "Escriba al menos 3 letras" sigue apareciendo si se escribe de menos.
+- **El máximo del motivo es el del servidor**: `maxMotivo` (por defecto 255, el `.max(255)` de todos
+  los esquemas de motivos) va como `maxLength` del campo, así que no se puede escribir de más. Desde
+  el 80 % del máximo, la ayuda muestra a la derecha el contador "N/255" (en negrita al llegar al
+  máximo, donde el campo deja de aceptar letras); va dentro de la ayuda, así que el lector de
+  pantalla también lo oye. Antes no aparece, para no distraer en un motivo corto.
 - `ModalConfirmacion` **no se cierra tocando afuera** (se perdería el motivo escrito): se sale
   con Cancelar o Escape.
 - **Ninguna pantalla en blanco**: mientras carga, `Cargando`; si falla, `ErrorDeCarga` (un
@@ -60,7 +65,9 @@ tamaño táctil, los textos y la accesibilidad sean iguales en todo el sistema.
 - **Un aviso que pide una decisión** (reingreso, prescripción duplicada) va con `enfocar` (UX-12):
   al aparecer se lleva a la vista (centrado) y toma el foco, porque suele mostrarse arriba, lejos
   del botón que se acaba de tocar. Los avisos que solo informan no lo usan: no deben robar el
-  foco de lo que se está haciendo.
+  foco de lo que se está haciendo. La excepción es cuando el control que tenía el foco desaparece:
+  en el panel de recordatorios, el aviso del resultado lo toma porque la tarjeta del botón que abrió
+  el diálogo sale de la lista al recargarse, y el foco caería en la página.
 - **Estados con `ChipEstado`, no con `Chip` suelto** (F30). Ver la tabla más abajo.
 - **El botón principal de un formulario va siempre al final** y dentro de `AccionesFormulario`
   (F31): en teléfono ocupa el ancho completo, apilado debajo de los secundarios; desde tablet va

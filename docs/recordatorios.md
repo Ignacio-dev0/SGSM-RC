@@ -261,35 +261,62 @@ Código: [`api/recordatorios.ts`](../frontend/src/api/recordatorios.ts) (tipos y
 Se llega desde el menú (después de Inicio), la insignia de la barra y, para quien atiende, la
 primera tarea del inicio ("Tomas para dar ahora").
 
-- **Tarjetas en el orden del servidor** (ya vienen por urgencia): una columna en teléfono; en
-  tablet y PC, tantas columnas de al menos 300 px como entren. Cada una: chip de urgencia, **hora
-  de la toma grande** (24 h), "Faltan 12 min" / "Atrasada 8 min" / "Toca ahora" (con la hora del
-  servidor, se recalcula sola cada 30 s), paciente "Apellido, Nombre" con DNI, cama y sala, y
-  medicamento con dosis, vía y presentación (número y unidad sin cortes).
+- **Tarjetas en el orden del servidor** (ya vienen por urgencia), tomas y estudios mezclados: una
+  columna en teléfono; en tablet y PC, tantas columnas de al menos 300 px como entren. Cada una:
+  chip de urgencia, **hora grande** (24 h), "Faltan 12 min" / "Atrasada 8 min" / "Toca ahora" (con
+  la hora del servidor, se recalcula sola cada 30 s), paciente "Apellido, Nombre" con DNI, cama y
+  sala, y qué se hace, con su ícono:
+  - **Toma** (ícono de medicamento): medicamento con dosis, vía y presentación (número y unidad
+    sin cortes). La tarjeta se nombra "Toma de las 11:52 · Benítez, Rosa".
+  - **Estudio** (ícono de microscopio, distinto del de medicamento): nombre del estudio, tipo (si
+    el nombre lo precisa) y "Preparación: …" si tiene. Se nombra "Estudio de las 12:05 · Benítez,
+    Rosa" y concuerda en masculino: "Atrasado 8 min", "Vencido", "Programado".
 - **Chip de urgencia** (ícono y texto, nunca verde ni rojo); las tarjetas urgentes y vencidas
   llevan además el borde de advertencia:
 
-  | Recordatorio        | Chip       | Aspecto            |
-  | ------------------- | ---------- | ------------------ |
-  | `VENCIDO`           | Vencida    | Relleno `warning`  |
-  | `PENDIENTE` `ALTA`  | Urgente    | Relleno `warning`  |
-  | `PENDIENTE` `MEDIA` | Pronto     | Contorno `primary` |
-  | `PENDIENTE` `BAJA`  | Programada | Contorno neutro    |
+  | Recordatorio        | Chip (toma / estudio)   | Aspecto            |
+  | ------------------- | ----------------------- | ------------------ |
+  | `VENCIDO`           | Vencida / Vencido       | Relleno `warning`  |
+  | `PENDIENTE` `ALTA`  | Urgente                 | Relleno `warning`  |
+  | `PENDIENTE` `MEDIA` | Pronto                  | Contorno `primary` |
+  | `PENDIENTE` `BAJA`  | Programada / Programado | Contorno neutro    |
 
-  "Urgente" y "Vencida" son justamente los que cuenta `meta.urgentes`.
+  "Urgente" y "Vencida" son justamente los que cuenta `meta.urgentes`. Un estudio siempre llega
+  con prioridad `MEDIA` ("Pronto") o vencido.
 
-- **Acciones**, solo con `recordatorios.atender`: **No se administró** (secundario) abre la
-  confirmación con motivo obligatorio (3 a 255) y hace el `POST`; **Administrar** (principal, pide
-  además `suministros.registrar`) abre `/suministros/medicamento?pacienteId=…&prescripcionId=…`,
-  que deja elegidos el paciente y la prescripción. Un 409 cierra el diálogo, avisa "Ese
-  recordatorio ya fue atendido por otra persona" (o que se canceló, si `detalles.estado` es
-  `CANCELADO`) y vuelve a pedir la lista; un 422 explica que un estudio se atiende confirmándolo;
-  cualquier otro error queda dentro del diálogo, sin perder el motivo escrito.
+- **Acciones de una toma**, solo con `recordatorios.atender`: **No se administró** (texto) abre la
+  confirmación con motivo obligatorio (3 a 255; el campo no deja escribir más) y hace el `POST`;
+  **Administrar** (con contorno, pide además `suministros.registrar`) abre
+  `/suministros/medicamento?pacienteId=…&prescripcionId=…&desde=recordatorios`, que deja elegidos
+  el paciente y la prescripción, y lleva en el estado de la navegación (`volverA`) los filtros del
+  panel. Un 409 cierra el diálogo, avisa "Ese recordatorio ya fue atendido por otra persona" (o que
+  se canceló, si `detalles.estado` es `CANCELADO`) y vuelve a pedir la lista; un 422 explica que un
+  estudio se atiende confirmándolo; cualquier otro error queda dentro del diálogo, sin perder el
+  motivo escrito.
+- **Acción de un estudio**, solo con `estudios.confirmar`: **Confirmar que se realizó** (con
+  contorno, ícono del rostro) abre `useConfirmacionEstudio` con `estudio.id` y el paciente del
+  recordatorio (nombre, DNI y cama); se confirma con el rostro. Al terminar, el hook renueva
+  `['recordatorios']` (el estudio sale de la lista) y el panel muestra su aviso (éxito, o el 409
+  "Este estudio ya fue confirmado o cancelado por otra persona"). Un estudio no ofrece "No se
+  administró" ni "Administrar".
+- **Volver al panel después de administrar** (`desde=recordatorios` en la administración): la flecha
+  Volver lleva a `/recordatorios` con los filtros que tenía ("Volver a Recordatorios"); al registrar
+  con éxito, el aviso ofrece **Volver a Recordatorios** como acción principal, al final, junto a
+  "Ir a la ficha". Con algo cargado sin registrar, la flecha pregunta antes (`useCambiosSinGuardar`);
+  cambiar de paciente conserva el camino de vuelta. El recordatorio de la toma lo atiende el
+  servidor al registrar el suministro; la pantalla solo renueva `['recordatorios']` (la insignia se
+  actualiza aunque no haya tiempo real).
+- **Foco del resultado**: el aviso de "No se administró" o de la confirmación del estudio (también el
+  409/422) usa `Alerta` con `enfocar`. Al cerrarse el diálogo MUI devuelve el foco al botón de la
+  tarjeta, que desaparece al recargarse la lista: sin esto el foco caería en la página.
 - **Estados**: cargando; error con Reintentar (si ya había una lista, queda a la vista con su
-  hora); vacío ("No hay tomas para atender ahora" y a qué hora se actualizó); franja "Sin conexión
-  en tiempo real: la lista se actualiza cada 30 s".
-- **Filtro por sala** en la URL (`?salaId=2`), solo con `pacientes.ver` (las salas salen de
-  `GET /api/salas`). El filtro por tipo no se muestra mientras solo haya tomas.
+  hora); vacío según el filtro ("No hay tomas ni estudios para atender ahora", "No hay tomas…" o
+  "No hay estudios…", con "en _sala_" si se filtró, y a qué hora se actualizó); franja "Sin conexión
+  en tiempo real: la lista se actualiza cada 30 s". La lista se nombra "Recordatorios para
+  atender" ("Tomas para atender" o "Estudios para atender" con el filtro).
+- **Filtros en la URL**: **Tipo** (`?tipo=MEDICAMENTO|ESTUDIO`: Todos, Tomas, Estudios; un valor
+  desconocido se ignora y no se manda) para todos, y **Sala** (`?salaId=2`) solo con `pacientes.ver`
+  (las salas salen de `GET /api/salas`). Van juntos, de a dos desde tablet.
 - **Interruptor "Sonido de avisos"** (solo quien atiende): se recuerda en la tablet
   (`localStorage` `sgsm.sonidoAvisos = 'no'`; sin almacenamiento disponible, vale mientras la
   pantalla esté abierta). Al prenderlo suena una vez, con el toque, para comprobar el audio.
@@ -329,9 +356,13 @@ primera tarea del inicio ("Tomas para dar ahora").
   Datos y ayudas en [`datosRecordatorios.ts`](../frontend/src/pruebas/datosRecordatorios.ts)
   (`simularRecordatorios`, `avisarCambio`, `registrarConexiones`, `fijarHoraTablet`).
 - Unitarias: `tiempoReal/conexion.test.ts` (cada código de cierre con un socket falso),
-  `tiempoReal/avisos.test.ts` y `paginas/recordatorios/urgencia.test.ts`. De pantalla:
-  `paginas/recordatorios/panel.test.tsx`, `tiempoReal/tiempoReal.test.tsx` y
-  `navegacion/insignia.test.tsx`.
+  `tiempoReal/avisos.test.ts` y `paginas/recordatorios/urgencia.test.ts` (también las etiquetas en
+  masculino de los estudios). De pantalla: `paginas/recordatorios/panel.test.tsx` (tomas y
+  estudios, confirmar un estudio con el rostro y su 409, filtro por tipo, foco del resultado y
+  volver con los filtros), `paginas/suministros/administracion.test.tsx` ("volver al panel de
+  recordatorios"), `tiempoReal/tiempoReal.test.tsx` y `navegacion/insignia.test.tsx`.
+  `recordatorioDeEstudio()` (en `datosRecordatorios.ts`) es el del estudio 60 de
+  `datosEstudios.ts`.
 - Mientras se hace la primera carga de la lista, React Query reutiliza ese pedido si llega
   `conectado` (no pide dos veces); las pruebas que cuentan pedidos esperan a que la lista esté
   cargada antes de mandar avisos.
