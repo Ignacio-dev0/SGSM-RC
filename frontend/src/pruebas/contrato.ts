@@ -26,6 +26,7 @@ import {
   esquemaCambioEstado,
   esquemaModificacionPrescripcion,
 } from '../../../backend/src/modulos/prescripciones/prescripciones.esquemas';
+import { esquemaNoAdministrado } from '../../../backend/src/modulos/recordatorios/recordatorios.esquemas';
 import {
   esquemaAdministracion,
   esquemaCorreccion,
@@ -65,6 +66,7 @@ const REGLAS = [
   regla('PATCH', '/api/insumos/:id', esquemaModificacionInsumo),
   regla('PUT', '/api/biometria/usuarios/:id', esquemaRegistroBiometrico),
   regla('POST', '/api/biometria/validar', esquemaValidacion),
+  regla('POST', '/api/recordatorios/:id/no-administrar', esquemaNoAdministrado),
 ];
 
 /** null si el cuerpo cumple el esquema del servidor (o la ruta no tiene cuerpo que validar). */

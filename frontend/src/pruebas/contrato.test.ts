@@ -31,6 +31,15 @@ describe('contrato con el servidor: lo que mandan las pantallas se valida con su
     ).not.toBeNull();
   });
 
+  it('E5: "No se administró" exige el motivo, como el servidor', () => {
+    expect(
+      validarContrato('POST', '/api/recordatorios/12/no-administrar', {
+        motivo: 'Paciente en ayunas',
+      }),
+    ).toBeNull();
+    expect(validarContrato('POST', '/api/recordatorios/12/no-administrar', {})).toMatch(/motivo/);
+  });
+
   it('las rutas sin cuerpo que validar no tienen regla', () => {
     expect(validarContrato('GET', '/api/pacientes', undefined)).toBeNull();
     expect(validarContrato('POST', '/api/auth/logout', undefined)).toBeNull();

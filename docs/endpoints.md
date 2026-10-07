@@ -146,3 +146,21 @@ Errores: `403 VALIDACION_FACIAL_REQUERIDA` (falta, vencido, ajeno o ya usado),
 `409 PACIENTE_NO_INTERNADO`, `422 SIN_PRESCRIPCION_VIGENTE`, `422 INSUMO_NO_DISPONIBLE`,
 `422 FUERA_DE_PLAZO`, `422 CORRECCION_INVALIDA`, `422 SIN_CAMBIOS`. Acciones de auditoría:
 `REGISTRAR`, `CORREGIR` (Suministro). Reglas en [suministros.md](suministros.md).
+
+## Recordatorios — T501–T508 · CU24–CU28
+
+Contrato completo (forma de las respuestas, prioridad, vencimiento, mensajes del tiempo real y
+códigos de cierre) en [recordatorios.md](recordatorios.md).
+
+| Método | Ruta                                    | Permiso                 | Descripción                                                                                                                                  |
+| ------ | --------------------------------------- | ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| GET    | `/api/recordatorios?tipo&salaId`        | `recordatorios.ver`     | Para atender: `PENDIENTE` y `VENCIDO` de las últimas 12 h de pacientes internados, por urgencia; `meta.total`, `meta.urgentes`, `meta.ahora` |
+| POST   | `/api/recordatorios/:id/no-administrar` | `recordatorios.atender` | `{ motivo }`: "No se administró"; la toma pasa a `ATENDIDO` con el motivo                                                                    |
+| GET    | `/api/tiempo-real` (WebSocket)          | `recordatorios.ver`     | Avisos sin datos clínicos de que los recordatorios cambiaron; cierra con 4001 (sesión) o 4003 (permiso)                                      |
+
+Atender por administración no cambia el contrato de `POST /api/suministros/medicamentos`: el
+registro marca `ATENDIDO` el recordatorio de la toma más cercana dentro de su transacción.
+
+Errores: `409 RECORDATORIO_NO_PENDIENTE` (`detalles.estado`), `422 NO_ES_TOMA`. Acciones de
+auditoría: `GENERAR`, `VENCER`, `ATENDER`, `NO_ADMINISTRAR`, `CANCELAR` (Recordatorio).
+Los endpoints de estudios (T509–T513) se suman en la fase 3 ([diseno-e5.md](diseno-e5.md)).

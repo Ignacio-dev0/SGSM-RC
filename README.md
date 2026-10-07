@@ -108,6 +108,7 @@ El mapa archivo por archivo está en [INDEX.md](INDEX.md).
 | [docs/supuestos.md](docs/supuestos.md)             | Supuestos y decisiones técnicas      |
 | [docs/biometria.md](docs/biometria.md)             | Reconocimiento facial                |
 | [docs/suministros.md](docs/suministros.md)         | Registro y corrección de suministros |
+| [docs/recordatorios.md](docs/recordatorios.md)     | Recordatorios y tiempo real (E5)     |
 | [docs/despliegue.md](docs/despliegue.md)           | Entornos y despliegue                |
 | [docs/trazabilidad.md](docs/trazabilidad.md)       | Tareas del plan → código → pruebas   |
 
