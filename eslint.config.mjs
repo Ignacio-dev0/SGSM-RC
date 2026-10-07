@@ -19,6 +19,8 @@ export default tseslint.config(
       '@typescript-eslint/consistent-type-imports': 'error',
       eqeqeq: ['error', 'always'],
       'no-console': ['warn', { allow: ['warn', 'error', 'info'] }],
+      // Ningún archivo pasa de 1000 líneas: si crece tanto, se separa en piezas más chicas.
+      'max-lines': ['error', { max: 1000, skipBlankLines: false, skipComments: false }],
     },
   },
   {
