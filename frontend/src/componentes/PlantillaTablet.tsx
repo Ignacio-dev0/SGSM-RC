@@ -1,8 +1,9 @@
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import {
   AppBar,
   Box,
   Drawer,
+  IconButton,
   List,
   ListItemButton,
   ListItemIcon,
@@ -12,6 +13,7 @@ import {
   useMediaQuery,
   useTheme,
 } from '@mui/material';
+import MenuIcon from '@mui/icons-material/Menu';
 import { NavLink } from 'react-router-dom';
 
 export interface OpcionMenu {
@@ -30,23 +32,99 @@ interface Props {
 const ANCHO_MENU = 264;
 const ANCHO_RIEL = 96;
 
+function ListaMenu({
+  opciones,
+  compacto,
+  alElegir,
+}: {
+  opciones: OpcionMenu[];
+  compacto: boolean;
+  alElegir?: () => void;
+}) {
+  return (
+    <Box component="nav" aria-label="Menú principal" sx={{ overflowY: 'auto', py: 1 }}>
+      <List disablePadding>
+        {opciones.map((o) => (
+          <ListItemButton
+            key={o.ruta}
+            component={NavLink}
+            to={o.ruta}
+            end={o.ruta === '/'}
+            onClick={alElegir}
+            sx={{
+              mx: 1,
+              my: 0.5,
+              borderRadius: 2,
+              flexDirection: compacto ? 'column' : 'row',
+              textAlign: compacto ? 'center' : 'left',
+              '&.active': {
+                bgcolor: 'primary.main',
+                color: 'primary.contrastText',
+                '& .MuiListItemIcon-root': { color: 'inherit' },
+              },
+            }}
+          >
+            {o.icono && (
+              <ListItemIcon sx={{ minWidth: compacto ? 0 : 44, justifyContent: 'center' }}>
+                {o.icono}
+              </ListItemIcon>
+            )}
+            <ListItemText
+              primary={o.etiqueta}
+              slotProps={{
+                primary: { sx: { fontSize: compacto ? '0.8rem' : '1.05rem', fontWeight: 600 } },
+              }}
+            />
+          </ListItemButton>
+        ))}
+      </List>
+    </Box>
+  );
+}
+
 /**
- * Plantilla de pantalla para tablet (T004 · RF14 · RNF02): barra superior, menú lateral
- * siempre visible y área de contenido. En pantallas angostas (tablet vertical) el menú
- * se reduce a un riel con ícono y etiqueta corta, para no tapar el contenido.
+ * Plantilla de pantalla (T004 · RF14 · RNF02): barra superior, menú lateral y área de contenido.
+ * - Tablet horizontal y PC: menú lateral completo.
+ * - Tablet vertical: riel con ícono y etiqueta corta, para no tapar el contenido.
+ * - Teléfono: el menú se abre en un cajón con el botón de menú y deja todo el ancho al contenido.
  */
 export function PlantillaTablet({ opciones, acciones, children }: Props) {
   const tema = useTheme();
-  const ancho = useMediaQuery(tema.breakpoints.up('md'));
-  const anchoMenu = ancho ? ANCHO_MENU : ANCHO_RIEL;
+  const telefono = useMediaQuery(tema.breakpoints.down('sm'));
+  const riel = useMediaQuery(tema.breakpoints.down('md'));
+  const [abierto, setAbierto] = useState(false);
+  const anchoMenu = riel ? ANCHO_RIEL : ANCHO_MENU;
 
   return (
     <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: 'background.default' }}>
       <AppBar position="fixed" elevation={0} sx={{ zIndex: (t) => t.zIndex.drawer + 1 }}>
-        <Toolbar sx={{ gap: 2 }}>
-          <Typography variant="h6" component="p" sx={{ flexGrow: 1, fontWeight: 700 }}>
+        <Toolbar sx={{ gap: { xs: 0.5, sm: 2 } }}>
+          {telefono && (
+            <IconButton
+              color="inherit"
+              aria-label="Abrir el menú"
+              onClick={() => setAbierto(true)}
+              edge="start"
+            >
+              <MenuIcon />
+            </IconButton>
+          )}
+          <Typography
+            variant="h6"
+            component="p"
+            sx={{ flexGrow: 1, fontWeight: 700, minWidth: 0 }}
+            noWrap
+          >
             SGSM-RC
-            <Typography component="span" sx={{ ml: 1.5, opacity: 0.85, fontSize: '0.95rem' }}>
+            <Typography
+              component="span"
+              sx={{
+                ml: 1.5,
+                opacity: 0.85,
+                fontSize: '0.95rem',
+                display: { xs: 'none', sm: 'inline' },
+              }}
+            >
               Hospital El Dique
             </Typography>
           </Typography>
@@ -54,52 +132,29 @@ export function PlantillaTablet({ opciones, acciones, children }: Props) {
         </Toolbar>
       </AppBar>
 
-      <Drawer
-        variant="permanent"
-        sx={{
-          width: anchoMenu,
-          flexShrink: 0,
-          '& .MuiDrawer-paper': { width: anchoMenu, boxSizing: 'border-box' },
-        }}
-      >
-        <Toolbar />
-        <Box component="nav" aria-label="Menú principal" sx={{ overflowY: 'auto', py: 1 }}>
-          <List disablePadding>
-            {opciones.map((o) => (
-              <ListItemButton
-                key={o.ruta}
-                component={NavLink}
-                to={o.ruta}
-                end={o.ruta === '/'}
-                sx={{
-                  mx: 1,
-                  my: 0.5,
-                  borderRadius: 2,
-                  flexDirection: ancho ? 'row' : 'column',
-                  textAlign: ancho ? 'left' : 'center',
-                  '&.active': {
-                    bgcolor: 'primary.main',
-                    color: 'primary.contrastText',
-                    '& .MuiListItemIcon-root': { color: 'inherit' },
-                  },
-                }}
-              >
-                {o.icono && (
-                  <ListItemIcon sx={{ minWidth: ancho ? 44 : 0, justifyContent: 'center' }}>
-                    {o.icono}
-                  </ListItemIcon>
-                )}
-                <ListItemText
-                  primary={o.etiqueta}
-                  slotProps={{
-                    primary: { sx: { fontSize: ancho ? '1.05rem' : '0.8rem', fontWeight: 600 } },
-                  }}
-                />
-              </ListItemButton>
-            ))}
-          </List>
-        </Box>
-      </Drawer>
+      {telefono ? (
+        <Drawer
+          variant="temporary"
+          open={abierto}
+          onClose={() => setAbierto(false)}
+          sx={{ '& .MuiDrawer-paper': { width: ANCHO_MENU, boxSizing: 'border-box' } }}
+        >
+          <Toolbar />
+          <ListaMenu opciones={opciones} compacto={false} alElegir={() => setAbierto(false)} />
+        </Drawer>
+      ) : (
+        <Drawer
+          variant="permanent"
+          sx={{
+            width: anchoMenu,
+            flexShrink: 0,
+            '& .MuiDrawer-paper': { width: anchoMenu, boxSizing: 'border-box' },
+          }}
+        >
+          <Toolbar />
+          <ListaMenu opciones={opciones} compacto={riel} />
+        </Drawer>
+      )}
 
       <Box component="main" sx={{ flexGrow: 1, p: { xs: 2, md: 3 }, minWidth: 0 }}>
         <Toolbar />

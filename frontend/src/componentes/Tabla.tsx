@@ -38,9 +38,14 @@ interface Props<T> {
   cargando?: boolean;
   alTocarFila?: (fila: T) => void;
   paginacion?: Paginacion;
+  /** Si la consulta falló: se muestra el error en lugar del mensaje de "sin resultados". */
+  error?: string | null;
 }
 
-/** Tabla estándar (T010) con estado vacío, carga, filas tocables y paginación de la API. */
+/**
+ * Tabla estándar (T010) con estados de carga, vacío y error, filas tocables (también con el
+ * teclado: Tab y Enter) y paginación de la API.
+ */
 export function Tabla<T>({
   titulo,
   columnas,
@@ -50,6 +55,7 @@ export function Tabla<T>({
   cargando = false,
   alTocarFila,
   paginacion,
+  error,
 }: Props<T>) {
   return (
     <Paper variant="outlined">
@@ -71,6 +77,17 @@ export function Tabla<T>({
                 key={claveFila(f)}
                 hover={Boolean(alTocarFila)}
                 onClick={alTocarFila ? () => alTocarFila(f) : undefined}
+                tabIndex={alTocarFila ? 0 : undefined}
+                onKeyDown={
+                  alTocarFila
+                    ? (e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          alTocarFila(f);
+                        }
+                      }
+                    : undefined
+                }
                 sx={alTocarFila ? { cursor: 'pointer' } : undefined}
               >
                 {columnas.map((c) => (
@@ -83,10 +100,17 @@ export function Tabla<T>({
           </TableBody>
         </Table>
       </TableContainer>
-      {!cargando && filas.length === 0 && (
-        <Box sx={{ p: 4, textAlign: 'center' }}>
-          <Typography color="text.secondary">{mensajeVacio}</Typography>
+      {error ? (
+        <Box role="alert" sx={{ p: 4, textAlign: 'center' }}>
+          <Typography color="error">{error}</Typography>
         </Box>
+      ) : (
+        !cargando &&
+        filas.length === 0 && (
+          <Box sx={{ p: 4, textAlign: 'center' }}>
+            <Typography color="text.secondary">{mensajeVacio}</Typography>
+          </Box>
+        )
       )}
       {paginacion && (
         <TablePagination

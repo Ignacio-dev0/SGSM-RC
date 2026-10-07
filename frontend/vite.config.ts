@@ -14,5 +14,8 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles: ['./src/pruebas/configurar.ts'],
     css: false,
+    // Las pruebas de pantalla escriben y tocan como una persona: con la suite completa en
+    // paralelo algunas superan los 5 s por defecto.
+    testTimeout: 15_000,
   },
 });

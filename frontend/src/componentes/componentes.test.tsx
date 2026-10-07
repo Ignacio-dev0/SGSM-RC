@@ -116,6 +116,38 @@ describe('Tabla', () => {
     expect(alTocarFila).toHaveBeenCalledWith({ id: 7, apellido: 'Ruiz' });
   });
 
+  it('las filas tocables también se abren con el teclado', async () => {
+    const alTocarFila = vi.fn();
+    render(
+      <Tabla
+        titulo="Pacientes"
+        columnas={columnas}
+        filas={[{ id: 7, apellido: 'Ruiz' }]}
+        claveFila={(f) => f.id}
+        alTocarFila={alTocarFila}
+      />,
+    );
+    await userEvent.tab();
+    expect(screen.getAllByRole('row')[1]).toHaveFocus();
+    await userEvent.keyboard('{Enter}');
+    expect(alTocarFila).toHaveBeenCalledWith({ id: 7, apellido: 'Ruiz' });
+  });
+
+  it('si la consulta falló muestra el error y no "no hay resultados"', () => {
+    render(
+      <Tabla
+        titulo="Pacientes"
+        columnas={columnas}
+        filas={[]}
+        claveFila={(f) => f.id}
+        mensajeVacio="No se encontraron pacientes"
+        error="No hay conexión con el servidor."
+      />,
+    );
+    expect(screen.queryByText('No se encontraron pacientes')).not.toBeInTheDocument();
+    expect(screen.getByRole('alert')).toHaveTextContent('No hay conexión con el servidor.');
+  });
+
   it('pagina los resultados', async () => {
     const alCambiarPagina = vi.fn();
     render(
