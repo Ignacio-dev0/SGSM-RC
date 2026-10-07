@@ -1,4 +1,4 @@
-import { screen, waitFor, within } from '@testing-library/react';
+import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { ENFERMERO, MEDICO } from '../../pruebas/datos';
@@ -258,6 +258,66 @@ describe('ficha del paciente: modificación, traslado y baja (T207 · T208 · CU
     expect(await screen.findByText('Egresado')).toBeInTheDocument();
     expect(enviado).toMatchObject({ motivo: 'Alta médica' });
     expect(enviado?.fechaEgreso).toEqual(expect.any(String));
+  });
+
+  it('el traslado nombra al paciente y no deja confirmar sin elegir la cama', async () => {
+    servidor.use(http.get('*/api/pacientes/7', () => HttpResponse.json({ data: paciente() })));
+    renderizarApp('/pacientes/7', MEDICO);
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Trasladar' }));
+    const dialogo = screen.getByRole('dialog', { name: /Trasladar/ });
+    expect(dialogo).toHaveTextContent(/Benítez, Rosa/);
+    expect(dialogo).toHaveTextContent(/Cama actual: Sala A – Neurorrehabilitación · A-01/);
+    const trasladar = within(dialogo).getByRole('button', { name: 'Trasladar' });
+    expect(trasladar).toBeDisabled();
+    await userEvent.selectOptions(
+      within(dialogo).getByLabelText(/Cama nueva/),
+      await within(dialogo).findByRole('option', { name: /B-01/ }),
+    );
+    expect(trasladar).toBeEnabled();
+  });
+
+  it('si no hay camas libres para trasladar, lo dice', async () => {
+    servidor.use(
+      http.get('*/api/pacientes/7', () => HttpResponse.json({ data: paciente() })),
+      http.get('*/api/camas', () => HttpResponse.json({ data: [] })),
+    );
+    renderizarApp('/pacientes/7', MEDICO);
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Trasladar' }));
+    const dialogo = screen.getByRole('dialog', { name: /Trasladar/ });
+    expect(await within(dialogo).findByText(/No hay camas libres/)).toBeInTheDocument();
+    expect(within(dialogo).getByRole('button', { name: 'Trasladar' })).toBeDisabled();
+  });
+
+  it('dar de alta nombra al paciente y su cama y dice cómo volver a internarlo', async () => {
+    servidor.use(http.get('*/api/pacientes/7', () => HttpResponse.json({ data: paciente() })));
+    renderizarApp('/pacientes/7', MEDICO);
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Dar de alta' }));
+    const dialogo = screen.getByRole('dialog', { name: /Dar de alta/ });
+    expect(dialogo).toHaveTextContent(/Benítez, Rosa/);
+    expect(dialogo).toHaveTextContent(/cama A-01/);
+    expect(dialogo).toHaveTextContent(/Internar paciente.*reingreso/);
+  });
+
+  it('dar de alta valida la fecha: vacía o futura no se puede confirmar', async () => {
+    servidor.use(http.get('*/api/pacientes/7', () => HttpResponse.json({ data: paciente() })));
+    renderizarApp('/pacientes/7', MEDICO);
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Dar de alta' }));
+    const dialogo = screen.getByRole('dialog', { name: /Dar de alta/ });
+    await userEvent.type(within(dialogo).getByLabelText(/Motivo del egreso/), 'Alta médica');
+    const fecha = within(dialogo).getByLabelText(/Fecha y hora de egreso/);
+    const confirmar = within(dialogo).getByRole('button', { name: 'Dar de alta' });
+
+    fireEvent.change(fecha, { target: { value: '' } });
+    expect(fecha).toHaveAccessibleDescription('Indique la fecha y hora del egreso');
+    expect(confirmar).toBeDisabled();
+
+    fireEvent.change(fecha, { target: { value: '2999-01-01T10:00' } });
+    expect(fecha).toHaveAccessibleDescription('No puede ser posterior a ahora');
+    expect(confirmar).toBeDisabled();
   });
 });
 
