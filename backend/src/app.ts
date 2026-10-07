@@ -4,6 +4,7 @@ import cookieParser from 'cookie-parser';
 import { manejarErrores, rutaNoEncontrada } from './comun/middleware-errores';
 import { autenticar } from './modulos/auth/auth.middleware';
 import { rutasAuth } from './modulos/auth/auth.rutas';
+import { rutasNotificaciones } from './modulos/notificaciones/notificaciones.rutas';
 import { rutasPermisos, rutasRoles } from './modulos/seguridad/seguridad.rutas';
 import { rutasUsuarios } from './modulos/usuarios/usuarios.rutas';
 
@@ -24,6 +25,7 @@ export function crearApp() {
   app.use('/api/usuarios', autenticar, rutasUsuarios);
   app.use('/api/roles', autenticar, rutasRoles);
   app.use('/api/permisos', autenticar, rutasPermisos);
+  app.use('/api/notificaciones', autenticar, rutasNotificaciones);
 
   app.use(rutaNoEncontrada);
   app.use(manejarErrores);
