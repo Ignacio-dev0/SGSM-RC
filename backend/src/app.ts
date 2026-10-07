@@ -6,6 +6,10 @@ import { autenticar } from './modulos/auth/auth.middleware';
 import { rutasAuth } from './modulos/auth/auth.rutas';
 import { rutasCamas, rutasSalas } from './modulos/camas/camas.rutas';
 import { rutasPacientes } from './modulos/pacientes/pacientes.rutas';
+import {
+  rutasPrescripciones,
+  rutasPrescripcionesDePaciente,
+} from './modulos/prescripciones/prescripciones.rutas';
 import { rutasInsumos } from './modulos/insumos/insumos.rutas';
 import { rutasNotificaciones } from './modulos/notificaciones/notificaciones.rutas';
 import { rutasPermisos, rutasRoles } from './modulos/seguridad/seguridad.rutas';
@@ -31,7 +35,9 @@ export function crearApp() {
   app.use('/api/notificaciones', autenticar, rutasNotificaciones);
   app.use('/api/camas', autenticar, rutasCamas);
   app.use('/api/salas', autenticar, rutasSalas);
+  app.use('/api/pacientes/:id/prescripciones', autenticar, rutasPrescripcionesDePaciente);
   app.use('/api/pacientes', autenticar, rutasPacientes);
+  app.use('/api/prescripciones', autenticar, rutasPrescripciones);
   app.use('/api/insumos', autenticar, rutasInsumos);
 
   app.use(rutaNoEncontrada);
