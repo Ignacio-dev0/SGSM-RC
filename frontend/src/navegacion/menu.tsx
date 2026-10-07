@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import AlarmOutlinedIcon from '@mui/icons-material/AlarmOutlined';
 import FaceOutlinedIcon from '@mui/icons-material/FaceOutlined';
 import HomeOutlinedIcon from '@mui/icons-material/HomeOutlined';
 import HotelOutlinedIcon from '@mui/icons-material/HotelOutlined';
@@ -17,6 +18,12 @@ export interface OpcionDelMenu {
 /** Todas las opciones del menú principal, en el orden en que se muestran (T108). */
 export const OPCIONES_DEL_MENU: OpcionDelMenu[] = [
   { ruta: '/', etiqueta: 'Inicio', icono: <HomeOutlinedIcon />, permiso: null },
+  {
+    ruta: '/recordatorios',
+    etiqueta: 'Recordatorios',
+    icono: <AlarmOutlinedIcon />,
+    permiso: 'recordatorios.ver',
+  },
   {
     ruta: '/pacientes',
     etiqueta: 'Pacientes',

@@ -239,6 +239,93 @@ pasar el _upgrade_ (riesgo R4):
   `TIEMPO_REAL_ORIGENES=http://localhost:8080` en el servicio `backend` de `docker-compose.yml`.
   El latido manda tráfico cada 30 s, así que alcanza el `proxy_read_timeout` por defecto (60 s).
 
+## Interfaz (fase 2)
+
+Código: [`api/recordatorios.ts`](../frontend/src/api/recordatorios.ts) (tipos y API),
+[`tiempoReal/`](../frontend/src/tiempoReal/) (conexión, proveedor y avisos),
+[`paginas/recordatorios/`](../frontend/src/paginas/recordatorios/) (pantalla) e
+[`InsigniaRecordatorios.tsx`](../frontend/src/navegacion/InsigniaRecordatorios.tsx).
+
+### Pantalla Recordatorios (`/recordatorios`, `recordatorios.ver`)
+
+Se llega desde el menú (después de Inicio), la insignia de la barra y, para quien atiende, la
+primera tarea del inicio ("Tomas para dar ahora").
+
+- **Tarjetas en el orden del servidor** (ya vienen por urgencia): una columna en teléfono; en
+  tablet y PC, tantas columnas de al menos 300 px como entren. Cada una: chip de urgencia, **hora
+  de la toma grande** (24 h), "Faltan 12 min" / "Atrasada 8 min" / "Toca ahora" (con la hora del
+  servidor, se recalcula sola cada 30 s), paciente "Apellido, Nombre" con DNI, cama y sala, y
+  medicamento con dosis, vía y presentación (número y unidad sin cortes).
+- **Chip de urgencia** (ícono y texto, nunca verde ni rojo); las tarjetas urgentes y vencidas
+  llevan además el borde de advertencia:
+
+  | Recordatorio        | Chip       | Aspecto            |
+  | ------------------- | ---------- | ------------------ |
+  | `VENCIDO`           | Vencida    | Relleno `warning`  |
+  | `PENDIENTE` `ALTA`  | Urgente    | Relleno `warning`  |
+  | `PENDIENTE` `MEDIA` | Pronto     | Contorno `primary` |
+  | `PENDIENTE` `BAJA`  | Programada | Contorno neutro    |
+
+  "Urgente" y "Vencida" son justamente los que cuenta `meta.urgentes`.
+
+- **Acciones**, solo con `recordatorios.atender`: **No se administró** (secundario) abre la
+  confirmación con motivo obligatorio (3 a 255) y hace el `POST`; **Administrar** (principal, pide
+  además `suministros.registrar`) abre `/suministros/medicamento?pacienteId=…&prescripcionId=…`,
+  que deja elegidos el paciente y la prescripción. Un 409 cierra el diálogo, avisa "Ese
+  recordatorio ya fue atendido por otra persona" (o que se canceló, si `detalles.estado` es
+  `CANCELADO`) y vuelve a pedir la lista; un 422 explica que un estudio se atiende confirmándolo;
+  cualquier otro error queda dentro del diálogo, sin perder el motivo escrito.
+- **Estados**: cargando; error con Reintentar (si ya había una lista, queda a la vista con su
+  hora); vacío ("No hay tomas para atender ahora" y a qué hora se actualizó); franja "Sin conexión
+  en tiempo real: la lista se actualiza cada 30 s".
+- **Filtro por sala** en la URL (`?salaId=2`), solo con `pacientes.ver` (las salas salen de
+  `GET /api/salas`). El filtro por tipo no se muestra mientras solo haya tomas.
+- **Interruptor "Sonido de avisos"** (solo quien atiende): se recuerda en la tablet
+  (`localStorage` `sgsm.sonidoAvisos = 'no'`; sin almacenamiento disponible, vale mientras la
+  pantalla esté abierta). Al prenderlo suena una vez, con el toque, para comprobar el audio.
+- **Insignia** de la barra: la misma consulta que la lista sin filtros (`['recordatorios', {}]`),
+  con `aria-label` "Recordatorios: N para atender, M urgentes" (o "1 urgente"). La cantidad va
+  rellena de advertencia solo si hay urgentes; si no, con contorno neutro.
+
+### Cliente de tiempo real
+
+- [`conexion.ts`](../frontend/src/tiempoReal/conexion.ts): sin React, con la fábrica del socket
+  y el reloj inyectables. Valida cada mensaje (lo que no entiende lo ignora) y expone el estado
+  (`conectando`, `conectado`, `sin-conexion`). Cierres: 1001, 1006 y cualquier otro inesperado
+  reconectan con espera de 1, 2, 4… hasta 30 s (vuelve a 1 s con cada `conectado`); 4001
+  reconecta enseguida una vez y, si la nueva conexión vuelve a cerrar con 4001 sin `conectado`,
+  avisa que la sesión terminó; 4003 no reconecta y avisa; 1000, nada. Si está esperando para
+  reconectar y vuelve la red (`online`) o la pantalla (`visibilitychange`), reconecta ya.
+- [`ProveedorTiempoReal`](../frontend/src/tiempoReal/ProveedorTiempoReal.tsx), montado en
+  `Disposicion` (la plantilla de toda pantalla con sesión): se conecta solo con
+  `recordatorios.ver`. Cada mensaje (también `conectado`) invalida `['recordatorios']`; si
+  `vencidos > 0`, también `['notificaciones']`. Sin conexión, invalida la lista cada 30 s. Ante
+  4001 dos veces o 4003 vuelve a pedir la sesión (`refrescarSesion`): un 401 lleva al ingreso y un
+  permiso perdido saca el menú, la insignia y la conexión.
+- **Reloj (R6)**: desfase = hora del servidor − hora de la tablet, con `meta.ahora` de cada
+  respuesta de la lista y `momento` de cada mensaje (diferencias de menos de 1 s se ignoran).
+- **Avisos de nuevos (S16)**, solo a quien tiene `recordatorios.atender`: texto ("2 recordatorios
+  nuevos") en una región `aria-live="polite"` que está siempre en la página, a la vista 15 s
+  abajo al centro con "Ver recordatorios" y Cerrar; tono corto de dos notas (Web Audio) y
+  vibración si la tablet no los apagó. Como mucho un aviso cada 10 s: lo que llega antes se suma
+  al siguiente. El audio se habilita con el primer toque en la pantalla (R7); sin Web Audio o sin
+  vibración (iOS) queda solo el texto.
+
+### Pruebas
+
+- [`pruebas/servidor.ts`](../frontend/src/pruebas/servidor.ts) trae respuestas por defecto para
+  lo que monta la plantilla: `GET */api/recordatorios` vacío con su `meta` y el WebSocket simulado
+  con `ws.link('*/api/tiempo-real')` de MSW (funciona en jsdom), que acepta y manda `conectado`.
+  Datos y ayudas en [`datosRecordatorios.ts`](../frontend/src/pruebas/datosRecordatorios.ts)
+  (`simularRecordatorios`, `avisarCambio`, `registrarConexiones`, `fijarHoraTablet`).
+- Unitarias: `tiempoReal/conexion.test.ts` (cada código de cierre con un socket falso),
+  `tiempoReal/avisos.test.ts` y `paginas/recordatorios/urgencia.test.ts`. De pantalla:
+  `paginas/recordatorios/panel.test.tsx`, `tiempoReal/tiempoReal.test.tsx` y
+  `navegacion/insignia.test.tsx`.
+- Mientras se hace la primera carga de la lista, React Query reutiliza ese pedido si llega
+  `conectado` (no pide dos veces); las pruebas que cuentan pedidos esperan a que la lista esté
+  cargada antes de mandar avisos.
+
 ## Decisiones
 
 Tomadas al bajar el diseño al código; complementan D9–D14 de [diseno-e5.md](diseno-e5.md). D15–D19

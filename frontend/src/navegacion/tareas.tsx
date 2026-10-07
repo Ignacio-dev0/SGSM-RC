@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import AlarmOutlinedIcon from '@mui/icons-material/AlarmOutlined';
 import FaceOutlinedIcon from '@mui/icons-material/FaceOutlined';
 import HistoryOutlinedIcon from '@mui/icons-material/HistoryOutlined';
 import Inventory2OutlinedIcon from '@mui/icons-material/Inventory2Outlined';
@@ -25,6 +26,13 @@ export interface Tarea {
  * quien gestiona usuarios ve primero las de gestión (ver `tareasDe`).
  */
 export const TAREAS: Tarea[] = [
+  {
+    ruta: '/recordatorios',
+    etiqueta: 'Tomas para dar ahora',
+    descripcion: 'Las atrasadas y las de la próxima media hora, de la más urgente a la menos',
+    icono: <AlarmOutlinedIcon />,
+    permiso: 'recordatorios.atender',
+  },
   {
     ruta: '/suministros/medicamento',
     etiqueta: 'Administrar medicamento',

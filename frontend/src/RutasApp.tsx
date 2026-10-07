@@ -10,6 +10,7 @@ import { Inicio } from './paginas/Inicio';
 import { NoEncontrada } from './paginas/NoEncontrada';
 import { CargaPrescripcion } from './paginas/prescripciones/CargaPrescripcion';
 import { DetallePrescripcion } from './paginas/prescripciones/DetallePrescripcion';
+import { PanelRecordatorios } from './paginas/recordatorios/PanelRecordatorios';
 import { AdministracionMedicamento } from './paginas/suministros/AdministracionMedicamento';
 import { HistorialSuministros } from './paginas/suministros/HistorialSuministros';
 import { RegistroInsumos } from './paginas/suministros/RegistroInsumos';
@@ -34,6 +35,14 @@ export function RutasApp() {
         }
       >
         <Route index element={<Inicio />} />
+        <Route
+          path="recordatorios"
+          element={
+            <ConPermiso permiso="recordatorios.ver">
+              <PanelRecordatorios />
+            </ConPermiso>
+          }
+        />
         <Route
           path="pacientes"
           element={

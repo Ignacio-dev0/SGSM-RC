@@ -23,6 +23,19 @@ describe('menú principal por rol (T108 · CU06 · RF15)', () => {
     expect(etiquetas(usuario.permisos)).not.toContain('Usuarios');
   });
 
+  it.each([
+    ['administrador', ADMIN],
+    ['médico', MEDICO],
+    ['enfermero', ENFERMERO],
+  ])('el %s ve Recordatorios, después de Inicio', (_rol, usuario) => {
+    expect(etiquetas(usuario.permisos).slice(0, 2)).toEqual(['Inicio', 'Recordatorios']);
+  });
+
+  it('sin recordatorios.ver no ve Recordatorios', () => {
+    const permisos = ENFERMERO.permisos.filter((p) => !p.startsWith('recordatorios.'));
+    expect(etiquetas(permisos)).not.toContain('Recordatorios');
+  });
+
   it('un permiso adicional habilita su opción aunque el rol no la traiga', () => {
     expect(etiquetas([...ENFERMERO.permisos, 'usuarios.gestionar'])).toContain('Usuarios');
   });
@@ -31,6 +44,7 @@ describe('menú principal por rol (T108 · CU06 · RF15)', () => {
     renderizarApp('/', ENFERMERO);
     const menu = await screen.findByRole('navigation', { name: 'Menú principal' });
     expect(within(menu).getByRole('link', { name: 'Inicio' })).toBeInTheDocument();
+    expect(within(menu).getByRole('link', { name: 'Recordatorios' })).toBeInTheDocument();
     expect(within(menu).queryByRole('link', { name: 'Usuarios' })).not.toBeInTheDocument();
     expect(screen.getByText(/Sofía Acosta/)).toBeInTheDocument();
   });

@@ -3,21 +3,18 @@ import userEvent from '@testing-library/user-event';
 import { http } from 'msw';
 import { ADMIN, ENFERMERO, MEDICO } from '../pruebas/datos';
 import { listaDePacientes, paciente } from '../pruebas/datosPacientes';
+import { simularRecordatorios } from '../pruebas/datosRecordatorios';
 import { renderizarApp } from '../pruebas/renderizar';
 import { servidor } from '../pruebas/servidor';
 
-/** Nombres de las tareas que ofrece el Inicio, en el orden en que aparecen. */
-const tareas = () => screen.getAllByRole('link').map((l) => l.textContent);
-
 describe('inicio por rol: las tareas del día con las palabras de quien las hace', () => {
-  it('enfermería ve primero administrar medicamento, registrar insumos y buscar paciente', async () => {
+  it('enfermería ve primero las tomas para dar ahora, administrar medicamento, registrar insumos y buscar paciente', async () => {
     renderizarApp('/', ENFERMERO);
     await screen.findByRole('heading', { name: /Hola, Sofía/ });
 
-    const enInicio = tareas().filter(
-      (t) => t && !/^(Saltar al contenido|Inicio|Pacientes|Suministros)$/.test(t),
-    );
-    expect(enInicio.slice(0, 3)).toEqual([
+    const enInicio = tareasDeLaPantalla();
+    expect(enInicio.slice(0, 4)).toEqual([
+      expect.stringMatching(/^Tomas para dar ahora/),
       expect.stringMatching(/^Administrar medicamento/),
       expect.stringMatching(/^Registrar insumos/),
       expect.stringMatching(/^Buscar paciente/),
@@ -39,6 +36,16 @@ describe('inicio por rol: las tareas del día con las palabras de quien las hace
       screen.getByRole('link', { name: /Registrar el rostro del personal/ }),
     ).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /Agregar al catálogo/ })).toBeInTheDocument();
+  });
+
+  it('desde el inicio se llega a las tomas para dar ahora en un toque', async () => {
+    simularRecordatorios([]);
+    renderizarApp('/', ENFERMERO);
+
+    await userEvent.click(await screen.findByRole('link', { name: /Tomas para dar ahora/ }));
+    expect(
+      await screen.findByRole('heading', { name: 'Recordatorios', level: 1 }),
+    ).toBeInTheDocument();
   });
 
   it('desde el inicio se llega a administrar medicamento en un toque', async () => {
@@ -74,6 +81,7 @@ describe('tareas de gestión primero para quien administra (F34)', () => {
       expect.stringMatching(/^Nuevo usuario/),
       expect.stringMatching(/^Registrar el rostro del personal/),
       expect.stringMatching(/^Agregar al catálogo/),
+      expect.stringMatching(/^Tomas para dar ahora/),
       expect.stringMatching(/^Administrar medicamento/),
       expect.stringMatching(/^Registrar insumos/),
       expect.stringMatching(/^Buscar paciente/),
@@ -99,7 +107,7 @@ describe('la tarea más frecuente del rol se destaca (F34)', () => {
     renderizarApp('/', ENFERMERO);
     await screen.findByRole('heading', { name: /Hola, Sofía/ });
 
-    const { tarjeta, celda } = tarjetaDe(/Administrar medicamento/);
+    const { tarjeta, celda } = tarjetaDe(/Tomas para dar ahora/);
     expect(tarjeta).toHaveAttribute('data-destacada', 'true');
     expect(celda).toHaveClass('MuiGrid-grid-xs-12');
     expect(celda).not.toHaveClass('MuiGrid-grid-sm-6');
@@ -117,7 +125,12 @@ describe('la tarea más frecuente del rol se destaca (F34)', () => {
     renderizarApp('/', ENFERMERO);
     await screen.findByRole('heading', { name: /Hola, Sofía/ });
 
-    for (const nombre of [/Registrar insumos/, /Buscar paciente/, /Ver lo que se registró/]) {
+    for (const nombre of [
+      /Administrar medicamento/,
+      /Registrar insumos/,
+      /Buscar paciente/,
+      /Ver lo que se registró/,
+    ]) {
       const { tarjeta, celda } = tarjetaDe(nombre);
       expect(tarjeta).not.toHaveAttribute('data-destacada');
       expect(celda).toHaveClass('MuiGrid-grid-sm-6');
@@ -132,6 +145,7 @@ describe('la tarea más frecuente del rol se destaca (F34)', () => {
 
     expect(tarjetaDe(/Nuevo usuario/).tarjeta).toHaveAttribute('data-destacada', 'true');
     expect(tarjetaDe(/Administrar medicamento/).tarjeta).not.toHaveAttribute('data-destacada');
+    expect(tarjetaDe(/Tomas para dar ahora/).tarjeta).not.toHaveAttribute('data-destacada');
   });
 });
 
