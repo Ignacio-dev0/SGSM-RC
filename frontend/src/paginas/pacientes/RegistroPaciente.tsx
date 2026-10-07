@@ -12,6 +12,7 @@ import { Selector } from '../../componentes/Selector';
 import { CamposPaciente } from './CamposPaciente';
 import { PACIENTE_VACIO, validarPaciente, type ErroresPaciente } from './datosPaciente';
 import { descripcionCama, opcionesDeCamas } from './etiquetas';
+import { useFocoEnPrimerError } from '../../utilidades/useFocoEnPrimerError';
 
 /** Campo del formulario al que corresponde cada conflicto que informa el backend. */
 const CAMPO_DEL_ERROR: Record<string, keyof ErroresPaciente> = {
@@ -31,6 +32,7 @@ export function RegistroPaciente() {
   const [datos, setDatos] = useState<DatosPaciente>(PACIENTE_VACIO);
   const [camaId, setCamaId] = useState('');
   const [errores, setErrores] = useState<ErroresPaciente>({});
+  const { ref: refFormulario, enfocarPrimerError } = useFocoEnPrimerError<HTMLFormElement>();
   const [egresadoId, setEgresadoId] = useState<number | null>(null);
 
   const alTerminar = async (p: Paciente, accion: string) => {
@@ -51,6 +53,7 @@ export function RegistroPaciente() {
       if (campo) porCampo[campo] = err.message;
     }
     setErrores(porCampo);
+    enfocarPrimerError();
   };
 
   const internar = useMutation({
@@ -73,6 +76,7 @@ export function RegistroPaciente() {
       ...(camaId ? {} : { camaId: 'Elija la cama' }),
     };
     setErrores(faltan);
+    enfocarPrimerError();
     if (Object.keys(faltan).length === 0) internar.mutate();
   };
 
@@ -104,7 +108,14 @@ export function RegistroPaciente() {
         </Alerta>
       )}
 
-      <Paper variant="outlined" component="form" noValidate onSubmit={enviar} sx={{ p: 3 }}>
+      <Paper
+        ref={refFormulario}
+        variant="outlined"
+        component="form"
+        noValidate
+        onSubmit={enviar}
+        sx={{ p: 3 }}
+      >
         <CamposPaciente
           datos={datos}
           errores={errores}

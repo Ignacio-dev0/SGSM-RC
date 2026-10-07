@@ -21,6 +21,8 @@ import { EncabezadoPagina } from '../../componentes/EncabezadoPagina';
 import { Selector } from '../../componentes/Selector';
 import { Tabla, type Columna } from '../../componentes/Tabla';
 import { useRetardo } from '../../utilidades/useRetardo';
+import { useFocoEnPrimerError } from '../../utilidades/useFocoEnPrimerError';
+import { cerrarSinTocarAfuera } from '../../componentes/dialogos';
 
 const TIPOS = [
   { valor: 'MEDICAMENTO', etiqueta: 'Medicamento' },
@@ -56,6 +58,7 @@ interface PropsDialogo {
 function DialogoInsumo({ insumo, abierto, alCerrar, alTerminar }: PropsDialogo) {
   const [datos, setDatos] = useState<DatosInsumo>(VACIO);
   const [errores, setErrores] = useState<Partial<Record<keyof DatosInsumo, string>>>({});
+  const { ref: refFormulario, enfocarPrimerError } = useFocoEnPrimerError<HTMLDivElement>();
 
   useEffect(() => {
     if (abierto) {
@@ -77,6 +80,7 @@ function DialogoInsumo({ insumo, abierto, alCerrar, alTerminar }: PropsDialogo) 
     const porCampo = erroresPorCampo(err) as Partial<Record<keyof DatosInsumo, string>>;
     if (err instanceof ErrorApi && err.codigo === 'INSUMO_DUPLICADO') porCampo.nombre = err.message;
     setErrores(porCampo);
+    enfocarPrimerError();
   };
 
   const guardar = useMutation({
@@ -106,6 +110,7 @@ function DialogoInsumo({ insumo, abierto, alCerrar, alTerminar }: PropsDialogo) 
       ...(datos.unidadMedida.trim() ? {} : { unidadMedida: 'Ingrese la unidad de medida' }),
     };
     setErrores(faltan);
+    enfocarPrimerError();
     if (Object.keys(faltan).length === 0) guardar.mutate();
   };
   const campo = (c: keyof DatosInsumo) => ({
@@ -122,7 +127,7 @@ function DialogoInsumo({ insumo, abierto, alCerrar, alTerminar }: PropsDialogo) 
   return (
     <Dialog
       open={abierto}
-      onClose={alCerrar}
+      onClose={cerrarSinTocarAfuera(alCerrar)}
       fullWidth
       maxWidth="sm"
       aria-labelledby="titulo-insumo"
@@ -131,7 +136,7 @@ function DialogoInsumo({ insumo, abierto, alCerrar, alTerminar }: PropsDialogo) 
         {/* Glosario: "insumo" es solo lo no medicinal; el título dice qué se agrega. */}
         {insumo ? 'Editar' : 'Nuevo'} {datos.tipo === 'MEDICAMENTO' ? 'medicamento' : 'insumo'}
       </DialogTitle>
-      <DialogContent sx={{ display: 'grid', gap: 2, pt: '8px !important' }}>
+      <DialogContent ref={refFormulario} sx={{ display: 'grid', gap: 2, pt: '8px !important' }}>
         {error ? <Alerta tipo="error">{mensajeDeError(error)}</Alerta> : null}
         <CampoTexto etiqueta="Nombre" {...campo('nombre')} required />
         <Selector

@@ -15,6 +15,7 @@ import { proximasTomas } from '../../utilidades/agenda';
 import { formatearFechaHora, formatearHora } from '../../utilidades/formato';
 import { IdentidadPaciente } from '../pacientes/IdentidadPaciente';
 import { FRECUENCIAS, VIAS, aLocal, etiquetaVia, resumenPrescripcion } from './etiquetas';
+import { useFocoEnPrimerError } from '../../utilidades/useFocoEnPrimerError';
 
 interface Formulario {
   insumoId: string;
@@ -79,6 +80,7 @@ export function CargaPrescripcion() {
     observaciones: '',
   }));
   const [errores, setErrores] = useState<Errores>({});
+  const { ref: refFormulario, enfocarPrimerError } = useFocoEnPrimerError<HTMLFormElement>();
   const [duplicadas, setDuplicadas] = useState<Duplicada[] | null>(null);
 
   const cambiar = (campo: keyof Formulario) => (valor: string) => {
@@ -125,6 +127,7 @@ export function CargaPrescripcion() {
         porCampo[CAMPO[campo] ?? (campo as keyof Formulario)] = mensaje;
       }
       setErrores(porCampo);
+      enfocarPrimerError();
     },
   });
 
@@ -132,6 +135,7 @@ export function CargaPrescripcion() {
     e.preventDefault();
     const faltan = validarCompleto(f);
     setErrores(faltan);
+    enfocarPrimerError();
     if (Object.keys(faltan).length === 0) guardar.mutate(false);
   };
 
@@ -175,7 +179,14 @@ export function CargaPrescripcion() {
         </Alerta>
       )}
 
-      <Paper variant="outlined" component="form" noValidate onSubmit={enviar} sx={{ p: 3 }}>
+      <Paper
+        ref={refFormulario}
+        variant="outlined"
+        component="form"
+        noValidate
+        onSubmit={enviar}
+        sx={{ p: 3 }}
+      >
         <Box
           sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr', md: '2fr 1fr 1fr' } }}
         >

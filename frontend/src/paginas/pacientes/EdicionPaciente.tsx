@@ -15,6 +15,7 @@ import {
   validarPaciente,
   type ErroresPaciente,
 } from './datosPaciente';
+import { useFocoEnPrimerError } from '../../utilidades/useFocoEnPrimerError';
 
 /** Modificación de los datos personales del paciente (T207 · CU13). */
 export function EdicionPaciente() {
@@ -24,6 +25,7 @@ export function EdicionPaciente() {
   const paciente = usePaciente(id);
   const [datos, setDatos] = useState<DatosPaciente>(PACIENTE_VACIO);
   const [errores, setErrores] = useState<ErroresPaciente>({});
+  const { ref: refFormulario, enfocarPrimerError } = useFocoEnPrimerError<HTMLFormElement>();
 
   useEffect(() => {
     if (paciente.data) setDatos(datosDePaciente(paciente.data));
@@ -40,6 +42,7 @@ export function EdicionPaciente() {
       const porCampo: ErroresPaciente = erroresPorCampo(err);
       if (err instanceof ErrorApi && err.codigo === 'DNI_DUPLICADO') porCampo.dni = err.message;
       setErrores(porCampo);
+      enfocarPrimerError();
     },
   });
 
@@ -47,6 +50,7 @@ export function EdicionPaciente() {
     e.preventDefault();
     const faltan = validarPaciente(datos);
     setErrores(faltan);
+    enfocarPrimerError();
     if (Object.keys(faltan).length === 0) guardar.mutate();
   };
 
@@ -69,7 +73,14 @@ export function EdicionPaciente() {
       ) : !p ? (
         <Cargando texto="Cargando los datos del paciente…" />
       ) : (
-        <Paper variant="outlined" component="form" noValidate onSubmit={enviar} sx={{ p: 3 }}>
+        <Paper
+          ref={refFormulario}
+          variant="outlined"
+          component="form"
+          noValidate
+          onSubmit={enviar}
+          sx={{ p: 3 }}
+        >
           <CamposPaciente
             datos={datos}
             errores={errores}

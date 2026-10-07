@@ -20,6 +20,7 @@ import { EncabezadoPagina } from '../../componentes/EncabezadoPagina';
 import { Cargando, ErrorDeCarga } from '../../componentes/EstadoDeCarga';
 import { ModalConfirmacion } from '../../componentes/ModalConfirmacion';
 import { formatearFechaHora } from '../../utilidades/formato';
+import { cerrarSinTocarAfuera } from '../../componentes/dialogos';
 
 /**
  * Registro (CU07), actualización (CU08) y eliminación (CU09) del rostro de un usuario por parte
@@ -136,7 +137,7 @@ export function RostroUsuario() {
 
       <Dialog
         open={capturando}
-        onClose={() => setCapturando(false)}
+        onClose={cerrarSinTocarAfuera(() => setCapturando(false))}
         slotProps={{ transition: { onExited: () => setCaptura(null) } }}
         fullWidth
         maxWidth="sm"

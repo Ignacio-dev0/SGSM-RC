@@ -68,6 +68,22 @@ describe('catálogo de insumos y medicamentos (T303)', () => {
     });
   });
 
+  it('el diálogo no se cierra tocando afuera (se perdería lo escrito) y enfoca el error', async () => {
+    servidor.use(http.get('*/api/insumos', () => HttpResponse.json({ data: [] })));
+    renderizarApp('/catalogo', ADMIN);
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Agregar al catálogo' }));
+    const dialogo = screen.getByRole('dialog', { name: 'Nuevo medicamento' });
+    await userEvent.type(within(dialogo).getByLabelText(/^Unidad de medida/), 'mg');
+    await userEvent.click(document.querySelector('.MuiBackdrop-root')!);
+    expect(screen.getByRole('dialog', { name: 'Nuevo medicamento' })).toBeInTheDocument();
+
+    await userEvent.click(within(dialogo).getByRole('button', { name: 'Guardar' }));
+    // El foco va al primer campo con error, para corregirlo sin buscarlo.
+    await waitFor(() => expect(document.activeElement).toHaveAttribute('aria-invalid', 'true'));
+    expect(document.activeElement).toBe(within(dialogo).getByLabelText(/^Nombre/));
+  });
+
   it('da de baja un insumo desde su edición', async () => {
     const baja = vi.fn(() => HttpResponse.json({ data: insumo({ activo: false }) }));
     servidor.use(

@@ -163,6 +163,8 @@ describe('carga de prescripción (T304 · CU17)', () => {
       'Elija el medicamento',
     );
     expect(screen.getByLabelText(/^Vía/)).toHaveAccessibleDescription('Elija la vía');
+    // El foco va al primer campo con error, para corregirlo sin buscarlo.
+    await waitFor(() => expect(document.activeElement).toHaveAttribute('aria-invalid', 'true'));
   });
 
   it('T307: avisa si ya hay una vigente del mismo medicamento y permite cargarla igual', async () => {

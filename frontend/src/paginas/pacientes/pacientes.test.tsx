@@ -134,6 +134,9 @@ describe('registro de paciente con cama (T205 · CU11 · CU15)', () => {
     await userEvent.click(await screen.findByRole('button', { name: 'Internar' }));
     expect(screen.getByLabelText(/^DNI/)).toHaveAccessibleDescription('Ingrese el DNI');
     expect(screen.getByLabelText(/^Cama/)).toHaveAccessibleDescription('Elija la cama');
+    // El foco va al primer campo con error, para corregirlo sin buscarlo.
+    await waitFor(() => expect(document.activeElement).toHaveAttribute('aria-invalid', 'true'));
+    expect(document.activeElement).toBe(screen.getByLabelText(/^DNI/));
   });
 
   it('muestra en el campo la cama que otro ocupó mientras se cargaba', async () => {

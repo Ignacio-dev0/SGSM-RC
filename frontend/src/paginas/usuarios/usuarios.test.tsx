@@ -143,6 +143,8 @@ describe('gestión de usuarios (T110 · CU01–CU04)', () => {
     expect(screen.getByLabelText(/^Contraseña/)).toHaveAccessibleDescription(
       'Ingrese una contraseña',
     );
+    // El foco va al primer campo con error, para corregirlo sin buscarlo.
+    await waitFor(() => expect(document.activeElement).toHaveAttribute('aria-invalid', 'true'));
   });
 
   it('modifica un usuario sin pedir de nuevo la contraseña', async () => {

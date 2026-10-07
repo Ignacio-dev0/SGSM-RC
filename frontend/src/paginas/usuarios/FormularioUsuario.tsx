@@ -15,6 +15,7 @@ import { Cargando, ErrorDeCarga } from '../../componentes/EstadoDeCarga';
 import { ModalConfirmacion } from '../../componentes/ModalConfirmacion';
 import { Selector } from '../../componentes/Selector';
 import { formatearFechaHora } from '../../utilidades/formato';
+import { useFocoEnPrimerError } from '../../utilidades/useFocoEnPrimerError';
 
 const VACIO: DatosUsuario = {
   nombre: '',
@@ -74,6 +75,7 @@ export function FormularioUsuario() {
 
   const [datos, setDatos] = useState<DatosUsuario>(VACIO);
   const [errores, setErrores] = useState<Partial<Record<keyof DatosUsuario, string>>>({});
+  const { ref: refFormulario, enfocarPrimerError } = useFocoEnPrimerError<HTMLFormElement>();
   const [aviso, setAviso] = useState<string | null>(null);
   const [confirmandoBaja, setConfirmandoBaja] = useState(false);
 
@@ -92,6 +94,7 @@ export function FormularioUsuario() {
       porCampo[CAMPO_DEL_CONFLICTO[err.codigo]!] = err.message;
     }
     setErrores(porCampo);
+    enfocarPrimerError();
   };
 
   const guardar = useMutation({
@@ -127,6 +130,7 @@ export function FormularioUsuario() {
     setAviso(null);
     const faltan = validar(datos, esAlta);
     setErrores(faltan);
+    enfocarPrimerError();
     if (Object.keys(faltan).length === 0) guardar.mutate();
   };
 
@@ -184,7 +188,14 @@ export function FormularioUsuario() {
       ) : !esAlta && !u ? (
         <Cargando texto="Cargando los datos del usuario…" />
       ) : (
-        <Paper variant="outlined" component="form" noValidate onSubmit={enviar} sx={{ p: 3 }}>
+        <Paper
+          ref={refFormulario}
+          variant="outlined"
+          component="form"
+          noValidate
+          onSubmit={enviar}
+          sx={{ p: 3 }}
+        >
           <Typography variant="h6" component="h2" sx={{ mb: 2 }}>
             Datos personales
           </Typography>

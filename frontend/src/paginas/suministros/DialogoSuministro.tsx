@@ -14,6 +14,7 @@ import { formatearFechaHora } from '../../utilidades/formato';
 import { formatearDosis } from '../prescripciones/etiquetas';
 import { detalleDe } from './formato';
 import { ListaCantidades, type ItemCantidad } from './comunes';
+import { cerrarSinTocarAfuera } from '../../componentes/dialogos';
 
 function Dato({ etiqueta, children }: { etiqueta: string; children: ReactNode }) {
   return (
@@ -92,7 +93,13 @@ export function DialogoSuministro({
     (s.tipo === 'MEDICAMENTO' ? Number(cantidad) > 0 : items.length > 0);
 
   return (
-    <Dialog open onClose={alCerrar} fullWidth maxWidth="md" aria-labelledby="titulo-suministro">
+    <Dialog
+      open
+      onClose={cerrarSinTocarAfuera(alCerrar)}
+      fullWidth
+      maxWidth="md"
+      aria-labelledby="titulo-suministro"
+    >
       <DialogTitle id="titulo-suministro">
         Suministro del {formatearFechaHora(s.fechaHora)}
       </DialogTitle>

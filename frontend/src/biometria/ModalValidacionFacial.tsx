@@ -13,6 +13,7 @@ import { useUsuario } from '../auth/useSesion';
 import { Alerta } from '../componentes/Alerta';
 import { Boton } from '../componentes/Boton';
 import { CapturaRostro, type RostroCapturado } from './CapturaRostro';
+import { cerrarSinTocarAfuera } from '../componentes/dialogos';
 
 type Respuesta =
   | { valido: true; validacionToken: string; similitud: number }
@@ -84,7 +85,7 @@ export function ModalValidacionFacial({ operacion, detalle, alValidar, alCancela
   return (
     <Dialog
       open
-      onClose={enviando ? undefined : alCancelar}
+      onClose={enviando ? undefined : cerrarSinTocarAfuera(alCancelar)}
       fullWidth
       maxWidth="sm"
       aria-labelledby="titulo-validacion"
