@@ -77,6 +77,10 @@ describe('búsqueda de pacientes (T203 · CU12)', () => {
     expect(nombres(await buscar({ dni: '30999000' }))).toEqual(['Gómez, Ana']);
   });
 
+  it('el mismo buscador encuentra por número de cama actual', async () => {
+    expect(nombres(await buscar({ texto: 'b-01' }))).toEqual(['Benítez, Juan']);
+  });
+
   it('busca por número de cama y por sala', async () => {
     expect(nombres(await buscar({ cama: 'a-01' }))).toEqual(['Benítez, Rosa']);
     expect(nombres(await buscar({ salaId: salaBId }))).toEqual(['Benítez, Juan']);

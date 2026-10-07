@@ -181,7 +181,7 @@ const escaparLike = (t: string) => t.replace(/[\\%_]/g, (c) => '\\' + c);
 
 /**
  * Ids de pacientes cuyo apellido o nombre contiene el texto sin importar mayúsculas ni tildes
- * (extensión unaccent de PostgreSQL), o cuyo DNI empieza con él.
+ * (extensión unaccent de PostgreSQL), cuyo DNI empieza con él o cuya cama actual es esa.
  */
 async function idsQueCoinciden(texto: string, incluirDniYNombre: boolean) {
   const patron = `%${escaparLike(texto)}%`;
@@ -190,7 +190,12 @@ async function idsQueCoinciden(texto: string, incluirDniYNombre: boolean) {
         SELECT id FROM pacientes
         WHERE dni LIKE ${`${escaparLike(texto)}%`}
            OR unaccent(apellido) ILIKE unaccent(${patron})
-           OR unaccent(nombre) ILIKE unaccent(${patron})`
+           OR unaccent(nombre) ILIKE unaccent(${patron})
+           OR id IN (
+             SELECT a.paciente_id FROM asignaciones_cama a
+             JOIN camas c ON c.id = a.cama_id
+             WHERE a.fecha_hasta IS NULL AND c.numero ILIKE ${escaparLike(texto)}
+           )`
     : await prisma.$queryRaw<{ id: number }[]>`
         SELECT id FROM pacientes WHERE unaccent(apellido) ILIKE unaccent(${patron})`;
   return filas.map((f) => f.id);
