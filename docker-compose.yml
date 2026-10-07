@@ -21,5 +21,35 @@ services:
       timeout: 3s
       retries: 10
 
+  # Entorno completo (T007, versión local): docker compose --profile completo up --build
+  # Interfaz en http://localhost:8080. Cargar datos de prueba la primera vez con:
+  # docker compose --profile completo run --rm -e NODE_ENV=development backend npm run db:sembrar
+  backend:
+    profiles: [completo]
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DATABASE_URL: postgresql://sgsm:sgsm@db:5432/sgsm?schema=public
+      JWT_SECRETO: ${JWT_SECRETO:-entorno-local-de-pruebas-cambiar}
+      # Por HTTP en localhost la cookie no puede ser Secure; en un servidor real va con HTTPS.
+      COOKIE_SEGURA: 'false'
+
+  frontend:
+    profiles: [completo]
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+      args:
+        VITE_BIOMETRIA_MODO: ${VITE_BIOMETRIA_MODO:-camara}
+    depends_on: [backend]
+    ports:
+      - '${FRONTEND_PUERTO:-8080}:80'
+
 volumes:
   sgsm-db-datos:
