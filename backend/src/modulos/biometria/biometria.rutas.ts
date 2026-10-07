@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { z } from 'zod';
 import { idDeRuta } from '../../comun/parametros';
 import { validar } from '../../comun/validacion';
 import { usuarioActual } from '../auth/sesion';
@@ -9,8 +10,10 @@ import {
   estadoBiometrico,
   fotoDeReferencia,
   guardarBiometria,
+  esquemaPatron,
   listarPersonal,
 } from './biometria.servicio';
+import { validarRostro } from './validacion.servicio';
 
 /** /api/biometria — gestión de datos biométricos (T403) y validación facial (T404, T407). */
 export const rutasBiometria = Router();
@@ -37,4 +40,18 @@ rutasBiometria.put('/usuarios/:id', gestionar, async (req, res) => {
 
 rutasBiometria.delete('/usuarios/:id', gestionar, async (req, res) => {
   res.json({ data: await eliminarBiometria(idDeRuta(req.params.id), usuarioActual(req).id) });
+});
+
+const esquemaValidacion = z.object({
+  patron: esquemaPatron,
+  operacion: z.string().trim().max(80).optional(),
+});
+
+/**
+ * POST /api/biometria/validar — valida el rostro del usuario de la sesión (CU10). No pide un
+ * permiso propio: el comprobante solo sirve en endpoints que exigen el suyo.
+ */
+rutasBiometria.post('/validar', async (req, res) => {
+  const { patron, operacion } = validar(esquemaValidacion, req.body);
+  res.json({ data: await validarRostro(usuarioActual(req).id, patron, operacion) });
 });
