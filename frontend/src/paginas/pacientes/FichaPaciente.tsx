@@ -17,7 +17,7 @@ import { edad, formatearFechaHora, formatearFechaSinZona } from '../../utilidade
 import { PrescripcionesPaciente } from '../prescripciones/PrescripcionesPaciente';
 import { DialogoEgreso, DialogoTraslado } from './DialogosPaciente';
 import { HistorialPaciente } from './HistorialPaciente';
-import { descripcionCama, etiquetaSexo } from './etiquetas';
+import { etiquetaSexo, ubicacionCama } from './etiquetas';
 
 function Dato({ etiqueta, children }: { etiqueta: string; children: ReactNode }) {
   return (
@@ -112,7 +112,7 @@ export function FichaPaciente() {
             <span>DNI {p.dni}</span>
             <span>· {edad(p.fechaNacimiento)} años ·</span>
             {p.cama ? (
-              <Chip color="primary" label={`Cama ${descripcionCama(p.cama)}`} />
+              <Chip color="primary" label={ubicacionCama(p.cama)} />
             ) : (
               <Chip label="Egresado" />
             )}

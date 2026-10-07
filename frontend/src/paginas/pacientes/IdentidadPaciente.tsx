@@ -2,6 +2,7 @@ import { useId } from 'react';
 import { Box, Paper, Typography } from '@mui/material';
 import type { Paciente } from '../../api/tipos';
 import { edad } from '../../utilidades/formato';
+import { ubicacionCama } from './etiquetas';
 
 /**
  * Identificación del paciente en las pantallas donde se actúa sobre él (administrar, prescribir):
@@ -24,9 +25,7 @@ export function IdentidadPaciente({ paciente: p }: { paciente: Paciente }) {
       >
         <span>DNI {p.dni}</span>
         <span>{edad(p.fechaNacimiento)} años</span>
-        <strong>
-          {p.cama ? `Cama ${p.cama.numero} · ${p.cama.sala.nombre}` : 'Sin cama asignada'}
-        </strong>
+        <strong>{p.cama ? ubicacionCama(p.cama) : 'Sin cama asignada'}</strong>
       </Box>
     </Paper>
   );

@@ -142,7 +142,7 @@ export function FormularioUsuario() {
           u && (
             <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap' }}>
               {u.rol.nombre}
-              {!u.activo && <Chip label="Inactivo" size="small" />}
+              {!u.activo && <Chip label="Dado de baja" size="small" />}
               <span>· Último acceso: {formatearFechaHora(u.ultimoAcceso)}</span>
             </Box>
           )

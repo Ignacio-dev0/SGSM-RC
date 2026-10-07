@@ -8,7 +8,7 @@ import { Alerta } from '../../componentes/Alerta';
 import { CampoTexto } from '../../componentes/CampoTexto';
 import { Tabla } from '../../componentes/Tabla';
 import { formatearFechaHora } from '../../utilidades/formato';
-import { ACCIONES, CAMPOS, MOTIVO_ASIGNACION } from './etiquetas';
+import { CAMPOS, MOTIVO_ASIGNACION, etiquetaAccion } from './etiquetas';
 
 type Modificacion = Historial['modificaciones'][number];
 
@@ -106,7 +106,7 @@ export function HistorialPaciente({ pacienteId }: { pacienteId: number }) {
           titulo="Modificaciones"
           columnas={[
             { titulo: 'Fecha y hora', valor: (m) => formatearFechaHora(m.fechaHora), ancho: 170 },
-            { titulo: 'Acción', valor: (m) => ACCIONES[m.accion] ?? m.accion },
+            { titulo: 'Acción', valor: (m) => etiquetaAccion(m.accion, m.entidad) },
             {
               titulo: 'Detalle',
               valor: (m) => <Typography variant="body2">{cambiosDe(m)}</Typography>,

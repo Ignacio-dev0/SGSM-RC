@@ -24,7 +24,7 @@ const COLUMNAS: Columna<Usuario>[] = [
     titulo: 'Estado',
     valor: (u) =>
       !u.activo ? (
-        <Chip label="Inactivo" size="small" />
+        <Chip label="Dado de baja" size="small" />
       ) : u.bloqueadoHasta && new Date(u.bloqueadoHasta) > new Date() ? (
         <Chip label="Bloqueado" size="small" color="warning" />
       ) : (
@@ -110,7 +110,7 @@ export function ListaUsuarios() {
           alCambiar={(v) => cambiarFiltro(() => setActivo(v))}
           opciones={[
             { valor: 'true', etiqueta: 'Activos' },
-            { valor: 'false', etiqueta: 'Inactivos' },
+            { valor: 'false', etiqueta: 'Dados de baja' },
             { valor: '', etiqueta: 'Todos' },
           ]}
         />

@@ -127,7 +127,10 @@ function DialogoInsumo({ insumo, abierto, alCerrar, alTerminar }: PropsDialogo) 
       maxWidth="sm"
       aria-labelledby="titulo-insumo"
     >
-      <DialogTitle id="titulo-insumo">{insumo ? 'Editar insumo' : 'Nuevo insumo'}</DialogTitle>
+      <DialogTitle id="titulo-insumo">
+        {/* Glosario: "insumo" es solo lo no medicinal; el título dice qué se agrega. */}
+        {insumo ? 'Editar' : 'Nuevo'} {datos.tipo === 'MEDICAMENTO' ? 'medicamento' : 'insumo'}
+      </DialogTitle>
       <DialogContent sx={{ display: 'grid', gap: 2, pt: '8px !important' }}>
         {error ? <Alerta tipo="error">{mensajeDeError(error)}</Alerta> : null}
         <CampoTexto etiqueta="Nombre" {...campo('nombre')} required />
@@ -194,7 +197,7 @@ export function CatalogoInsumos() {
         titulo="Catálogo de insumos y medicamentos"
         acciones={
           <Boton startIcon={<AddIcon />} onClick={() => setDialogo({ insumo: null })}>
-            Nuevo insumo
+            Agregar al catálogo
           </Boton>
         }
       />

@@ -35,7 +35,7 @@ describe('catálogo de insumos y medicamentos (T303)', () => {
     await waitFor(() => expect(pedidos.at(-1)?.get('tipo')).toBe('INSUMO'));
   });
 
-  it('da de alta un insumo', async () => {
+  it('agrega un insumo al catálogo', async () => {
     let enviado: unknown;
     servidor.use(
       http.get('*/api/insumos', () => HttpResponse.json({ data: [] })),
@@ -49,10 +49,12 @@ describe('catálogo de insumos y medicamentos (T303)', () => {
     );
     renderizarApp('/catalogo', ADMIN);
 
-    await userEvent.click(await screen.findByRole('button', { name: /Nuevo insumo/ }));
-    const dialogo = screen.getByRole('dialog', { name: /Nuevo insumo/ });
+    await userEvent.click(await screen.findByRole('button', { name: 'Agregar al catálogo' }));
+    // El título dice qué se agrega según el tipo elegido (medicamento o insumo).
+    const dialogo = screen.getByRole('dialog', { name: 'Nuevo medicamento' });
     await userEvent.type(within(dialogo).getByLabelText(/^Nombre/), 'Pañal adulto');
     await userEvent.selectOptions(within(dialogo).getByLabelText(/^Tipo/), 'Insumo no medicinal');
+    expect(dialogo).toHaveAccessibleName('Nuevo insumo');
     await userEvent.type(within(dialogo).getByLabelText(/^Unidad de medida/), 'unidad');
     await userEvent.type(within(dialogo).getByLabelText(/^Presentación/), 'Paquete x 10');
     await userEvent.click(within(dialogo).getByRole('button', { name: 'Guardar' }));
@@ -75,7 +77,7 @@ describe('catálogo de insumos y medicamentos (T303)', () => {
     renderizarApp('/catalogo', ADMIN);
 
     await userEvent.click(await screen.findByText('Paracetamol'));
-    const dialogo = screen.getByRole('dialog', { name: /Editar insumo/ });
+    const dialogo = screen.getByRole('dialog', { name: 'Editar medicamento' });
     await userEvent.click(within(dialogo).getByRole('button', { name: 'Dar de baja' }));
 
     expect(await screen.findByRole('status')).toHaveTextContent(/dado de baja/);

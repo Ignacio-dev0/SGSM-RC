@@ -72,7 +72,7 @@ describe('gestión de usuarios (T110 · CU01–CU04)', () => {
 
     await userEvent.type(screen.getByLabelText(/Buscar/), 'gomez');
     await userEvent.selectOptions(screen.getByLabelText('Rol'), 'Enfermero');
-    await userEvent.selectOptions(screen.getByLabelText('Estado'), 'Inactivos');
+    await userEvent.selectOptions(screen.getByLabelText('Estado'), 'Dados de baja');
 
     await waitFor(() => {
       const ultimo = pedidos.at(-1)!;
@@ -82,7 +82,7 @@ describe('gestión de usuarios (T110 · CU01–CU04)', () => {
     });
   });
 
-  it('da de alta un usuario', async () => {
+  it('registra un usuario nuevo', async () => {
     let enviado: Record<string, unknown> | undefined;
     servidor.use(
       http.get('*/api/usuarios', () => lista([])),
@@ -165,6 +165,15 @@ describe('gestión de usuarios (T110 · CU01–CU04)', () => {
     expect(await screen.findByRole('status')).toHaveTextContent(/guardaron/);
     expect(enviado).toMatchObject({ apellido: 'Gómez Paz' });
     expect(enviado).not.toHaveProperty('contrasena');
+  });
+
+  it('a los usuarios desactivados los muestra como "Dado de baja", como dice el glosario', async () => {
+    servidor.use(http.get('*/api/usuarios', () => lista([usuario({ activo: false })])));
+    renderizarApp('/usuarios', ADMIN);
+
+    const tabla = await screen.findByRole('table', { name: 'Usuarios' });
+    expect(await within(tabla).findByText('Dado de baja')).toBeInTheDocument();
+    expect(within(tabla).queryByText('Inactivo')).not.toBeInTheDocument();
   });
 
   it('da de baja un usuario con confirmación', async () => {

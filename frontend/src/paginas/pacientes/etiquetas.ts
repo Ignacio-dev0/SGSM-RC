@@ -16,7 +16,7 @@ export const MOTIVO_ASIGNACION: Record<string, string> = {
 };
 
 export const ACCIONES: Record<string, string> = {
-  CREAR: 'Alta',
+  CREAR: 'Registro',
   MODIFICAR: 'Modificación',
   REINGRESAR: 'Reingreso',
   TRASLADAR: 'Traslado',
@@ -29,6 +29,13 @@ export const ACCIONES: Record<string, string> = {
   REGISTRAR: 'Registro',
   CORREGIR: 'Corrección',
 };
+
+/**
+ * Acción de la auditoría como la nombra el glosario: crear un paciente es "Internación" (no
+ * "Alta", que en el hospital quiere decir que se va).
+ */
+export const etiquetaAccion = (accion: string, entidad: string) =>
+  accion === 'CREAR' && entidad === 'Paciente' ? 'Internación' : (ACCIONES[accion] ?? accion);
 
 /** Nombres legibles de los campos que aparecen en la auditoría. */
 export const CAMPOS: Record<string, string> = {
@@ -53,6 +60,10 @@ export const CAMPOS: Record<string, string> = {
 
 export const descripcionCama = (c: Pick<Cama, 'numero' | 'sala'>) =>
   `${c.sala.nombre} · ${c.numero}`;
+
+/** Dónde está el paciente, con la cama primero: "Cama A-01 · Sala A – Neurorrehabilitación". */
+export const ubicacionCama = (c: Pick<Cama, 'numero' | 'sala'>) =>
+  `Cama ${c.numero} · ${c.sala.nombre}`;
 
 /** Opciones de cama para un Selector: "Sala A – … · A-02". */
 export const opcionesDeCamas = (camas: Cama[]) =>

@@ -260,6 +260,15 @@ describe('ficha del paciente: modificación, traslado y baja (T207 · T208 · CU
     expect(enviado?.fechaEgreso).toEqual(expect.any(String));
   });
 
+  it('el encabezado de la ficha dice la cama primero, igual que en el resto de las pantallas', async () => {
+    servidor.use(http.get('*/api/pacientes/7', () => HttpResponse.json({ data: paciente() })));
+    renderizarApp('/pacientes/7', ENFERMERO);
+
+    expect(
+      await screen.findByText('Cama A-01 · Sala A – Neurorrehabilitación'),
+    ).toBeInTheDocument();
+  });
+
   it('el traslado nombra al paciente y no deja confirmar sin elegir la cama', async () => {
     servidor.use(http.get('*/api/pacientes/7', () => HttpResponse.json({ data: paciente() })));
     renderizarApp('/pacientes/7', MEDICO);
@@ -344,5 +353,37 @@ describe('historial del paciente (T209 · CU16)', () => {
 
     await userEvent.type(screen.getByLabelText('Desde'), '2026-10-02');
     await waitFor(() => expect(pedidos.at(-1)?.get('desde')).toMatch(/^2026-10-02/));
+  });
+
+  it('el registro del paciente figura como "Internación", no como "Alta"', async () => {
+    servidor.use(
+      http.get('*/api/pacientes/7', () => HttpResponse.json({ data: paciente() })),
+      http.get('*/api/pacientes/7/historial', () =>
+        HttpResponse.json({
+          data: {
+            ...HISTORIAL,
+            modificaciones: [
+              {
+                id: 1,
+                fechaHora: '2026-10-01T13:00:00.000Z',
+                accion: 'CREAR',
+                entidad: 'Paciente',
+                usuario: 'Ferreyra, Martín',
+                valorAnterior: null,
+                valorNuevo: null,
+                detalle: null,
+              },
+            ],
+          },
+        }),
+      ),
+    );
+    renderizarApp('/pacientes/7', ENFERMERO);
+
+    await userEvent.click(await screen.findByRole('tab', { name: 'Historial' }));
+    await userEvent.click(await screen.findByRole('tab', { name: /Modificaciones/ }));
+    const tabla = await screen.findByRole('table', { name: 'Modificaciones' });
+    expect(await within(tabla).findByText('Internación')).toBeInTheDocument();
+    expect(within(tabla).queryByText('Alta')).not.toBeInTheDocument();
   });
 });
