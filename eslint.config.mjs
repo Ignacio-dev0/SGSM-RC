@@ -37,6 +37,12 @@ export default tseslint.config(
     },
   },
   {
+    // Playwright pide desestructurar los fixtures aunque no se usen: ({}, info) => …
+    files: ['e2e/**/*.ts'],
+    languageOptions: { globals: { ...globals.node } },
+    rules: { 'no-empty-pattern': 'off' },
+  },
+  {
     files: ['**/*.{js,mjs,cjs}'],
     languageOptions: { globals: { ...globals.node } },
   },

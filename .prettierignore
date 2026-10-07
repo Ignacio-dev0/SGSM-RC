@@ -9,3 +9,5 @@ frontend/public/models
 .ux-governance/STATUS.md
 .ux-governance/status.html
 .ux-governance/state.local.json
+test-results
+playwright-report

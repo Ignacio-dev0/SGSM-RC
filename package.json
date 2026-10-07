@@ -18,12 +18,14 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "typecheck": "npm run typecheck --workspaces",
+    "typecheck": "npm run typecheck --workspaces && tsc -p e2e --noEmit",
     "test": "npm run test --workspaces",
-    "verificar": "npm run format:check && npm run lint && npm run typecheck && npm run test"
+    "verificar": "npm run format:check && npm run lint && npm run typecheck && npm run test",
+    "e2e": "playwright test"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.5",
+    "@playwright/test": "^1.63.0",
     "eslint": "^9.39.5",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-react-hooks": "^5.2.0",

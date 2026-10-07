@@ -50,6 +50,27 @@ Solo un lado: `npm test -w backend` o `npm test -w frontend`.
 - Un archivo por pantalla o tema; **ningún archivo pasa de 1000 líneas** (regla `max-lines`
   de ESLint).
 
+## En navegador real (Playwright)
+
+[`e2e/`](../e2e/) recorre la aplicación levantada con los datos de la semilla (backend en
+:3000, frontend en :5173 o `E2E_URL`) en Chromium, en **teléfono (375 px), tablet (768 px) y
+PC (1366 px)**, con **tema claro y oscuro**:
+
+```bash
+npx playwright install chromium   # una sola vez
+npm run e2e
+```
+
+| Archivo                                           | Qué verifica                                                                                                                                                                                                 |
+| ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| [`responsive.spec.ts`](../e2e/responsive.spec.ts) | Las pantallas principales de cada rol: sin desplazamiento lateral, nada fuera de la pantalla y controles táctiles de al menos 44 px. Incluye un control que comprueba que el medidor sí detecta un desborde. |
+| [`teclado.spec.ts`](../e2e/teclado.spec.ts)       | Con Tab se llega a Administrar con foco visible y Enter lo abre; un diálogo retiene el foco y Escape lo cierra devolviéndolo; las filas se abren con Enter.                                                  |
+| [`tactil.spec.ts`](../e2e/tactil.spec.ts)         | En el teléfono: el menú en cajón, las tarjetas de prescripción y las pestañas responden al toque.                                                                                                            |
+
+Los usuarios son los de la semilla de desarrollo (se pueden cambiar con `E2E_USUARIO_*` y
+`E2E_CLAVE_*`). No corren en la integración continua porque necesitan la base sembrada y los
+dos servidores; se corren antes de cerrar un cambio de interfaz.
+
 ## Control de permisos con los tres roles
 
 La definición de terminado del plan pide verificar los permisos con los tres roles. Cada módulo
