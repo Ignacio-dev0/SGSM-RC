@@ -5,6 +5,7 @@ import { manejarErrores, rutaNoEncontrada } from './comun/middleware-errores';
 import { autenticar } from './modulos/auth/auth.middleware';
 import { rutasAuth } from './modulos/auth/auth.rutas';
 import { rutasCamas, rutasSalas } from './modulos/camas/camas.rutas';
+import { rutasPacientes } from './modulos/pacientes/pacientes.rutas';
 import { rutasNotificaciones } from './modulos/notificaciones/notificaciones.rutas';
 import { rutasPermisos, rutasRoles } from './modulos/seguridad/seguridad.rutas';
 import { rutasUsuarios } from './modulos/usuarios/usuarios.rutas';
@@ -29,6 +30,7 @@ export function crearApp() {
   app.use('/api/notificaciones', autenticar, rutasNotificaciones);
   app.use('/api/camas', autenticar, rutasCamas);
   app.use('/api/salas', autenticar, rutasSalas);
+  app.use('/api/pacientes', autenticar, rutasPacientes);
 
   app.use(rutaNoEncontrada);
   app.use(manejarErrores);

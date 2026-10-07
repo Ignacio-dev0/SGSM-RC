@@ -27,7 +27,8 @@ export const sinPermiso = (mensaje = 'No tiene permiso para realizar esta acció
 export const noEncontrado = (mensaje = 'Recurso no encontrado') =>
   new ErrorApi(404, 'NO_ENCONTRADO', mensaje);
 
-export const conflicto = (codigo: string, mensaje: string) => new ErrorApi(409, codigo, mensaje);
+export const conflicto = (codigo: string, mensaje: string, detalles?: unknown) =>
+  new ErrorApi(409, codigo, mensaje, detalles);
 
 export const reglaNegocio = (codigo: string, mensaje: string, detalles?: unknown) =>
   new ErrorApi(422, codigo, mensaje, detalles);
