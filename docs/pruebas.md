@@ -15,6 +15,10 @@ npm run verificar      # formato + lint + tipos + pruebas (lo mismo que corre CI
 
 Solo un lado: `npm test -w backend` o `npm test -w frontend`.
 
+**Rendimiento (T702):** `npm run volumen:sembrar -w backend` y después
+`npm run volumen:medir -w backend` (contra la base aparte `sgsm_volumen`, nunca la de pruebas):
+un año de volumen y la tabla de tiempos en [rendimiento.md](rendimiento.md).
+
 ## Backend (Jest + supertest)
 
 - **Unitarias** para la lógica pura: tokens de sesión, auditoría (`cambios`, `sanear`),
@@ -112,4 +116,6 @@ contra sus endpoints.
 - La captura real de la cámara y el modelo de reconocimiento facial en el navegador (ver
   [biometria.md](biometria.md)): se prueban la comparación de patrones en el backend y el flujo
   de la pantalla con un motor simulado.
-- Pruebas en tablets reales, de rendimiento y de usabilidad: corresponden a la etapa E7.
+- Pruebas en tablets reales y de usabilidad: corresponden a la etapa E7. El rendimiento con un año
+  de volumen se mide aparte, con un script ([rendimiento.md](rendimiento.md)); la suite solo
+  comprueba que las consultas reescritas para el volumen devuelven lo mismo.

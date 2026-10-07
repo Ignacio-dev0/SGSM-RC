@@ -114,13 +114,21 @@ Los reportes y las estadísticas filtran los suministros de **todo el hospital**
 [`reportes_e6`](../backend/prisma/migrations/20261007173927_reportes_e6/migration.sql) agrega
 `suministros(fecha_hora)` (`suministros_fecha_hora_idx`). El resto ya existía:
 
-| Consulta                                        | Índice                                                                     |
-| ----------------------------------------------- | -------------------------------------------------------------------------- |
-| Reporte y estadísticas: suministros del período | `suministros(fecha_hora)` (nuevo en E6)                                    |
-| Recordatorios del período                       | `recordatorios(estado, fecha_hora_objetivo)`                               |
-| Sala del paciente en un momento dado            | `asignaciones_cama(paciente_id)`                                           |
-| Auditoría por fecha, usuario, paciente          | `auditoria(fecha_hora)`, `auditoria(usuario_id)`, `auditoria(paciente_id)` |
-| Auditoría por entidad                           | `auditoria(entidad, entidad_id)`                                           |
+| Consulta                                        | Índice                                                                                |
+| ----------------------------------------------- | ------------------------------------------------------------------------------------- |
+| Reporte y estadísticas: suministros del período | `suministros(fecha_hora)` (nuevo en E6)                                               |
+| Recordatorios del período                       | `recordatorios(estado, fecha_hora_objetivo)`                                          |
+| Sala del paciente en un momento dado            | `asignaciones_cama(paciente_id)`                                                      |
+| Auditoría por fecha, usuario, paciente          | `auditoria(fecha_hora, id)` (T702), `auditoria(usuario_id)`, `auditoria(paciente_id)` |
+| Auditoría por acción y acciones distintas       | `auditoria(accion, fecha_hora, id)` (T702)                                            |
+| Auditoría por entidad                           | `auditoria(entidad, entidad_id)`                                                      |
+| Detalles de un suministro                       | `detalles_suministro(suministro_id)` (T702)                                           |
+| Últimas administraciones de una prescripción    | `suministros(prescripcion_id, fecha_hora)` (T702)                                     |
+
+Los índices marcados T702 son de la migración
+[`indices_rendimiento`](../backend/prisma/migrations/20261007194806_indices_rendimiento/migration.sql),
+que agregó lo que hacía falta con un año de datos (por qué, en [rendimiento.md](rendimiento.md)).
+`auditoria(fecha_hora, id)` reemplazó al de `fecha_hora` sola.
 
 Los días se agrupan en hora de Argentina en la base (`fecha_hora AT TIME ZONE
 'America/Argentina/Buenos_Aires'`), no en UTC (S18).
