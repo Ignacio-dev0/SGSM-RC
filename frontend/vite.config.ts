@@ -6,8 +6,9 @@ export default defineConfig({
   plugins: [react()],
   server: {
     port: 5173,
-    // La API corre en el puerto 3000; el proxy evita CORS y permite la cookie de sesión.
-    proxy: { '/api': 'http://localhost:3000' },
+    // La API corre en el puerto 3000; el proxy evita CORS y permite la cookie de sesión. `ws`
+    // deja pasar el WebSocket de recordatorios (/api/tiempo-real) con la misma cookie.
+    proxy: { '/api': { target: 'http://localhost:3000', ws: true } },
   },
   test: {
     globals: true,
