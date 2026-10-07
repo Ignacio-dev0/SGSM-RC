@@ -26,6 +26,7 @@ import { rutasReportes } from './modulos/reportes/reportes.rutas';
 import { rutasSuministros } from './modulos/suministros/suministros.rutas';
 import { rutasPermisos, rutasRoles } from './modulos/seguridad/seguridad.rutas';
 import { rutasUsuarios } from './modulos/usuarios/usuarios.rutas';
+import { rutaSalud } from './salud';
 
 /** Crea la aplicación Express. No escucha ningún puerto: eso lo hace server.ts. */
 export function crearApp() {
@@ -63,9 +64,8 @@ export function crearApp() {
   app.use(express.json({ limit: '100kb' }));
   app.use(cookieParser());
 
-  app.get('/api/salud', (_req, res) => {
-    res.json({ data: { estado: 'ok' } });
-  });
+  // Pública: el healthcheck de compose; 503 si la base no responde (D100).
+  app.get('/api/salud', rutaSalud);
 
   app.use('/api/auth', rutasAuth);
   // Todo lo que sigue exige sesión; cada ruta pide además su permiso.

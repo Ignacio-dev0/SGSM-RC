@@ -1,7 +1,11 @@
 import request from 'supertest';
 import { crearApp } from './app';
+import { prisma } from './db';
 
 describe('app', () => {
+  // /api/salud consulta la base (D100).
+  afterAll(() => prisma.$disconnect());
+
   it('responde el estado de salud de la API', async () => {
     const res = await request(crearApp()).get('/api/salud');
 
