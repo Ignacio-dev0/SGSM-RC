@@ -1,4 +1,4 @@
-import type { Page } from '@playwright/test';
+import type { APIRequestContext, Page } from '@playwright/test';
 
 export type Rol = 'enfermero' | 'medico' | 'admin';
 
@@ -23,8 +23,13 @@ const CREDENCIALES: Record<Rol, { usuario: string; clave: string }> = {
 
 /** Inicia sesión por la API (la cookie queda en el contexto del navegador). */
 export async function ingresar(page: Page, rol: Rol) {
+  await ingresarPorApi(page.request, rol);
+}
+
+/** Inicia sesión en un contexto de pedidos aparte (otro usuario en la misma prueba). */
+export async function ingresarPorApi(api: APIRequestContext, rol: Rol) {
   const { usuario, clave } = CREDENCIALES[rol];
-  const r = await page.request.post('/api/auth/login', {
+  const r = await api.post('/api/auth/login', {
     data: { nombreUsuario: usuario, contrasena: clave },
   });
   if (!r.ok()) throw new Error(`No se pudo ingresar como ${rol}: ${r.status()}`);
