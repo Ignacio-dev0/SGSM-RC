@@ -38,6 +38,22 @@ describe('menú principal por rol (T108 · CU06 · RF15)', () => {
     expect(await screen.findByText(/No tiene permiso para ver esta pantalla/)).toBeInTheDocument();
   });
 
+  it('en modo de demostración lo avisa siempre, debajo de la barra superior', async () => {
+    vi.stubEnv('VITE_BIOMETRIA_MODO', 'simulado');
+    renderizarApp('/', ENFERMERO);
+
+    expect(
+      await screen.findByText(/Modo demostración: la validación facial se simula/),
+    ).toBeInTheDocument();
+    vi.unstubAllEnvs();
+  });
+
+  it('con la cámara real no muestra el aviso de demostración', async () => {
+    renderizarApp('/', ENFERMERO);
+    await screen.findByRole('button', { name: /Salir/ });
+    expect(screen.queryByText(/Modo demostración/)).not.toBeInTheDocument();
+  });
+
   it('cierra la sesión desde la barra superior', async () => {
     servidor.use(
       http.post('*/api/auth/logout', () => HttpResponse.json({ data: { cerrada: true } })),
