@@ -60,3 +60,24 @@ La clave, la rotación y el límite por IP se explican en
 `docker-compose.yml` levanta PostgreSQL 17 en el puerto `5432` (cambiable con `DB_PUERTO`) con
 dos bases: `sgsm` (desarrollo) y `sgsm_test` (pruebas automáticas, se vacía en cada corrida).
 Usuario y contraseña de desarrollo: `sgsm` / `sgsm`.
+
+## Docker Compose (servidor del hospital)
+
+En el servidor la API no lee `backend/.env`: sus variables las fija `docker-compose.yml` y las que
+cambian por instalación van en el `.env` de la raíz (plantilla [`.env.ejemplo`](../.env.ejemplo)),
+que además activa el perfil `completo` con `COMPOSE_PROFILES=completo`. Fijas: `NODE_ENV=production`,
+`COOKIE_SEGURA=true` (siempre detrás de nginx con HTTPS) y `TZ=America/Argentina/Buenos_Aires`.
+
+| Variable del `.env`                                       | Para qué                                                                       |
+| --------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| `JWT_SECRETO`, `BIOMETRIA_CLAVE`, `POSTGRES_CLAVE`        | Secretos: con el perfil activado desde el `.env`, compose no arranca sin ellos |
+| `BIOMETRIA_CLAVE_ANTERIOR`                                | Solo durante una rotación de la clave biométrica                               |
+| `SGSM_SERVIDOR`, `SGSM_IP`                                | Nombres e IP del servidor para el certificado HTTPS                            |
+| `HTTPS_PUERTO`, `HTTP_PUERTO`, `DB_PUERTO`                | Puertos en la PC (8443, 8080 y `127.0.0.1:5432` en la plantilla)               |
+| `LOGIN_IP_MAX_FALLIDOS`, `LOGIN_IP_VENTANA_MIN`           | Límite por IP del login (`0` en la plantilla por Docker Desktop)               |
+| `CONFIAR_PROXY`, `TIEMPO_REAL_ORIGENES`                   | Por defecto `1` y vacío: nginx es el único proxy y conserva el `Host`          |
+| `RESPALDO_HORA`, `RESPALDO_RETENCION`, `RESPALDO_CARPETA` | Respaldo diario                                                                |
+| `VITE_BIOMETRIA_MODO`                                     | `camara` o `simulado`, se fija al construir la imagen de la interfaz           |
+
+Sin `.env` (desarrollo) compose no pide nada y la base usa `sgsm` / `sgsm`. Detalle de cada
+variable, cómo generar los secretos y el resto del despliegue: [despliegue.md](despliegue.md).
