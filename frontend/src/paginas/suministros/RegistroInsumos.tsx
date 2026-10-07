@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
-import { Box, Button, Paper, Typography } from '@mui/material';
+import { Box, Button, InputAdornment, Paper, Typography } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import FaceRetouchingNaturalIcon from '@mui/icons-material/FaceRetouchingNatural';
+import SearchIcon from '@mui/icons-material/Search';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
 import { mensajeDeError } from '../../api/cliente';
@@ -15,6 +16,8 @@ import { Boton } from '../../componentes/Boton';
 import { CampoTexto } from '../../componentes/CampoTexto';
 import { EncabezadoPagina } from '../../componentes/EncabezadoPagina';
 import { Cargando, ErrorDeCarga } from '../../componentes/EstadoDeCarga';
+import { IdentidadPaciente } from '../pacientes/IdentidadPaciente';
+import { formatearDosis } from '../prescripciones/etiquetas';
 import { ListaCantidades, SelectorPaciente, type ItemCantidad } from './comunes';
 
 /**
@@ -32,13 +35,6 @@ export function RegistroInsumos() {
   const [items, setItems] = useState<ItemCantidad[]>([]);
   const [observaciones, setObservaciones] = useState('');
   const [aviso, setAviso] = useState<string | null>(null);
-
-  // Al cambiar de paciente no queda nada del anterior (ni los insumos ni la nota).
-  useEffect(() => {
-    setItems([]);
-    setObservaciones('');
-    setAviso(null);
-  }, [pacienteId]);
 
   const agregar = (i: Insumo) => {
     setAviso(null);
@@ -66,19 +62,46 @@ export function RegistroInsumos() {
       void clienteQuery.invalidateQueries({ queryKey: ['suministros'] });
     },
   });
+  const { reset: reiniciarRegistro } = registrar;
+
+  // Al cambiar de paciente no queda nada del anterior (ni los insumos, ni la nota, ni un error).
+  useEffect(() => {
+    setItems([]);
+    setObservaciones('');
+    setAviso(null);
+    reiniciarRegistro();
+  }, [pacienteId, reiniciarRegistro]);
+
+  const p = paciente.data;
 
   const confirmar = async () => {
-    if (!paciente.data) return;
+    if (!p) return;
     const token = await pedirValidacion(
-      `Registro de insumos para ${paciente.data.apellido}, ${paciente.data.nombre}`,
+      `Registro de insumos para ${p.apellido}, ${p.nombre}`,
+      // Lo que se confirma queda a la vista junto a la cámara.
+      <>
+        <Box component="ul" sx={{ m: 0, pl: 2.5 }}>
+          {items.map((i) => (
+            <li key={i.insumoId}>
+              <strong>{i.nombre}</strong> · {formatearDosis(i.cantidad, i.unidad)}
+            </li>
+          ))}
+        </Box>
+        <Typography sx={{ mt: 1 }}>
+          {p.apellido}, {p.nombre} · DNI {p.dni}
+          {p.cama ? ` · Cama ${p.cama.numero}` : ''}
+        </Typography>
+      </>,
     );
     if (token) registrar.mutate(token);
   };
 
+  const texto = buscar.trim();
   const visibles = (catalogo.data ?? []).filter((i) =>
-    i.nombre.toLowerCase().includes(buscar.trim().toLowerCase()),
+    i.nombre.toLowerCase().includes(texto.toLowerCase()),
   );
-  const p = paciente.data;
+  // Una cantidad vacía o en cero (0) no se confirma: la lista la marca con su error.
+  const puedeConfirmar = items.length > 0 && items.every((i) => i.cantidad >= 1);
 
   return (
     <>
@@ -99,86 +122,137 @@ export function RegistroInsumos() {
       )}
       {registrar.isError && <Alerta tipo="error">{mensajeDeError(registrar.error)}</Alerta>}
 
+      {pacienteId > 0 && paciente.isLoading && <Cargando texto="Cargando el paciente…" />}
+      {paciente.isError && (
+        <ErrorDeCarga
+          que="el paciente"
+          error={paciente.error}
+          alReintentar={() => void paciente.refetch()}
+        />
+      )}
+
       {p && (
-        <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr', lg: '3fr 2fr' } }}>
-          <Paper variant="outlined" sx={{ p: 2 }}>
-            <Typography variant="h6" component="h2" sx={{ mb: 1 }}>
-              Catálogo
-            </Typography>
-            <CampoTexto
-              etiqueta="Buscar insumo"
-              valor={buscar}
-              alCambiar={setBuscar}
-              type="search"
-              sx={{ mb: 2 }}
-            />
-            {catalogo.isError && (
-              <ErrorDeCarga
-                que="el catálogo de insumos"
-                error={catalogo.error}
-                alReintentar={() => void catalogo.refetch()}
+        <>
+          <IdentidadPaciente paciente={p} />
+          <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr', lg: '3fr 2fr' } }}>
+            <Paper variant="outlined" sx={{ p: 2 }}>
+              <Typography variant="h6" component="h2" sx={{ mb: 1 }}>
+                Catálogo
+              </Typography>
+              <CampoTexto
+                etiqueta="Buscar insumo"
+                valor={buscar}
+                alCambiar={setBuscar}
+                type="search"
+                sx={{ mb: 2 }}
+                slotProps={{
+                  input: {
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <SearchIcon />
+                      </InputAdornment>
+                    ),
+                  },
+                }}
               />
-            )}
-            {catalogo.isLoading && <Cargando texto="Cargando el catálogo…" />}
-            <Box
-              sx={{
-                display: 'grid',
-                gap: 1,
-                gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
-              }}
-            >
-              {visibles.map((i) => (
-                <Button
-                  key={i.id}
-                  variant="outlined"
-                  startIcon={<AddIcon />}
-                  aria-label={`Agregar ${i.nombre}`}
-                  onClick={() => agregar(i)}
-                  sx={{ justifyContent: 'flex-start', textAlign: 'left', py: 1.5 }}
-                >
-                  <span>
-                    {i.nombre}
-                    {i.presentacion && (
+              {catalogo.isError && (
+                <ErrorDeCarga
+                  que="el catálogo de insumos"
+                  error={catalogo.error}
+                  alReintentar={() => void catalogo.refetch()}
+                />
+              )}
+              {catalogo.isLoading && <Cargando texto="Cargando el catálogo…" />}
+              {catalogo.isSuccess && catalogo.data.length === 0 && (
+                <Alerta tipo="info">
+                  El catálogo no tiene insumos para registrar. Pida al administrador que los
+                  agregue.
+                </Alerta>
+              )}
+              {catalogo.isSuccess && catalogo.data.length > 0 && visibles.length === 0 && (
+                <Alerta tipo="info">
+                  Ningún insumo coincide con «{texto}». Revise el nombre o pida al administrador que
+                  lo agregue al catálogo.
+                </Alerta>
+              )}
+              <Box
+                sx={{
+                  display: 'grid',
+                  gap: 1,
+                  gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
+                }}
+              >
+                {visibles.map((i) => (
+                  <Button
+                    key={i.id}
+                    variant="outlined"
+                    startIcon={<AddIcon />}
+                    aria-label={`Agregar ${i.nombre}`}
+                    onClick={() => agregar(i)}
+                    sx={{
+                      justifyContent: 'flex-start',
+                      textAlign: 'left',
+                      py: 1.5,
+                      // El nombre se lee en el color del texto: la marca queda para el "+" y el borde.
+                      color: 'text.primary',
+                      '& .MuiButton-startIcon': { color: 'primary.main' },
+                    }}
+                  >
+                    <span>
                       <Typography
                         component="span"
-                        variant="body2"
-                        sx={{ display: 'block', opacity: 0.8 }}
+                        sx={{
+                          display: 'block',
+                          fontWeight: 700,
+                          lineHeight: 1.3,
+                          color: 'text.primary',
+                        }}
                       >
-                        {i.presentacion}
+                        {i.nombre}
                       </Typography>
-                    )}
-                  </span>
-                </Button>
-              ))}
-            </Box>
-          </Paper>
+                      {i.presentacion && (
+                        <Typography
+                          component="span"
+                          variant="body2"
+                          color="text.secondary"
+                          sx={{ display: 'block', lineHeight: 1.3 }}
+                        >
+                          {i.presentacion}
+                        </Typography>
+                      )}
+                    </span>
+                  </Button>
+                ))}
+              </Box>
+            </Paper>
 
-          <Paper variant="outlined" sx={{ p: 2, display: 'grid', gap: 2, alignContent: 'start' }}>
-            <Typography variant="h6" component="h2">
-              Para {p.apellido}, {p.nombre} {p.cama ? `· Cama ${p.cama.numero}` : ''}
-            </Typography>
-            {items.length === 0 ? (
-              <Typography color="text.secondary">
-                Toque los insumos del catálogo para agregarlos.
+            <Paper variant="outlined" sx={{ p: 2, display: 'grid', gap: 2, alignContent: 'start' }}>
+              <Typography variant="h6" component="h2">
+                Insumos a registrar
               </Typography>
-            ) : (
-              <ListaCantidades titulo="Insumos a registrar" items={items} alCambiar={setItems} />
-            )}
-            <CampoTexto
-              etiqueta="Observaciones"
-              valor={observaciones}
-              alCambiar={setObservaciones}
-            />
-            <Boton
-              startIcon={<FaceRetouchingNaturalIcon />}
-              disabled={items.length === 0}
-              cargando={registrar.isPending}
-              onClick={() => void confirmar()}
-            >
-              Confirmar con mi rostro
-            </Boton>
-          </Paper>
-        </Box>
+              {items.length === 0 ? (
+                <Typography color="text.secondary">
+                  Toque los insumos del catálogo para agregarlos.
+                </Typography>
+              ) : (
+                <ListaCantidades titulo="Insumos a registrar" items={items} alCambiar={setItems} />
+              )}
+              <CampoTexto
+                etiqueta="Observaciones"
+                valor={observaciones}
+                alCambiar={setObservaciones}
+              />
+              <Boton
+                startIcon={<FaceRetouchingNaturalIcon />}
+                disabled={!puedeConfirmar}
+                cargando={registrar.isPending}
+                onClick={() => void confirmar()}
+              >
+                Confirmar con mi rostro
+              </Boton>
+            </Paper>
+          </Box>
+        </>
       )}
       {!p && !pacienteId && (
         <Boton disabled startIcon={<FaceRetouchingNaturalIcon />}>

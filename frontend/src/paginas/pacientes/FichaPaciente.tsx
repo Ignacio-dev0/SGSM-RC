@@ -122,7 +122,10 @@ export function FichaPaciente() {
             <span>DNI {p.dni}</span>
             <span>· {edad(p.fechaNacimiento)} años ·</span>
             {p.cama ? (
-              <Chip color="primary" label={ubicacionCama(p.cama)} />
+              // La cama como texto en negrita, igual que en la identificación de las otras pantallas.
+              <Typography component="span" sx={{ fontWeight: 700, color: 'text.primary' }}>
+                {ubicacionCama(p.cama)}
+              </Typography>
             ) : (
               <Chip label="Egresado" />
             )}
