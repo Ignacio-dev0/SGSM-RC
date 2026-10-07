@@ -5,22 +5,27 @@ El backend lee su configuración de `backend/.env` (plantilla en
 [`backend/.env.test`](../backend/.env.test). La lectura y los valores por defecto están en
 [`backend/src/config.ts`](../backend/src/config.ts).
 
-| Variable                            | Por defecto          | Para qué                                                      |
-| ----------------------------------- | -------------------- | ------------------------------------------------------------- |
-| `NODE_ENV`                          | `development`        | `production` activa cookie segura y exige `JWT_SECRETO`       |
-| `PORT`                              | `3000`               | Puerto de la API                                              |
-| `DATABASE_URL`                      | —                    | Conexión a PostgreSQL                                         |
-| `JWT_SECRETO`                       | valor de desarrollo  | Clave para firmar las sesiones. **Obligatoria en producción** |
-| `SESION_INACTIVIDAD_MIN`            | `15`                 | Minutos sin actividad que cierran la sesión                   |
-| `SESION_MAXIMA_HORAS`               | `12`                 | Duración máxima de una sesión                                 |
-| `COOKIE_SEGURA`                     | `true` en producción | La cookie de sesión solo viaja por HTTPS                      |
-| `BCRYPT_COSTO`                      | `10`                 | Costo de bcrypt (las pruebas usan 4)                          |
-| `LOGIN_MAX_INTENTOS`                | `3`                  | Intentos fallidos que bloquean la cuenta                      |
-| `LOGIN_BLOQUEO_MIN`                 | `15`                 | Minutos de bloqueo                                            |
-| `BIOMETRIA_UMBRAL`                  | `0.5`                | Distancia máxima entre patrones para aceptar el rostro        |
-| `BIOMETRIA_MAX_INTENTOS`            | `3`                  | Validaciones fallidas seguidas que cancelan la operación      |
-| `BIOMETRIA_VALIDEZ_SEG`             | `120`                | Vigencia del comprobante de validación facial                 |
-| `SUMINISTRO_PLAZO_CORRECCION_HORAS` | `24`                 | Plazo para corregir un suministro                             |
+| Variable                            | Por defecto          | Para qué                                                                                                                    |
+| ----------------------------------- | -------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| `NODE_ENV`                          | `development`        | `production` activa cookie segura y exige `JWT_SECRETO` y `BIOMETRIA_CLAVE`                                                 |
+| `PORT`                              | `3000`               | Puerto de la API                                                                                                            |
+| `DATABASE_URL`                      | —                    | Conexión a PostgreSQL                                                                                                       |
+| `JWT_SECRETO`                       | valor de desarrollo  | Clave para firmar las sesiones. **Obligatoria en producción**                                                               |
+| `SESION_INACTIVIDAD_MIN`            | `15`                 | Minutos sin actividad que cierran la sesión                                                                                 |
+| `SESION_MAXIMA_HORAS`               | `12`                 | Duración máxima de una sesión                                                                                               |
+| `COOKIE_SEGURA`                     | `true` en producción | La cookie de sesión solo viaja por HTTPS; también activa HSTS (se sirve por HTTPS)                                          |
+| `BCRYPT_COSTO`                      | `10`                 | Costo de bcrypt (las pruebas usan 4)                                                                                        |
+| `LOGIN_MAX_INTENTOS`                | `3`                  | Intentos fallidos que bloquean la cuenta                                                                                    |
+| `LOGIN_BLOQUEO_MIN`                 | `15`                 | Minutos de bloqueo                                                                                                          |
+| `LOGIN_IP_MAX_FALLIDOS`             | `10`                 | Fallidos desde una misma IP que frenan el login con 429 (`0` lo desactiva)                                                  |
+| `LOGIN_IP_VENTANA_MIN`              | `15`                 | Minutos de la ventana deslizante del límite por IP                                                                          |
+| `CONFIAR_PROXY`                     | `1`                  | `trust proxy` de Express: proxies delante de la API (nginx o Vite). `false` si se expone sin proxy                          |
+| `BIOMETRIA_UMBRAL`                  | `0.5`                | Distancia máxima entre patrones para aceptar el rostro                                                                      |
+| `BIOMETRIA_MAX_INTENTOS`            | `3`                  | Validaciones fallidas seguidas que cancelan la operación                                                                    |
+| `BIOMETRIA_VALIDEZ_SEG`             | `120`                | Vigencia del comprobante de validación facial                                                                               |
+| `BIOMETRIA_CLAVE`                   | clave de desarrollo  | Clave AES-256 (32 bytes en base64 o hex) del patrón y la foto. **Obligatoria en producción** y distinta de la de desarrollo |
+| `BIOMETRIA_CLAVE_ANTERIOR`          | (vacío)              | Solo durante una rotación: la clave anterior, para volver a cifrar con la nueva                                             |
+| `SUMINISTRO_PLAZO_CORRECCION_HORAS` | `24`                 | Plazo para corregir un suministro                                                                                           |
 
 ### Recordatorios y tiempo real (E5)
 
@@ -45,6 +50,10 @@ Frontend: `VITE_BIOMETRIA_MODO` (`camara` por defecto o `simulado`), en
 
 El frontend no necesita variables para desarrollo: Vite reenvía `/api` al backend en el puerto
 3000 ([`frontend/vite.config.ts`](../frontend/vite.config.ts)).
+
+La clave, la rotación y el límite por IP se explican en
+[seguridad.md](seguridad.md#revisión-de-seguridad-t705). Para generar una clave:
+`node -e "console.log(require('node:crypto').randomBytes(32).toString('base64'))"`.
 
 ## Base de datos
 

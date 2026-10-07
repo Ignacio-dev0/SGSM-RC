@@ -19,6 +19,8 @@
 | GET    | `/api/auth/sesion` | sesión  | Usuario de la sesión activa                                                                             |
 
 Errores: `401 CREDENCIALES_INVALIDAS`, `423 CUENTA_BLOQUEADA` (`detalles.bloqueadoHasta`),
+`429 DEMASIADOS_INTENTOS` (límite de fallidos por IP: encabezado `Retry-After` y
+`detalles.reintentarEnSegundos`; ver [seguridad.md](seguridad.md#límite-de-intentos-por-ip)),
 `401 NO_AUTENTICADO`.
 
 ## Usuarios — T109 · CU01–CU05
@@ -122,12 +124,17 @@ Acciones de auditoría: `CREAR`, `MODIFICAR` (con el motivo en `detalle`), `SUSP
 | ------ | ---------------------------------- | --------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
 | GET    | `/api/biometria/usuarios`          | `biometria.gestionar` | Personal activo con `registrado` y `actualizadoEn`                                                                            |
 | GET    | `/api/biometria/usuarios/:id`      | `biometria.gestionar` | Estado biométrico de un usuario, con nombre, usuario y rol                                                                    |
-| GET    | `/api/biometria/usuarios/:id/foto` | `biometria.gestionar` | Foto de referencia (sin caché)                                                                                                |
+| GET    | `/api/biometria/usuarios/:id/foto` | `biometria.gestionar` | Foto de referencia descifrada (sin caché, con su tipo)                                                                        |
 | PUT    | `/api/biometria/usuarios/:id`      | `biometria.gestionar` | Registra o actualiza: `{ patron: number[128], foto: dataURL }`                                                                |
 | DELETE | `/api/biometria/usuarios/:id`      | `biometria.gestionar` | Elimina patrón y foto                                                                                                         |
 | POST   | `/api/biometria/validar`           | sesión                | `{ patron, operacion? }` → `{ valido: true, validacionToken, similitud }` o `{ valido: false, intentosRestantes, cancelada }` |
 
-Errores: `422 SIN_BIOMETRIA`. Acciones de auditoría: `REGISTRAR_BIOMETRIA`,
+El patrón y la foto se guardan cifrados (T705 · [seguridad.md](seguridad.md#cifrado-del-dato-biométrico-en-reposo-rnf06)); la foto
+tiene que ser de verdad del tipo declarado (JPEG, PNG o WebP) y el cuerpo del `PUT` puede llegar a
+unos 715 KB.
+
+Errores: `422 SIN_BIOMETRIA`, `500 BIOMETRIA_ILEGIBLE` (el dato guardado no se puede descifrar:
+hay que registrar el rostro de nuevo). Acciones de auditoría: `REGISTRAR_BIOMETRIA`,
 `ACTUALIZAR_BIOMETRIA`, `ELIMINAR_BIOMETRIA` (DatoBiometrico), `VALIDACION_FACIAL_FALLIDA`,
 `OPERACION_CANCELADA` (Usuario).
 

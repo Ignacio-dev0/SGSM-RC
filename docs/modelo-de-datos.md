@@ -62,7 +62,7 @@ erDiagram
 | `prescripciones`      | Indicaciones médicas: dosis, frecuencia, vía, estado                                                   | T301             |
 | `suministros`         | Cada administración de medicamento o movimiento de insumos                                             | T408, T409       |
 | `detalles_suministro` | Insumos y cantidades de cada suministro                                                                | T408, T409       |
-| `datos_biometricos`   | Patrón facial (128 valores) y foto de referencia por usuario                                           | T403             |
+| `datos_biometricos`   | Patrón facial (128 valores) y foto de referencia por usuario, cifrados con AES-256-GCM (T705)          | T403, T705       |
 | `tipos_estudio`       | Catálogo de tipos de estudio                                                                           | T103 (E5)        |
 | `estudios`            | Estudios por paciente: tipo, hora, preparación, observaciones, estado y quién confirmó que se realizó  | E5 (T509–T513)   |
 | `recordatorios`       | Recordatorios de tomas y estudios: prioridad, estado, atención (administración o motivo) y vencimiento | E5               |

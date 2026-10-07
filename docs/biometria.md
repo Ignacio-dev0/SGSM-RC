@@ -48,6 +48,10 @@ cada persona **Registrar / Actualizar rostro** (con vista previa de la foto de r
 **Eliminar datos biométricos**. La foto de referencia se guarda para que el administrador pueda
 verificar visualmente de quién es el patrón; nunca se usa para comparar.
 
+El patrón y la foto se guardan **cifrados con AES-256-GCM** (`BIOMETRIA_CLAVE`, T705) y solo se
+descifran en memoria para comparar o para mostrar la foto al administrador. Formato, clave,
+migración y rotación: [seguridad.md](seguridad.md#cifrado-del-dato-biométrico-en-reposo-rnf06).
+
 ## Modo de demostración (sin cámara)
 
 Para mostrar o probar el sistema en una PC sin cámara:
@@ -95,7 +99,8 @@ contraseña.
 - **El patrón lo calcula el cliente**: alguien con acceso a la API y al patrón de otra persona
   podría falsificar una validación. El patrón nunca sale del servidor por la API (no hay
   endpoint que lo devuelva), y todas las validaciones quedan auditadas.
-- **Patrón sin cifrar en reposo**: se cifra en la revisión de seguridad (T705, etapa E7).
+- **Clave en el servidor**: el patrón está cifrado en reposo (T705), pero la clave vive en una
+  variable de entorno del mismo servidor; perderla obliga a registrar todos los rostros de nuevo.
 - **Comprobantes usados en memoria**: el registro de comprobantes ya consumidos vive en la
   memoria del proceso; con más de una instancia del backend habría que llevarlo a la base o a
   Redis.

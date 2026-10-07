@@ -56,18 +56,21 @@ de validación trae un elemento por campo inválido.
 
 ## Códigos de error
 
-| HTTP | `codigo`                 | Cuándo                                                                            |
-| ---- | ------------------------ | --------------------------------------------------------------------------------- |
-| 400  | `VALIDACION`             | Datos con formato inválido (incluye `detalles` por campo)                         |
-| 400  | `JSON_INVALIDO`          | El cuerpo no es JSON                                                              |
-| 401  | `NO_AUTENTICADO`         | Sin sesión o sesión vencida por inactividad                                       |
-| 401  | `CREDENCIALES_INVALIDAS` | Usuario o contraseña incorrectos                                                  |
-| 403  | `SIN_PERMISO`            | El rol y los permisos adicionales no habilitan la acción                          |
-| 404  | `NO_ENCONTRADO`          | El recurso no existe                                                              |
-| 409  | `<CONFLICTO>`            | Choca con datos existentes: `DNI_DUPLICADO`, `USUARIO_DUPLICADO`, `CAMA_OCUPADA`… |
-| 422  | `<REGLA>`                | Viola una regla de negocio: `SIN_PRESCRIPCION_VIGENTE`, `FUERA_DE_PLAZO`…         |
-| 423  | `CUENTA_BLOQUEADA`       | Bloqueo por intentos fallidos (incluye `detalles.bloqueadoHasta`)                 |
-| 500  | `ERROR_INTERNO`          | Error no previsto (se registra en el log del servidor)                            |
+| HTTP | `codigo`                  | Cuándo                                                                                               |
+| ---- | ------------------------- | ---------------------------------------------------------------------------------------------------- |
+| 400  | `VALIDACION`              | Datos con formato inválido (incluye `detalles` por campo)                                            |
+| 400  | `JSON_INVALIDO`           | El cuerpo no es JSON                                                                                 |
+| 400  | `PEDIDO_INVALIDO`         | El cuerpo no se pudo leer (juego de caracteres, pedido cortado)                                      |
+| 401  | `NO_AUTENTICADO`          | Sin sesión o sesión vencida por inactividad                                                          |
+| 401  | `CREDENCIALES_INVALIDAS`  | Usuario o contraseña incorrectos                                                                     |
+| 403  | `SIN_PERMISO`             | El rol y los permisos adicionales no habilitan la acción                                             |
+| 404  | `NO_ENCONTRADO`           | El recurso no existe                                                                                 |
+| 413  | `CUERPO_DEMASIADO_GRANDE` | El cuerpo JSON supera 100 KB (o el máximo del registro del rostro) (T705)                            |
+| 409  | `<CONFLICTO>`             | Choca con datos existentes: `DNI_DUPLICADO`, `USUARIO_DUPLICADO`, `CAMA_OCUPADA`…                    |
+| 422  | `<REGLA>`                 | Viola una regla de negocio: `SIN_PRESCRIPCION_VIGENTE`, `FUERA_DE_PLAZO`…                            |
+| 423  | `CUENTA_BLOQUEADA`        | Bloqueo por intentos fallidos (incluye `detalles.bloqueadoHasta`)                                    |
+| 429  | `DEMASIADOS_INTENTOS`     | Demasiados logins fallidos desde la misma IP (`Retry-After`, `detalles.reintentarEnSegundos`) (T705) |
+| 500  | `ERROR_INTERNO`           | Error no previsto: nunca trae el mensaje interno ni la traza, que van solo al registro del servidor  |
 
 Los códigos propios de cada módulo se listan en [endpoints.md](endpoints.md).
 

@@ -44,5 +44,6 @@ el documento original.
 | D8  | Despliegue **solo local** (Docker Compose); T007/T008 en la nube quedaron fuera.                                          | Pedido del equipo para esta etapa. Ver [despliegue.md](despliegue.md).                                                                                                                     |
 
 Las decisiones técnicas de cada etapa siguiente están junto a su diseño: D9–D14 en
-[diseno-e5.md](diseno-e5.md), D15–D25 en [recordatorios.md](recordatorios.md#decisiones) y las de
-reportes y auditoría en [diseno-e6.md](diseno-e6.md).
+[diseno-e5.md](diseno-e5.md), D15–D25 en [recordatorios.md](recordatorios.md#decisiones), las de
+reportes y auditoría en [diseno-e6.md](diseno-e6.md) y las de la revisión de seguridad (D50–D62)
+en [seguridad.md](seguridad.md#decisiones).
