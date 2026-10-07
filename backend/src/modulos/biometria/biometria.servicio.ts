@@ -3,11 +3,12 @@ import { noEncontrado } from '../../comun/errores';
 import { prisma } from '../../db';
 import { registrarAuditoria } from '../auditoria/auditoria.servicio';
 import { DATA_URL, type esquemaRegistroBiometrico } from './biometria.esquemas';
+import { cifrarDatoBiometrico, descifrarFoto, leerDatoBiometrico } from './cifrado-biometrico';
 
 /**
  * Datos biométricos del personal (T403 · CU07–CU09): el patrón facial y la foto de referencia.
- * Los registra, actualiza y elimina el administrador. La auditoría nunca guarda el patrón ni la
- * foto, solo que la operación ocurrió.
+ * Los registra, actualiza y elimina el administrador. Se guardan cifrados (T705 · RNF06). La
+ * auditoría nunca guarda el patrón ni la foto, solo que la operación ocurrió.
  */
 
 async function usuarioExistente(id: number) {
@@ -58,25 +59,19 @@ export async function guardarBiometria(
 ) {
   await usuarioExistente(usuarioId);
   const [, tipo, base64] = DATA_URL.exec(datos.foto)!;
-  const foto = Buffer.from(base64!, 'base64');
+  const cifrado = cifrarDatoBiometrico(usuarioId, datos.patron, Buffer.from(base64!, 'base64'));
+  const campos = { ...cifrado, fotoTipo: tipo!, registradoPorId: actorId };
 
   return prisma.$transaction(async (tx) => {
-    const existente = await tx.datoBiometrico.findUnique({ where: { usuarioId } });
+    const existente = await tx.datoBiometrico.findUnique({
+      where: { usuarioId },
+      select: { id: true },
+    });
     const dato = await tx.datoBiometrico.upsert({
       where: { usuarioId },
-      create: {
-        usuarioId,
-        patron: datos.patron,
-        fotoReferencia: foto,
-        fotoTipo: tipo!,
-        registradoPorId: actorId,
-      },
-      update: {
-        patron: datos.patron,
-        fotoReferencia: foto,
-        fotoTipo: tipo!,
-        registradoPorId: actorId,
-      },
+      create: { usuarioId, ...campos },
+      update: campos,
+      select: { actualizadoEn: true },
     });
     await registrarAuditoria(tx, {
       usuarioId: actorId,
@@ -89,13 +84,15 @@ export async function guardarBiometria(
   });
 }
 
+/** Foto de referencia descifrada en memoria, solo para el administrador (biometria.gestionar). */
 export async function fotoDeReferencia(usuarioId: number) {
   const dato = await prisma.datoBiometrico.findUnique({
     where: { usuarioId },
-    select: { fotoReferencia: true, fotoTipo: true },
+    select: { fotoCifrada: true, fotoTipo: true },
   });
   if (!dato) throw noEncontrado('El usuario no tiene foto de referencia registrada');
-  return dato;
+  const foto = leerDatoBiometrico(usuarioId, () => descifrarFoto(usuarioId, dato.fotoCifrada));
+  return { foto, tipo: dato.fotoTipo };
 }
 
 /** Elimina los datos biométricos (CU09). Es el único borrado físico del sistema: dato sensible. */

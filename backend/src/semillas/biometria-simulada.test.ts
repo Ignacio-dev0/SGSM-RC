@@ -3,6 +3,7 @@ import { limpiarBase } from '../../tests/soporte/base';
 import { sembrarCatalogoBase } from './catalogo-base';
 import { USUARIOS_DE_PRUEBA, sembrarUsuariosDePrueba } from './usuarios-prueba';
 import { descriptorSimulado, sembrarRostrosSimulados } from './biometria-simulada';
+import { descifrarPatron } from '../modulos/biometria/cifrado-biometrico';
 
 describe('rostros simulados de los usuarios de prueba', () => {
   afterAll(() => prisma.$disconnect());
@@ -27,9 +28,9 @@ describe('rostros simulados de los usuarios de prueba', () => {
     const datos = await prisma.datoBiometrico.findMany({ include: { usuario: true } });
     expect(datos).toHaveLength(USUARIOS_DE_PRUEBA.length);
     const enfermero = datos.find((d) => d.usuario.nombreUsuario === 'enfermero');
-    const esperado = descriptorSimulado('enfermero');
-    // double precision puede perder el último dígito en la ida y vuelta a PostgreSQL.
-    const diferencia = Math.max(...esperado.map((v, i) => Math.abs(v - enfermero!.patron[i]!)));
-    expect(diferencia).toBeLessThan(1e-12);
+    // Se guarda cifrado (T705): el patrón vuelve exacto al descifrarlo.
+    expect(descifrarPatron(enfermero!.usuarioId, enfermero!.patronCifrado)).toEqual(
+      descriptorSimulado('enfermero'),
+    );
   });
 });

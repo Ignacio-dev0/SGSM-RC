@@ -6,6 +6,7 @@ import { config } from '../../config';
 import { prisma } from '../../db';
 import { registrarAuditoria } from '../auditoria/auditoria.servicio';
 import { notificarAdministradores } from '../notificaciones/notificaciones.servicio';
+import { descifrarPatron, leerDatoBiometrico } from './cifrado-biometrico';
 import { compararPatrones } from './comparacion';
 
 /**
@@ -48,7 +49,7 @@ export async function validarRostro(
 ): Promise<ResultadoValidacion> {
   const usuario = await prisma.usuario.findUniqueOrThrow({
     where: { id: usuarioId },
-    include: { datoBiometrico: { select: { patron: true } } },
+    include: { datoBiometrico: { select: { patronCifrado: true } } },
   });
   if (!usuario.datoBiometrico) {
     throw reglaNegocio(
@@ -57,7 +58,10 @@ export async function validarRostro(
     );
   }
 
-  const r = compararPatrones(usuario.datoBiometrico.patron, patron, config.biometria.umbral);
+  // El patrón registrado se descifra solo en memoria, para esta comparación (T705).
+  const { patronCifrado } = usuario.datoBiometrico;
+  const registrado = leerDatoBiometrico(usuarioId, () => descifrarPatron(usuarioId, patronCifrado));
+  const r = compararPatrones(registrado, patron, config.biometria.umbral);
   if (r.coincide) {
     await prisma.usuario.update({
       where: { id: usuarioId },

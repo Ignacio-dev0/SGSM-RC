@@ -1,5 +1,6 @@
 import request from 'supertest';
 import { prisma } from '../../db';
+import { descifrarPatron } from './cifrado-biometrico';
 import {
   agenteConRol,
   agenteDe,
@@ -30,7 +31,7 @@ describe('API de datos biométricos (T403 · CU07–CU09)', () => {
     const dato = await prisma.datoBiometrico.findUniqueOrThrow({
       where: { usuarioId: enfermero.id },
     });
-    expect(dato.patron).toHaveLength(128);
+    expect(descifrarPatron(enfermero.id, dato.patronCifrado)).toEqual(patron());
     expect(dato.fotoTipo).toBe('image/png');
     const sesion = await (await agenteDe(enfermero)).get('/api/auth/sesion');
     expect(sesion.body.data.tieneBiometria).toBe(true);
@@ -81,7 +82,8 @@ describe('API de datos biométricos (T403 · CU07–CU09)', () => {
     expect(res.status).toBe(200);
     expect(res.headers['content-type']).toBe('image/png');
     expect(res.headers['cache-control']).toMatch(/no-store/);
-    expect(res.body.length).toBeGreaterThan(10);
+    expect(res.headers['x-content-type-options']).toBe('nosniff');
+    expect(res.body).toEqual(Buffer.from(FOTO.split(',')[1]!, 'base64'));
   });
 
   it('elimina los datos biométricos y lo audita', async () => {
@@ -136,6 +138,26 @@ describe('API de datos biométricos (T403 · CU07–CU09)', () => {
       (await admin.put('/api/biometria/usuarios/999').send({ patron: patron(), foto: FOTO }))
         .status,
     ).toBe(404);
+  });
+
+  it.each([
+    [
+      'no es una imagen',
+      `data:image/png;base64,${Buffer.from('<script>x</script>').toString('base64')}`,
+    ],
+    ['es un PNG declarado como JPEG', FOTO.replace('image/png', 'image/jpeg')],
+  ])('rechaza una foto cuyo contenido %s', async (_caso, foto) => {
+    const { agente: admin } = await agenteConRol('ADMINISTRADOR');
+    const enfermero = await crearUsuario('ENFERMERO');
+
+    const res = await admin
+      .put(`/api/biometria/usuarios/${enfermero.id}`)
+      .send({ patron: patron(), foto });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error.detalles).toEqual([
+      expect.objectContaining({ campo: 'foto', mensaje: expect.stringMatching(/no coincide/) }),
+    ]);
   });
 
   it.each(['MEDICO', 'ENFERMERO'] as const)('el %s no gestiona datos biométricos', async (rol) => {

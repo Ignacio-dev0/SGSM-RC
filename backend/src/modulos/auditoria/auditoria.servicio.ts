@@ -11,7 +11,14 @@ import type { ClienteDb } from '../../db';
  */
 
 /** Campos que nunca se guardan en la auditoría, ni siquiera cifrados. */
-const CAMPOS_SENSIBLES = new Set(['contrasenaHash', 'contrasena', 'patron', 'fotoReferencia']);
+const CAMPOS_SENSIBLES = new Set([
+  'contrasenaHash',
+  'contrasena',
+  'patron',
+  'fotoReferencia',
+  'patronCifrado',
+  'fotoCifrada',
+]);
 
 /** Campos técnicos que cambian solos y no aportan a la auditoría. */
 const CAMPOS_IGNORADOS = new Set(['actualizadoEn']);

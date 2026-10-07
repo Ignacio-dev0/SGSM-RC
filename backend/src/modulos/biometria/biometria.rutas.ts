@@ -27,8 +27,9 @@ rutasBiometria.get('/usuarios/:id', gestionar, async (req, res) => {
 });
 
 rutasBiometria.get('/usuarios/:id/foto', gestionar, async (req, res) => {
-  const { fotoReferencia, fotoTipo } = await fotoDeReferencia(idDeRuta(req.params.id));
-  res.set({ 'Content-Type': fotoTipo, 'Cache-Control': 'no-store' }).send(fotoReferencia);
+  const { foto, tipo } = await fotoDeReferencia(idDeRuta(req.params.id));
+  // Dato biométrico: sin caché; nosniff (helmet) impide interpretarla como otra cosa.
+  res.set({ 'Content-Type': tipo, 'Cache-Control': 'no-store' }).send(foto);
 });
 
 rutasBiometria.put('/usuarios/:id', gestionar, async (req, res) => {

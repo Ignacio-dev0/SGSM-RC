@@ -2,6 +2,7 @@ import request from 'supertest';
 import { prisma } from '../../db';
 import { reloj } from '../../comun/reloj';
 import { agenteConRol, obtenerApp, prepararBaseConSeguridad } from '../../../tests/soporte/sesion';
+import { cifrarDatoBiometrico } from './cifrado-biometrico';
 import { consumirValidacion } from './validacion.servicio';
 
 const patron = (valor: number) => Array.from({ length: 128 }, () => valor);
@@ -14,8 +15,7 @@ async function enfermeroConRostro() {
   await prisma.datoBiometrico.create({
     data: {
       usuarioId: sesion.usuario.id,
-      patron: ROSTRO,
-      fotoReferencia: Buffer.from('foto'),
+      ...cifrarDatoBiometrico(sesion.usuario.id, ROSTRO, Buffer.from('foto')),
       fotoTipo: 'image/jpeg',
       registradoPorId: sesion.usuario.id,
     },

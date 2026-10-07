@@ -12,12 +12,16 @@ describe('auditoría (T104 · RN06 · RNF10)', () => {
           contrasenaHash: '$2a$xx',
           patron: [0.1, 0.2],
           fotoReferencia: Buffer.from('x'),
+          patronCifrado: Buffer.from('y'),
+          fotoCifrada: Buffer.from('z'),
         }),
       ).toEqual({
         nombre: 'Ana',
         contrasenaHash: '[oculto]',
         patron: '[oculto]',
         fotoReferencia: '[oculto]',
+        patronCifrado: '[oculto]',
+        fotoCifrada: '[oculto]',
       });
     });
 

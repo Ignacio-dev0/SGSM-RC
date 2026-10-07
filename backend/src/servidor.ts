@@ -2,6 +2,7 @@ import http from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { crearApp } from './app';
 import { config } from './config';
+import { cifrarPendientes } from './modulos/biometria/cifrado-biometrico';
 import { iniciarTemporizador } from './modulos/recordatorios/temporizador';
 import { iniciarTiempoReal } from './modulos/tiempo-real/tiempo-real';
 
@@ -17,6 +18,9 @@ export interface ServidorSgsm {
  * Levanta el proceso completo: la API (crearApp), el tiempo real en /api/tiempo-real sobre el
  * mismo puerto y, si está encendido, el temporizador de recordatorios (T501). `crearApp()` no
  * arranca nada de esto: las pruebas de la API no corren el temporizador.
+ *
+ * Antes de escuchar cifra los datos biométricos pendientes (T705): así ningún rostro queda en
+ * claro después de la migración, aunque nadie corra `npm run biometria:cifrar`.
  */
 export async function levantarServidor({
   puerto = config.puerto,
@@ -28,6 +32,7 @@ export async function levantarServidor({
   /** Reemplaza el ciclo del temporizador (pruebas). */
   ciclo?: () => Promise<unknown>;
 } = {}): Promise<ServidorSgsm> {
+  await revisarCifradoBiometrico();
   const servidor = http.createServer(crearApp());
   const tiempoReal = iniciarTiempoReal(servidor);
   await new Promise<void>((ok, falla) => {
@@ -47,4 +52,22 @@ export async function levantarServidor({
       await cerrado;
     },
   };
+}
+
+/** Si falla (por ejemplo, sin base) no impide arrancar: se reintenta en el próximo arranque. */
+async function revisarCifradoBiometrico() {
+  try {
+    const { cifrados, ilegibles } = await cifrarPendientes();
+    if (cifrados > 0) {
+      console.info(`Biometría: ${cifrados} registro(s) cifrado(s) con la clave actual`);
+    }
+    if (ilegibles.length > 0) {
+      console.error(
+        `Biometría: ${ilegibles.length} registro(s) que no se pueden descifrar (usuarios ` +
+          `${ilegibles.join(', ')}). Revisar BIOMETRIA_CLAVE y BIOMETRIA_CLAVE_ANTERIOR.`,
+      );
+    }
+  } catch (e) {
+    console.error('Biometría: no se pudo revisar el cifrado al arrancar', e);
+  }
 }

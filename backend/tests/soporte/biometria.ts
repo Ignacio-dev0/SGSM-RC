@@ -1,6 +1,7 @@
 // Ayudantes de biometría para las pruebas: rostro registrado y comprobante de validación.
 import type { Test } from 'supertest';
 import { prisma } from '../../src/db';
+import { cifrarDatoBiometrico } from '../../src/modulos/biometria/cifrado-biometrico';
 
 export const ROSTRO = Array.from({ length: 128 }, () => 0.1);
 
@@ -10,8 +11,7 @@ export async function registrarRostro(usuarioId: number) {
   await prisma.datoBiometrico.create({
     data: {
       usuarioId,
-      patron: ROSTRO,
-      fotoReferencia: Buffer.from('foto'),
+      ...cifrarDatoBiometrico(usuarioId, ROSTRO, Buffer.from('foto')),
       fotoTipo: 'image/jpeg',
       registradoPorId: usuarioId,
     },

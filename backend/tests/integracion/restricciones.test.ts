@@ -1,5 +1,8 @@
 import type { Prisma } from '@prisma/client';
+import { cifrar } from '../../src/comun/cifrado';
+import { config } from '../../src/config';
 import { prisma } from '../../src/db';
+import { patronABytes } from '../../src/modulos/biometria/cifrado-biometrico';
 import { limpiarBase } from '../soporte/base';
 import {
   crearCama,
@@ -106,13 +109,14 @@ describe('restricciones de negocio en la base (T102)', () => {
     ).rejects.toThrow(/detalles_suministro_cantidad_positiva/);
   });
 
-  it('el patrón facial tiene exactamente 128 valores', async () => {
+  it('el patrón facial (cifrado) tiene exactamente 128 valores', async () => {
+    const llavero = config.biometria.llavero;
     await expect(
       prisma.datoBiometrico.create({
         data: {
           usuarioId,
-          patron: [0.1, 0.2],
-          fotoReferencia: Buffer.from('x'),
+          patronCifrado: cifrar(patronABytes([0.1, 0.2]), llavero.actual, 'prueba'),
+          fotoCifrada: cifrar(Buffer.from('x'), llavero.actual, 'prueba'),
           fotoTipo: 'image/jpeg',
           registradoPorId: usuarioId,
         },

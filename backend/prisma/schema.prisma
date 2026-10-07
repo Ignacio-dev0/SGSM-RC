@@ -343,8 +343,10 @@ model DetalleSuministro {
 model DatoBiometrico {
   id              Int      @id @default(autoincrement())
   usuarioId       Int      @unique @map("usuario_id")
-  patron          Float[]
-  fotoReferencia  Bytes    @map("foto_referencia")
+  /// Patrón facial (128 valores) cifrado con AES-256-GCM (T705 · RNF06 · docs/seguridad.md).
+  patronCifrado   Bytes    @map("patron_cifrado")
+  /// Foto de referencia cifrada igual que el patrón.
+  fotoCifrada     Bytes    @map("foto_cifrada")
   fotoTipo        String   @map("foto_tipo") @db.VarChar(30)
   registradoPorId Int      @map("registrado_por_id")
   creadoEn        DateTime @default(now()) @map("creado_en") @db.Timestamptz(3)

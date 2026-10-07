@@ -1,4 +1,5 @@
 import type { PrismaClient } from '@prisma/client';
+import { cifrarDatoBiometrico } from '../modulos/biometria/cifrado-biometrico';
 import { USUARIOS_DE_PRUEBA } from './usuarios-prueba';
 
 /**
@@ -45,8 +46,7 @@ export async function sembrarRostrosSimulados(prisma: PrismaClient) {
       where: { nombreUsuario: u.nombreUsuario },
     });
     const datos = {
-      patron: descriptorSimulado(u.nombreUsuario),
-      fotoReferencia: FOTO,
+      ...cifrarDatoBiometrico(usuario.id, descriptorSimulado(u.nombreUsuario), FOTO),
       fotoTipo: 'image/png',
       registradoPorId: usuario.id,
     };
