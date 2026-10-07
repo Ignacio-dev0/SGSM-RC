@@ -14,6 +14,7 @@ import {
   buscarUsuarios,
   crearUsuario,
   darDeBajaUsuario,
+  reactivarUsuario,
   modificarUsuario,
   obtenerUsuario,
 } from './usuarios.servicio';
@@ -43,6 +44,10 @@ rutasUsuarios.patch('/:id', gestionar, async (req, res) => {
 
 rutasUsuarios.delete('/:id', gestionar, async (req, res) => {
   res.json({ data: await darDeBajaUsuario(idDeRuta(req.params.id), usuarioActual(req).id) });
+});
+
+rutasUsuarios.post('/:id/reactivar', gestionar, async (req, res) => {
+  res.json({ data: await reactivarUsuario(idDeRuta(req.params.id), usuarioActual(req).id) });
 });
 
 rutasUsuarios.put(

@@ -187,6 +187,28 @@ export async function darDeBajaUsuario(id: number, actorId: number) {
   });
 }
 
+/** Deshace una baja: el usuario vuelve a poder ingresar. Queda en la auditoría. */
+export async function reactivarUsuario(id: number, actorId: number) {
+  return prisma.$transaction(async (tx) => {
+    const antes = await obtenerCompleto(tx, id);
+    if (antes.activo) throw conflicto('USUARIO_ACTIVO', 'El usuario ya está activo');
+    const despues = await tx.usuario.update({
+      where: { id },
+      data: { activo: true, fechaBaja: null },
+      include: incluir,
+    });
+    await registrarAuditoria(tx, {
+      usuarioId: actorId,
+      accion: 'REACTIVAR',
+      entidad: 'Usuario',
+      entidadId: id,
+      anterior: { activo: false, fechaBaja: antes.fechaBaja },
+      nuevo: { activo: true, fechaBaja: null },
+    });
+    return aDto(despues);
+  });
+}
+
 /** Reemplaza los permisos adicionales del usuario (CU05). Ignora los que ya trae el rol. */
 export async function asignarPermisosAdicionales(id: number, codigos: string[], actorId: number) {
   return prisma.$transaction(async (tx) => {

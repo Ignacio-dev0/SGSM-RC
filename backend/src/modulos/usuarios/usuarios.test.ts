@@ -192,6 +192,37 @@ describe('API de usuarios (T109 · CU01–CU05)', () => {
     });
   });
 
+  describe('reactivación (deshacer una baja)', () => {
+    it('vuelve a activar al usuario, le permite ingresar y queda en la auditoría', async () => {
+      const u = await crearUsuario('ENFERMERO');
+      await admin.delete(`/api/usuarios/${u.id}`);
+
+      const res = await admin.post(`/api/usuarios/${u.id}/reactivar`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.data).toMatchObject({ id: u.id, activo: true, fechaBaja: null });
+      expect((await (await agenteDe(u)).get('/api/auth/sesion')).status).toBe(200);
+      const a = await prisma.auditoria.findFirstOrThrow({
+        where: { accion: 'REACTIVAR', entidad: 'Usuario', entidadId: String(u.id) },
+      });
+      expect(a.valorAnterior).toMatchObject({ activo: false });
+      expect(a.valorNuevo).toEqual({ activo: true, fechaBaja: null });
+    });
+
+    it('no reactiva a un usuario que ya está activo', async () => {
+      const u = await crearUsuario('ENFERMERO');
+      const res = await admin.post(`/api/usuarios/${u.id}/reactivar`);
+      expect(res.status).toBe(409);
+      expect(res.body.error.codigo).toBe('USUARIO_ACTIVO');
+    });
+
+    it('solo quien gestiona usuarios puede reactivar', async () => {
+      const u = await crearUsuario('ENFERMERO', { activo: false });
+      const enfermero = await agenteDe(await crearUsuario('ENFERMERO'));
+      expect((await enfermero.post(`/api/usuarios/${u.id}/reactivar`)).status).toBe(403);
+    });
+  });
+
   describe('permisos adicionales (CU05)', () => {
     it('reemplaza los permisos adicionales del usuario y lo audita', async () => {
       const u = await crearUsuario('ENFERMERO');

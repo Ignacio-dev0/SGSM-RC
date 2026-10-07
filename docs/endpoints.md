@@ -30,6 +30,7 @@ Errores: `401 CREDENCIALES_INVALIDAS`, `423 CUENTA_BLOQUEADA` (`detalles.bloquea
 | POST   | `/api/usuarios`                          | `usuarios.gestionar`                       | Alta: `nombreUsuario, contrasena, dni, nombre, apellido, email?, matricula?, rol` |
 | PATCH  | `/api/usuarios/:id`                      | `usuarios.gestionar`                       | Modificación parcial (incluye cambio de contraseña)                               |
 | DELETE | `/api/usuarios/:id`                      | `usuarios.gestionar`                       | Baja lógica                                                                       |
+| POST   | `/api/usuarios/:id/reactivar`            | `usuarios.gestionar`                       | Deshace la baja (`409 USUARIO_ACTIVO` si ya estaba activo); se audita `REACTIVAR` |
 | PUT    | `/api/usuarios/:id/permisos-adicionales` | `usuarios.permisos`                        | `{ permisos: string[] }` reemplaza los adicionales                                |
 | GET    | `/api/roles`                             | `usuarios.gestionar` o `usuarios.permisos` | Roles con sus permisos                                                            |
 | GET    | `/api/permisos`                          | `usuarios.gestionar` o `usuarios.permisos` | Catálogo de permisos                                                              |
