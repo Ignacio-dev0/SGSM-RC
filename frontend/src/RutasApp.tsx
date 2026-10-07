@@ -2,6 +2,9 @@ import { Navigate, Outlet, Route, Routes } from 'react-router-dom';
 import { ConPermiso, RutaProtegida } from './auth/RutaProtegida';
 import { Disposicion } from './navegacion/Disposicion';
 import { Ingreso } from './paginas/Ingreso';
+import { GestionBiometria } from './paginas/biometria/GestionBiometria';
+import { PruebaReconocimiento } from './paginas/biometria/PruebaReconocimiento';
+import { RostroUsuario } from './paginas/biometria/RostroUsuario';
 import { CatalogoInsumos } from './paginas/catalogo/CatalogoInsumos';
 import { Inicio } from './paginas/Inicio';
 import { CargaPrescripcion } from './paginas/prescripciones/CargaPrescripcion';
@@ -70,6 +73,18 @@ export function RutasApp() {
             </ConPermiso>
           }
         />
+        <Route
+          path="biometria"
+          element={
+            <ConPermiso permiso="biometria.gestionar">
+              <Outlet />
+            </ConPermiso>
+          }
+        >
+          <Route index element={<GestionBiometria />} />
+          <Route path="prueba" element={<PruebaReconocimiento />} />
+          <Route path=":id" element={<RostroUsuario />} />
+        </Route>
         <Route
           path="catalogo"
           element={

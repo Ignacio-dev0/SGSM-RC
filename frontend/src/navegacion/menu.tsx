@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import FaceOutlinedIcon from '@mui/icons-material/FaceOutlined';
 import HomeOutlinedIcon from '@mui/icons-material/HomeOutlined';
 import HotelOutlinedIcon from '@mui/icons-material/HotelOutlined';
 import Inventory2OutlinedIcon from '@mui/icons-material/Inventory2Outlined';
@@ -26,6 +27,12 @@ export const OPCIONES_DEL_MENU: OpcionDelMenu[] = [
     etiqueta: 'Catálogo',
     icono: <Inventory2OutlinedIcon />,
     permiso: 'catalogo.gestionar',
+  },
+  {
+    ruta: '/biometria',
+    etiqueta: 'Biometría',
+    icono: <FaceOutlinedIcon />,
+    permiso: 'biometria.gestionar',
   },
   {
     ruta: '/usuarios',
