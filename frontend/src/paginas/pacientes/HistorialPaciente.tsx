@@ -1,13 +1,16 @@
 import { useState } from 'react';
 import { Box, Tab, Tabs, Typography } from '@mui/material';
-import { keepPreviousData, useQuery } from '@tanstack/react-query';
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { mensajeDeError } from '../../api/cliente';
 import { pacientesApi } from '../../api/pacientes';
-import type { HistorialPaciente as Historial } from '../../api/tipos';
+import { suministrosApi } from '../../api/suministros';
+import type { HistorialPaciente as Historial, Suministro } from '../../api/tipos';
+import { useSesion } from '../../auth/useSesion';
 import { Alerta } from '../../componentes/Alerta';
 import { CampoTexto } from '../../componentes/CampoTexto';
 import { Tabla } from '../../componentes/Tabla';
 import { formatearFechaHora } from '../../utilidades/formato';
+import { DialogoSuministro } from '../suministros/DialogoSuministro';
 import { CAMPOS, MOTIVO_ASIGNACION, etiquetaAccion } from './etiquetas';
 
 type Modificacion = Historial['modificaciones'][number];
@@ -55,6 +58,14 @@ export function HistorialPaciente({ pacienteId }: { pacienteId: number }) {
     placeholderData: keepPreviousData,
   });
   const h = historial.data;
+  const { tienePermiso } = useSesion();
+  const clienteQuery = useQueryClient();
+  const [suministro, setSuministro] = useState<Suministro | null>(null);
+  // Donde se ve el registro, se puede abrir (y corregir) sin ir a otra pantalla (hallazgo F3).
+  const abrirSuministro = useMutation({
+    mutationFn: (id: number) => suministrosApi.obtener(id),
+    onSuccess: setSuministro,
+  });
 
   return (
     <>
@@ -138,8 +149,23 @@ export function HistorialPaciente({ pacienteId }: { pacienteId: number }) {
           ]}
           filas={h?.suministros ?? []}
           claveFila={(s) => s.id}
-          cargando={historial.isFetching}
+          cargando={historial.isFetching || abrirSuministro.isPending}
           mensajeVacio="Sin suministros en el período"
+          {...(tienePermiso('suministros.ver')
+            ? { alTocarFila: (s: { id: number }) => abrirSuministro.mutate(s.id) }
+            : {})}
+        />
+      )}
+      {abrirSuministro.isError && (
+        <Alerta tipo="error">{mensajeDeError(abrirSuministro.error)}</Alerta>
+      )}
+      {suministro && (
+        <DialogoSuministro
+          inicial={suministro}
+          alCerrar={() => {
+            setSuministro(null);
+            void clienteQuery.invalidateQueries({ queryKey: ['historial', pacienteId] });
+          }}
         />
       )}
     </>

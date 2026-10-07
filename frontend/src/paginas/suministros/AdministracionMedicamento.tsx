@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Box, Checkbox, FormControlLabel, Paper, Typography } from '@mui/material';
 import FaceRetouchingNaturalIcon from '@mui/icons-material/FaceRetouchingNatural';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -65,6 +65,18 @@ export function AdministracionMedicamento() {
     setObservaciones('');
     setOtraToma(false);
   }, [pacienteId]);
+
+  // Si se llegó con "Administrar" desde una prescripción, queda elegida (una sola vez).
+  const prescripcionPedida = Number(parametros.get('prescripcionId')) || 0;
+  const yaPreelegida = useRef(false);
+  useEffect(() => {
+    if (yaPreelegida.current || !prescripcionPedida) return;
+    const pedida = vigentes.data?.find((x) => x.id === prescripcionPedida);
+    if (!pedida) return;
+    yaPreelegida.current = true;
+    setElegidaId(pedida.id);
+    setCantidad(String(pedida.dosis));
+  }, [prescripcionPedida, vigentes.data]);
 
   const registrar = useMutation({
     mutationFn: (validacionToken: string) =>

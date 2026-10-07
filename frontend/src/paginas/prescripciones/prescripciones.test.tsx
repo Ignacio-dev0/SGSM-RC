@@ -3,7 +3,11 @@ import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import type { Insumo, Prescripcion } from '../../api/tipos';
 import { ENFERMERO, MEDICO } from '../../pruebas/datos';
-import { paciente, simularCatalogosDePacientes } from '../../pruebas/datosPacientes';
+import {
+  listaDePacientes,
+  paciente,
+  simularCatalogosDePacientes,
+} from '../../pruebas/datosPacientes';
 import { renderizarApp } from '../../pruebas/renderizar';
 import { servidor } from '../../pruebas/servidor';
 
@@ -97,6 +101,45 @@ describe('prescripciones del paciente (T305 · CU18)', () => {
     expect(pedidos[0]?.get('estado')).toBe('VIGENTE');
     await userEvent.selectOptions(screen.getByLabelText('Mostrar'), 'Todas');
     await waitFor(() => expect(pedidos.at(-1)?.has('estado')).toBe(false));
+  });
+});
+
+describe('administrar desde la lista de prescripciones', () => {
+  it('cada vigente tiene Administrar, que abre la pantalla con paciente y prescripción elegidos', async () => {
+    vi.stubEnv('VITE_BIOMETRIA_MODO', 'simulado');
+    servidor.use(
+      http.get('*/api/pacientes', () => listaDePacientes([paciente()])),
+      http.get('*/api/pacientes/7/prescripciones', () =>
+        HttpResponse.json({ data: [prescripcion()] }),
+      ),
+    );
+    renderizarApp('/pacientes/7?pestana=prescripciones', ENFERMERO);
+
+    const tabla = await screen.findByRole('table', { name: 'Prescripciones' });
+    await userEvent.click(
+      await within(tabla).findByRole('button', { name: 'Administrar Paracetamol' }),
+    );
+
+    expect(
+      await screen.findByRole('heading', { name: 'Administrar medicamento' }),
+    ).toBeInTheDocument();
+    expect(
+      await screen.findByRole('region', { name: 'Revise antes de confirmar' }),
+    ).toHaveTextContent(/Paracetamol 500\smg/);
+    vi.unstubAllEnvs();
+  });
+
+  it('el médico no ve Administrar', async () => {
+    servidor.use(
+      http.get('*/api/pacientes/7/prescripciones', () =>
+        HttpResponse.json({ data: [prescripcion()] }),
+      ),
+    );
+    renderizarApp('/pacientes/7?pestana=prescripciones', MEDICO);
+
+    const tabla = await screen.findByRole('table', { name: 'Prescripciones' });
+    await within(tabla).findByText('Paracetamol');
+    expect(within(tabla).queryByRole('button', { name: /Administrar/ })).not.toBeInTheDocument();
   });
 });
 

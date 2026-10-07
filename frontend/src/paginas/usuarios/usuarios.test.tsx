@@ -214,6 +214,16 @@ describe('gestión de usuarios (T110 · CU01–CU04)', () => {
   });
 });
 
+describe('desde la ficha del usuario se llega a su rostro', () => {
+  it('ofrece Rostro a quien gestiona la biometría', async () => {
+    servidor.use(http.get('*/api/usuarios/10', () => HttpResponse.json({ data: usuario() })));
+    renderizarApp('/usuarios/10', ADMIN);
+
+    const rostro = await screen.findByRole('link', { name: /Rostro/ });
+    expect(rostro).toHaveAttribute('href', '/biometria/10');
+  });
+});
+
 describe('reactivación de un usuario dado de baja', () => {
   it('ofrece Reactivar en lugar de Dar de baja y lo vuelve a activar', async () => {
     const reactivar = vi.fn(() => HttpResponse.json({ data: usuario({ activo: true }) }));

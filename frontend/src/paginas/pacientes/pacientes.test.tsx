@@ -11,7 +11,10 @@ import {
 import { renderizarApp } from '../../pruebas/renderizar';
 import { servidor } from '../../pruebas/servidor';
 
-beforeEach(() => simularCatalogosDePacientes());
+beforeEach(() => {
+  simularCatalogosDePacientes();
+  servidor.use(http.get('*/api/pacientes/7/prescripciones', () => HttpResponse.json({ data: [] })));
+});
 
 async function completarDatosPersonales() {
   await userEvent.type(await screen.findByLabelText(/^DNI/), '30111222');
@@ -201,13 +204,23 @@ describe('registro de paciente con cama (T205 · CU11 · CU15)', () => {
 describe('ficha del paciente: modificación, traslado y baja (T207 · T208 · CU13–CU15)', () => {
   it('muestra los datos del paciente y su cama', async () => {
     servidor.use(http.get('*/api/pacientes/7', () => HttpResponse.json({ data: paciente() })));
-    renderizarApp('/pacientes/7', ENFERMERO);
+    renderizarApp('/pacientes/7?pestana=datos', ENFERMERO);
 
     expect(await screen.findByRole('heading', { name: 'Benítez, Rosa' })).toBeInTheDocument();
     expect(screen.getByText(/DNI 30111222/)).toBeInTheDocument();
     expect(screen.getAllByText(/A-01/).length).toBeGreaterThan(0);
     expect(screen.getByText('ACV isquémico')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Trasladar' })).not.toBeInTheDocument();
+  });
+
+  it('la ficha abre en Prescripciones: lo primero que se busca al lado de la cama', async () => {
+    servidor.use(http.get('*/api/pacientes/7', () => HttpResponse.json({ data: paciente() })));
+    renderizarApp('/pacientes/7', ENFERMERO);
+
+    expect(await screen.findByRole('tab', { name: 'Prescripciones' })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    );
   });
 
   it('si los datos a editar no se pueden cargar, no muestra el formulario vacío', async () => {
@@ -422,6 +435,49 @@ describe('historial del paciente (T209 · CU16)', () => {
 
     await userEvent.type(screen.getByLabelText('Desde'), '2026-10-02');
     await waitFor(() => expect(pedidos.at(-1)?.get('desde')).toMatch(/^2026-10-02/));
+  });
+
+  it('un suministro del historial se abre con su detalle (y Corregir, si corresponde)', async () => {
+    servidor.use(
+      http.get('*/api/pacientes/7', () => HttpResponse.json({ data: paciente() })),
+      http.get('*/api/pacientes/7/historial', () => HttpResponse.json({ data: HISTORIAL })),
+      http.get('*/api/suministros/:id', ({ params }) =>
+        HttpResponse.json({
+          data: {
+            id: Number(params.id),
+            tipo: 'INSUMOS',
+            fechaHora: new Date().toISOString(),
+            paciente: { id: 7, apellido: 'Benítez', nombre: 'Rosa', dni: '30111222', cama: 'A-01' },
+            usuario: { id: 3, nombre: 'Acosta, Sofía' },
+            prescripcion: null,
+            tomaProgramada: null,
+            detalles: [
+              {
+                insumoId: 20,
+                insumo: 'Gasa estéril',
+                tipoInsumo: 'INSUMO',
+                cantidad: 2,
+                unidad: 'unidad',
+              },
+            ],
+            observaciones: null,
+            validadoBiometricamente: true,
+            corregido: false,
+            motivoCorreccion: null,
+            corregidoEn: null,
+            corregidoPor: null,
+            corregibleHasta: new Date(Date.now() + 3_600_000).toISOString(),
+          },
+        }),
+      ),
+    );
+    renderizarApp('/pacientes/7?pestana=historial', ENFERMERO);
+
+    await userEvent.click(await screen.findByRole('tab', { name: /Suministros/ }));
+    await userEvent.click(await screen.findByText(/Gasa estéril/));
+
+    const dialogo = await screen.findByRole('dialog', { name: /Suministro/ });
+    expect(within(dialogo).getByRole('button', { name: 'Corregir' })).toBeInTheDocument();
   });
 
   it('el registro del paciente figura como "Internación", no como "Alta"', async () => {

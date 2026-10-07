@@ -78,9 +78,11 @@ export function FichaPaciente() {
   const { tienePermiso } = useSesion();
   const ubicacion = useLocation();
   const [parametros, setParametros] = useSearchParams();
+  // Al lado de la cama lo primero que se busca es la medicación (hallazgo F1).
+  const pestanaInicial: Pestana = tienePermiso('prescripciones.ver') ? 'prescripciones' : 'datos';
   const pestana: Pestana = PESTANAS.includes(parametros.get('pestana') as Pestana)
     ? (parametros.get('pestana') as Pestana)
-    : 'datos';
+    : pestanaInicial;
   const [aviso, setAviso] = useState<string | null>(
     (ubicacion.state as { aviso?: string } | null)?.aviso ?? null,
   );

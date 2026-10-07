@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Box, Chip, Typography } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
+import MedicationOutlinedIcon from '@mui/icons-material/MedicationOutlined';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { mensajeDeError } from '../../api/cliente';
@@ -54,6 +55,8 @@ const COLUMNAS: Columna<Prescripcion>[] = [
  */
 export function PrescripcionesPaciente({ paciente }: { paciente: Paciente }) {
   const navegar = useNavigate();
+  const { tienePermiso: puede } = useSesion();
+  const administra = puede('suministros.registrar') && paciente.estado === 'INTERNADO';
   const { tienePermiso } = useSesion();
   const [estado, setEstado] = useState<EstadoPrescripcion | ''>('VIGENTE');
   const consulta = useQuery({
@@ -88,7 +91,34 @@ export function PrescripcionesPaciente({ paciente }: { paciente: Paciente }) {
       {consulta.isError && <Alerta tipo="error">{mensajeDeError(consulta.error)}</Alerta>}
       <Tabla
         titulo="Prescripciones"
-        columnas={COLUMNAS}
+        columnas={
+          administra
+            ? [
+                ...COLUMNAS,
+                {
+                  titulo: 'Acción',
+                  valor: (p) =>
+                    p.estado === 'VIGENTE' && (
+                      <Boton
+                        variante="secundario"
+                        startIcon={<MedicationOutlinedIcon />}
+                        aria-label={`Administrar ${p.medicamento.nombre}`}
+                        // Sin esto, el toque o el Enter también abrirían el detalle de la fila.
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navegar(
+                            `/suministros/medicamento?pacienteId=${paciente.id}&prescripcionId=${p.id}`,
+                          );
+                        }}
+                        onKeyDown={(e) => e.stopPropagation()}
+                      >
+                        Administrar
+                      </Boton>
+                    ),
+                },
+              ]
+            : COLUMNAS
+        }
         filas={consulta.data ?? []}
         claveFila={(p) => p.id}
         cargando={consulta.isFetching}

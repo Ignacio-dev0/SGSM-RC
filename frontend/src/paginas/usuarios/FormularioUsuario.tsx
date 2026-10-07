@@ -1,12 +1,13 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { Box, Chip, Paper, Typography } from '@mui/material';
+import { Box, Button, Chip, Paper, Typography } from '@mui/material';
+import FaceOutlinedIcon from '@mui/icons-material/FaceOutlined';
 import KeyOutlinedIcon from '@mui/icons-material/KeyOutlined';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useNavigate, useParams } from 'react-router-dom';
+import { Link as EnlaceRouter, useNavigate, useParams } from 'react-router-dom';
 import { ErrorApi, erroresPorCampo, mensajeDeError } from '../../api/cliente';
 import type { Usuario } from '../../api/tipos';
 import { useRoles, usuariosApi, type DatosUsuario } from '../../api/usuarios';
-import { useUsuario } from '../../auth/useSesion';
+import { useSesion, useUsuario } from '../../auth/useSesion';
 import { Alerta } from '../../componentes/Alerta';
 import { Boton } from '../../componentes/Boton';
 import { CampoTexto } from '../../componentes/CampoTexto';
@@ -63,6 +64,7 @@ export function FormularioUsuario() {
   const esAlta = id === undefined;
   const usuarioId = Number(id);
   const yo = useUsuario();
+  const { tienePermiso } = useSesion();
   const navegar = useNavigate();
   const clienteQuery = useQueryClient();
   const roles = useRoles();
@@ -171,6 +173,17 @@ export function FormularioUsuario() {
               >
                 Permisos adicionales
               </Boton>
+              {tienePermiso('biometria.gestionar') && (
+                // Es navegación: un enlace con aspecto de botón secundario.
+                <Button
+                  variant="outlined"
+                  startIcon={<FaceOutlinedIcon />}
+                  component={EnlaceRouter}
+                  to={`/biometria/${usuarioId}`}
+                >
+                  Rostro
+                </Button>
+              )}
               {u.activo && u.id !== yo.id && (
                 <Boton variante="peligro" onClick={() => setConfirmandoBaja(true)}>
                   Dar de baja
