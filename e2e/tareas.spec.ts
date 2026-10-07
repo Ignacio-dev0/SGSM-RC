@@ -128,3 +128,62 @@ test('T10 · dar de alta a un enfermero nuevo y registrar su cara', async ({ pag
     page.getByRole('button', { name: /Registrar rostro|Actualizar rostro/ }),
   ).toBeVisible();
 });
+
+test('T11 · ver qué tomas y estudios hay que atender ahora', async ({ page }) => {
+  await ingresar(page, 'enfermero');
+  await page.goto('/');
+  await page.getByRole('link', { name: /Tomas y estudios para atender/ }).click();
+  await expect(page.getByRole('heading', { level: 1, name: 'Recordatorios' })).toBeVisible();
+  // También a un toque desde cualquier pantalla: la insignia de la barra.
+  await expect(page.getByRole('link', { name: /^Recordatorios: \d+ para atender/ })).toBeVisible();
+});
+
+test('T13 · programar un estudio (médico)', async ({ page }) => {
+  await ingresar(page, 'medico');
+  await page.goto('/');
+  await page.getByRole('link', { name: /Buscar paciente/ }).click();
+  await page
+    .getByRole('cell', { name: /Benítez/ })
+    .first()
+    .click();
+  await page.getByRole('tab', { name: 'Estudios' }).click();
+  await page.getByRole('button', { name: 'Programar estudio' }).first().click();
+  const dialogo = page.getByRole('dialog', { name: 'Programar estudio' });
+  await expect(dialogo.getByLabel('Tipo de estudio')).toBeVisible();
+  await expect(dialogo.getByLabel('Fecha y hora')).toBeVisible();
+});
+
+test('T14 · ver cuánto se usó en un período (y descargarlo, el administrador)', async ({
+  page,
+}) => {
+  await ingresar(page, 'admin');
+  await page.goto('/');
+  await page.getByRole('link', { name: /Ver reportes/ }).click();
+  await expect(page.getByRole('heading', { level: 1, name: 'Reportes' })).toBeVisible();
+  await page.getByRole('button', { name: '30 días' }).click();
+  await expect(page.getByRole('table', { name: /Reporte de suministros por/ })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Descargar PDF' })).toBeVisible();
+  await page.getByRole('tab', { name: 'Estadísticas' }).click();
+  await expect(page.getByRole('button', { name: /Ver como tabla/ }).first()).toBeVisible();
+});
+
+test('T14 · el médico ve los reportes sin descargar', async ({ page }) => {
+  await ingresar(page, 'medico');
+  await page.goto('/');
+  await page.getByRole('link', { name: /Ver reportes/ }).click();
+  await page.getByRole('button', { name: '30 días' }).click();
+  await expect(page.getByRole('table', { name: /Reporte de suministros por/ })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Descargar PDF' })).toHaveCount(0);
+  await expect(page.getByText(/pídaselo a un administrador/)).toBeVisible();
+});
+
+test('T15 · averiguar quién cambió algo y cuándo', async ({ page }) => {
+  await ingresar(page, 'admin');
+  await page.goto('/');
+  await page.getByRole('link', { name: /Ver quién cambió algo/ }).click();
+  await expect(page.getByRole('heading', { level: 1, name: 'Auditoría' })).toBeVisible();
+  const tabla = page.getByRole('table', { name: 'Movimientos' });
+  await expect(tabla).toBeVisible();
+  await tabla.getByRole('row').nth(1).click();
+  await expect(page.getByRole('table', { name: 'Antes y después' })).toBeVisible();
+});

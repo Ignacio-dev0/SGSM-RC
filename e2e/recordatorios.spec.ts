@@ -7,7 +7,8 @@ import { ingresar, ingresarPorApi } from './soporte';
  * tarjeta aparece sola por el tiempo real (sin recargar); la enfermera lo administra desde la
  * tarjeta con su rostro y el recordatorio queda atendido. Necesita el temporizador encendido
  * (lo está por defecto) y el modo de demostración para simular la cara. Al terminar, el médico
- * finaliza la indicación para que no siga generando recordatorios.
+ * finaliza la indicación para que no siga generando recordatorios. La segunda prueba registra
+ * "No se administró" con el motivo (T12 de las tareas núcleo).
  */
 test.beforeEach(({}, info) => {
   test.skip(info.project.name !== 'pc', 'El recorrido se hace una vez, en PC');
@@ -25,17 +26,11 @@ async function datos<T>(api: APIRequestContext, ruta: string): Promise<T> {
   return ((await r.json()) as { data: T }).data;
 }
 
-test('la toma que se acerca aparece sola en el panel y se atiende al administrarla', async ({
-  page,
-  playwright,
-  baseURL,
-}) => {
-  test.setTimeout(180_000);
-  const medico = await playwright.request.newContext({ baseURL });
-  await ingresarPorApi(medico, 'medico');
-
-  // Un paciente internado y un medicamento que no tenga indicado: así la tarjeta de
-  // Administrar no se confunde con las de otras pruebas (el ciclo usa el Paracetamol).
+/**
+ * El médico indica, por la API, un medicamento que el paciente no tiene vigente con la primera
+ * toma dentro de `minutos`: así la tarjeta no se confunde con las de otras pruebas.
+ */
+async function indicarTomaProxima(medico: APIRequestContext, minutos: number) {
   const internados = await datos<Paciente[]>(medico, '/api/pacientes?estado=INTERNADO');
   const paciente = internados[0]!;
   const vigentes = await datos<{ medicamento: { id: number } }[]>(
@@ -47,7 +42,7 @@ test('la toma que se acerca aparece sola en el panel y se atiende al administrar
     '/api/insumos?tipo=MEDICAMENTO',
   );
   const medicamento = medicamentos.find((m) => !vigentes.some((v) => v.medicamento.id === m.id))!;
-  const toma = new Date(Date.now() + 10 * 60_000);
+  const toma = new Date(Date.now() + minutos * 60_000);
   const alta = await medico.post(`/api/pacientes/${paciente.id}/prescripciones`, {
     data: {
       insumoId: medicamento.id,
@@ -63,6 +58,35 @@ test('la toma que se acerca aparece sola en el panel y se atiende al administrar
   });
   expect(alta.status()).toBe(201);
   const prescripcion = ((await alta.json()) as { data: { id: number } }).data;
+  const hora = new Intl.DateTimeFormat('es-AR', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+    timeZone: 'America/Argentina/Buenos_Aires',
+  }).format(toma);
+  return {
+    paciente,
+    medicamento,
+    prescripcion,
+    nombreTarjeta: `Toma de las ${hora} · ${paciente.apellido}, ${paciente.nombre}`,
+    finalizar: () =>
+      medico.post(`/api/prescripciones/${prescripcion.id}/estado`, {
+        data: { estado: 'FINALIZADA', motivo: 'Fin de la prueba e2e de recordatorios' },
+      }),
+  };
+}
+
+test('la toma que se acerca aparece sola en el panel y se atiende al administrarla', async ({
+  page,
+  playwright,
+  baseURL,
+}) => {
+  test.setTimeout(180_000);
+  const medico = await playwright.request.newContext({ baseURL });
+  await ingresarPorApi(medico, 'medico');
+
+  const { paciente, medicamento, prescripcion, nombreTarjeta, finalizar } =
+    await indicarTomaProxima(medico, 10);
 
   try {
     // Inicio → la primera tarea de enfermería → el panel, abierto ANTES de que se genere.
@@ -76,15 +100,7 @@ test('la toma que se acerca aparece sola en el panel y se atiende al administrar
     await expect(page.getByRole('heading', { level: 1, name: 'Recordatorios' })).toBeVisible();
 
     // El temporizador corre cada 60 s: la tarjeta llega por el tiempo real, sin recargar.
-    const hora = new Intl.DateTimeFormat('es-AR', {
-      hour: '2-digit',
-      minute: '2-digit',
-      hourCycle: 'h23',
-      timeZone: 'America/Argentina/Buenos_Aires',
-    }).format(toma);
-    const tarjeta = page.getByRole('listitem', {
-      name: `Toma de las ${hora} · ${paciente.apellido}, ${paciente.nombre}`,
-    });
+    const tarjeta = page.getByRole('listitem', { name: nombreTarjeta });
     await expect(tarjeta).toBeVisible({ timeout: 90_000 });
     // "Faltan 10 min" va con espacios que no cortan: \s los incluye.
     await expect(tarjeta.getByText(/Faltan\s\d+\smin/)).toBeVisible();
@@ -110,9 +126,38 @@ test('la toma que se acerca aparece sola en el panel y se atiende al administrar
     );
     expect(pendientes.some((r) => r.prescripcion?.id === prescripcion.id)).toBe(false);
   } finally {
-    await medico.post(`/api/prescripciones/${prescripcion.id}/estado`, {
-      data: { estado: 'FINALIZADA', motivo: 'Fin de la prueba e2e de recordatorios' },
-    });
+    await finalizar();
+    await medico.dispose();
+  }
+});
+
+test('T12 · anotar que una toma no se dio y por qué', async ({ page, playwright, baseURL }) => {
+  test.setTimeout(180_000);
+  const medico = await playwright.request.newContext({ baseURL });
+  await ingresarPorApi(medico, 'medico');
+  const { prescripcion, nombreTarjeta, finalizar } = await indicarTomaProxima(medico, 12);
+
+  try {
+    await ingresar(page, 'enfermero');
+    await page.goto('/');
+    await page.getByRole('link', { name: /Tomas y estudios para atender/ }).click();
+    const tarjeta = page.getByRole('listitem', { name: nombreTarjeta });
+    await expect(tarjeta).toBeVisible({ timeout: 90_000 });
+
+    await tarjeta.getByRole('button', { name: /^No se administró/ }).click();
+    const dialogo = page.getByRole('dialog', { name: 'No se administró' });
+    await dialogo.getByRole('textbox').fill('Paciente en ayunas para un estudio');
+    await dialogo.getByRole('button', { name: 'Registrar' }).click();
+
+    // La tarjeta sale de la lista y el recordatorio queda atendido con el motivo.
+    await expect(tarjeta).toHaveCount(0);
+    const pendientes = await datos<{ prescripcion: { id: number } | null }[]>(
+      page.request,
+      '/api/recordatorios',
+    );
+    expect(pendientes.some((r) => r.prescripcion?.id === prescripcion.id)).toBe(false);
+  } finally {
+    await finalizar();
     await medico.dispose();
   }
 });
