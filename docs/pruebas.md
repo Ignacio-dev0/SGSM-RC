@@ -40,7 +40,15 @@ Solo un lado: `npm test -w backend` o `npm test -w frontend`.
   un pedido no simulado hace fallar la prueba.
 - `renderizarApp(ruta, usuario)` ([`src/pruebas/renderizar.tsx`](../frontend/src/pruebas/renderizar.tsx))
   monta la aplicación completa (rutas, sesión, tema) con el usuario indicado; los usuarios de
-  ejemplo por rol están en [`src/pruebas/datos.ts`](../frontend/src/pruebas/datos.ts).
+  ejemplo por rol están en [`src/pruebas/datos.ts`](../frontend/src/pruebas/datos.ts) y los
+  datos de cada módulo en `datosPacientes.ts` y `datosSuministros.ts`.
+- Las esperas asíncronas (`findBy…`, `waitFor`) llegan hasta **5 s**
+  ([`configurar.ts`](../frontend/src/pruebas/configurar.ts)): con todos los archivos en
+  paralelo, 1 s no siempre alcanzaba.
+- Lo que depende de la hora ("toca ahora", "atrasada") se arma **relativo a ahora**
+  (`enMinutos()`), nunca con fechas fijas.
+- Un archivo por pantalla o tema; **ningún archivo pasa de 1000 líneas** (regla `max-lines`
+  de ESLint).
 
 ## Control de permisos con los tres roles
 

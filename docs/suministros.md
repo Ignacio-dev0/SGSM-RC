@@ -40,8 +40,20 @@ en la pestaña **Historial** de cada paciente.
 
 ## Pantallas pensadas para el lado de la cama
 
-- La prescripción se elige tocando una **tarjeta** grande con la próxima toma y la última
-  administración.
+- Arriba, la **tarjeta del paciente** (nombre, DNI, edad, cama y sala): la cara valida a quien
+  registra, no al paciente.
+- La prescripción se elige tocando una **tarjeta** grande con la próxima toma, la última
+  administración y el **estado de la toma** ([`estadoToma.ts`](../frontend/src/paginas/suministros/estadoToma.ts)),
+  con los mismos criterios que el servidor: _Toca ahora_ (dentro de 30 min), _Atrasada X min_,
+  _Faltan X h_, _Ya se dio hace X min_ (la última administración fue hace menos de media
+  frecuencia) o _Sin más tomas_.
+- Antes de confirmar, un resumen **Revise antes de confirmar** (paciente, qué dar, vía, toma,
+  observaciones), repetido dentro del diálogo facial.
+- **Avisos** que no bloquean: cantidad distinta de la prescripta y toma adelantada. Si la toma
+  **ya se dio**, hay que marcar _Corresponde dar otra toma_ para poder confirmar.
+- Si al confirmar no hay respuesta del servidor, la pantalla dice que **no se sabe si quedó
+  registrada** y lleva al historial antes de reintentar (para no dar la dosis dos veces).
+- Al cambiar de paciente o de prescripción se limpian cantidad y observaciones.
 - Los insumos se agregan tocando el catálogo y se ajustan con botones **− / +** de 56 px.
 - Un único botón final: **Confirmar con mi rostro**.
 - Desde la ficha del paciente, **Administrar medicamento** y **Registrar insumos** abren estas
