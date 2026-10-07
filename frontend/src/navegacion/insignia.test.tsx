@@ -2,7 +2,14 @@ import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { UsuarioSesion } from '../api/tipos';
 import { ENFERMERO, MEDICO } from '../pruebas/datos';
-import { RECORDATORIOS, recordatorio, simularRecordatorios } from '../pruebas/datosRecordatorios';
+import {
+  RECORDATORIOS,
+  aLos,
+  fijarHoraTablet,
+  recordatorio,
+  recordatorioDeEstudio,
+  simularRecordatorios,
+} from '../pruebas/datosRecordatorios';
 import { renderizarApp } from '../pruebas/renderizar';
 
 describe('insignia de recordatorios en la barra (T506)', () => {
@@ -22,7 +29,10 @@ describe('insignia de recordatorios en la barra (T506)', () => {
   });
 
   it('con un solo urgente lo dice en singular', async () => {
-    simularRecordatorios([recordatorio(), recordatorio({ id: 13, prioridad: 'BAJA' })]);
+    simularRecordatorios([
+      recordatorio(),
+      recordatorio({ id: 13, prioridad: 'BAJA', fechaHoraObjetivo: aLos(25) }),
+    ]);
     renderizarApp('/', MEDICO);
 
     expect(
@@ -31,7 +41,8 @@ describe('insignia de recordatorios en la barra (T506)', () => {
   });
 
   it('la cantidad va rellena de advertencia solo si hay urgentes', async () => {
-    simularRecordatorios([recordatorio({ prioridad: 'BAJA' })]);
+    // Una toma de prioridad baja falta más de 15 min (S10).
+    simularRecordatorios([recordatorio({ prioridad: 'BAJA', fechaHoraObjetivo: aLos(25) })]);
     renderizarApp('/', ENFERMERO);
 
     const insignia = await screen.findByRole('link', {
@@ -50,6 +61,19 @@ describe('insignia de recordatorios en la barra (T506)', () => {
       name: 'Recordatorios: 1 para atender, 1 urgente',
     });
     expect(insignia.querySelector('.MuiBadge-badge')).toHaveClass('MuiBadge-colorWarning');
+  });
+
+  it('cuenta como urgente lo atrasado aunque el servidor no lo cuente (un estudio pasado su hora, E5-02)', async () => {
+    fijarHoraTablet();
+    // El servidor deja el estudio en MEDIA: meta.urgentes = 0.
+    simularRecordatorios([recordatorioDeEstudio({ fechaHoraObjetivo: aLos(-10) })]);
+    renderizarApp('/', ENFERMERO);
+
+    const insignia = await screen.findByRole('link', {
+      name: 'Recordatorios: 1 para atender, 1 urgente',
+    });
+    expect(insignia.querySelector('.MuiBadge-badge')).toHaveClass('MuiBadge-colorWarning');
+    vi.useRealTimers();
   });
 
   it('sin recordatorios.ver no aparece', async () => {

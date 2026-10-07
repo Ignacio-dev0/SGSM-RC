@@ -5,8 +5,10 @@ import { ADMIN, ENFERMERO, MEDICO } from '../pruebas/datos';
 import {
   AHORA_SERVIDOR,
   RECORDATORIOS,
+  aLos,
   avisarCambio,
   fijarHoraTablet,
+  recordatorio,
   registrarConexiones,
   respuestaRecordatorios,
   simularRecordatorios,
@@ -14,17 +16,23 @@ import {
 import { renderizarApp } from '../pruebas/renderizar';
 import { servidor } from '../pruebas/servidor';
 
-/** Cuenta los pedidos de la lista de recordatorios (y la contesta). */
-function contarPedidosDeLista() {
+/** Cuenta los pedidos de la lista de recordatorios (y la contesta con `lista()`). */
+function contarPedidosDeLista(lista: () => typeof RECORDATORIOS = () => RECORDATORIOS) {
   const pedidos: URL[] = [];
   servidor.use(
     http.get('*/api/recordatorios', ({ request }) => {
       pedidos.push(new URL(request.url));
-      return respuestaRecordatorios(RECORDATORIOS);
+      return respuestaRecordatorios(lista());
     }),
   );
   return pedidos;
 }
+
+/** Dos tomas que aparecen después de la primera carga (generadas por el temporizador). */
+const NUEVAS = [
+  recordatorio({ id: 30, prioridad: 'BAJA', fechaHoraObjetivo: aLos(28) }),
+  recordatorio({ id: 31, prioridad: 'BAJA', fechaHoraObjetivo: aLos(29) }),
+];
 
 /** Web Audio y vibración falsos: cuentan las notas y las vibraciones. */
 function simularAudioYVibracion() {
@@ -63,6 +71,18 @@ function simularAudioYVibracion() {
  */
 const listaCargada = () =>
   screen.findByRole('link', { name: 'Recordatorios: 4 para atender, 2 urgentes' });
+
+/** Espera real (setTimeout no es falso en estas pruebas). */
+const esperar = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+/** Como waitFor, pero sin setInterval: sirve con el setInterval falso y sin cambios en pantalla. */
+async function esperarHasta(condicion: () => boolean, ms = 3_000) {
+  const limite = Date.now() + ms;
+  while (!condicion()) {
+    if (Date.now() > limite) throw new Error('No se cumplió a tiempo');
+    await esperar(25);
+  }
+}
 
 const regionDeAvisos = () =>
   document.querySelector<HTMLElement>('[aria-live="polite"][data-avisos-recordatorios]')!;
@@ -196,8 +216,11 @@ describe('sin conexión en tiempo real', () => {
     const pedidos = contarPedidosDeLista();
     renderizarApp('/recordatorios', ENFERMERO);
 
+    // Lo que dice es cierto aun sin el socket: la lista y los avisos llegan cada 30 s (E5-03).
     expect(
-      await screen.findByText('Sin conexión en tiempo real: la lista se actualiza cada 30 s'),
+      await screen.findByText(
+        'Sin conexión en tiempo real: la lista y los avisos se actualizan cada 30 s.',
+      ),
     ).toBeInTheDocument();
     await waitFor(() => expect(pedidos.length).toBeGreaterThanOrEqual(1));
     const antes = pedidos.length;
@@ -208,6 +231,96 @@ describe('sin conexión en tiempo real', () => {
     await waitFor(() => expect(pedidos.length).toBe(antes + 2));
   });
 
+  it('a quien no recibe avisos (médico) le habla solo de la lista', async () => {
+    registrarConexiones((cliente) => cliente.close(1001, 'Reinicio'));
+    simularRecordatorios();
+    renderizarApp('/recordatorios', MEDICO);
+
+    expect(
+      await screen.findByText('Sin conexión en tiempo real: la lista se actualiza cada 30 s.'),
+    ).toBeInTheDocument();
+  });
+
+  it('se nota también fuera del panel: la insignia lleva el ícono de sin señal y lo dice (E5-03)', async () => {
+    registrarConexiones((cliente) => cliente.close(1001, 'Reinicio'));
+    simularRecordatorios();
+    renderizarApp('/', ENFERMERO);
+
+    const insignia = await screen.findByRole('link', {
+      name: 'Recordatorios: 4 para atender, 2 urgentes; sin avisos en tiempo real',
+    });
+    expect(within(insignia).getByTestId('WifiOffOutlinedIcon')).toBeInTheDocument();
+  });
+
+  it('con la conexión abierta, la insignia no lleva la marca de sin señal', async () => {
+    const conexiones = registrarConexiones();
+    simularRecordatorios();
+    renderizarApp('/', ENFERMERO);
+    await waitFor(() => expect(conexiones).toHaveLength(1));
+
+    const insignia = await screen.findByRole('link', {
+      name: 'Recordatorios: 4 para atender, 2 urgentes',
+    });
+    expect(within(insignia).queryByTestId('WifiOffOutlinedIcon')).not.toBeInTheDocument();
+  });
+
+  it('sin conexión, los recordatorios nuevos se avisan igual al consultar la lista (E5-03)', async () => {
+    vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] });
+    const { vibrar } = simularAudioYVibracion();
+    registrarConexiones((cliente) => cliente.close(1001, 'Reinicio'));
+    let lista = RECORDATORIOS;
+    const pedidos = contarPedidosDeLista(() => lista);
+    renderizarApp('/', ENFERMERO);
+    await screen.findByRole('link', { name: /^Recordatorios: 4 para atender/ });
+    await screen.findByRole('link', { name: /sin avisos en tiempo real/ });
+    // La primera carga no es "nueva": no avisa.
+    expect(regionDeAvisos()).toHaveTextContent('');
+
+    lista = [...RECORDATORIOS, ...NUEVAS];
+    const antes = pedidos.length;
+    act(() => vi.advanceTimersByTime(30_000));
+    await waitFor(() => expect(pedidos.length).toBeGreaterThan(antes));
+
+    await waitFor(() => expect(regionDeAvisos()).toHaveTextContent('2 recordatorios nuevos'));
+    expect(vibrar).toHaveBeenCalledTimes(1);
+  });
+
+  it('al volver la conexión avisa lo que apareció durante el corte (el socket no lo mandó)', async () => {
+    simularAudioYVibracion();
+    const conexiones = registrarConexiones();
+    let lista = RECORDATORIOS;
+    contarPedidosDeLista(() => lista);
+    renderizarApp('/', ENFERMERO);
+    await listaCargada();
+    await waitFor(() => expect(conexiones).toHaveLength(1));
+
+    // Se corta; mientras tanto el temporizador generó dos. Al reconectar se resincroniza.
+    lista = [...RECORDATORIOS, ...NUEVAS];
+    conexiones[0]!.close(1001, 'Reinicio');
+
+    await waitFor(() => expect(conexiones).toHaveLength(2));
+    await waitFor(() => expect(regionDeAvisos()).toHaveTextContent('2 recordatorios nuevos'));
+  });
+
+  it('con la conexión abierta, lo nuevo lo avisa el socket una sola vez (no se cuenta dos veces)', async () => {
+    const { vibrar } = simularAudioYVibracion();
+    const conexiones = registrarConexiones();
+    let lista = RECORDATORIOS;
+    const pedidos = contarPedidosDeLista(() => lista);
+    renderizarApp('/', ENFERMERO);
+    await listaCargada();
+    await waitFor(() => expect(conexiones).toHaveLength(1));
+
+    lista = [...RECORDATORIOS, ...NUEVAS];
+    const antes = pedidos.length;
+    avisarCambio(2, 0);
+    await waitFor(() => expect(pedidos.length).toBeGreaterThan(antes));
+    await screen.findByRole('link', { name: /^Recordatorios: 6 para atender/ });
+
+    expect(regionDeAvisos()).toHaveTextContent('2 recordatorios nuevos');
+    expect(vibrar).toHaveBeenCalledTimes(1);
+  });
+
   it('con la conexión abierta no muestra la franja', async () => {
     const conexiones = registrarConexiones();
     simularRecordatorios();
@@ -216,6 +329,56 @@ describe('sin conexión en tiempo real', () => {
     await screen.findAllByRole('listitem');
     await waitFor(() => expect(conexiones).toHaveLength(1));
     expect(screen.queryByText(/Sin conexión en tiempo real/)).not.toBeInTheDocument();
+  });
+});
+
+describe('la lista no depende solo del socket (E5-04)', () => {
+  it('al volver a la pantalla vuelve a pedir la lista aunque la conexión siga abierta', async () => {
+    const conexiones = registrarConexiones();
+    const pedidos = contarPedidosDeLista();
+    renderizarApp('/', ENFERMERO);
+    await listaCargada();
+    await waitFor(() => expect(conexiones).toHaveLength(1));
+    const antes = pedidos.length;
+
+    act(() => {
+      document.dispatchEvent(new Event('visibilitychange'));
+    });
+
+    await waitFor(() => expect(pedidos.length).toBe(antes + 1));
+    expect(conexiones).toHaveLength(1);
+  });
+
+  it('al volver la red también la vuelve a pedir', async () => {
+    const conexiones = registrarConexiones();
+    const pedidos = contarPedidosDeLista();
+    renderizarApp('/', ENFERMERO);
+    await listaCargada();
+    await waitFor(() => expect(conexiones).toHaveLength(1));
+    const antes = pedidos.length;
+
+    act(() => {
+      window.dispatchEvent(new Event('online'));
+    });
+
+    await waitFor(() => expect(pedidos.length).toBe(antes + 1));
+  });
+
+  it('con la conexión abierta, igual la vuelve a pedir cada 90 s por si se perdió un aviso', async () => {
+    vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] });
+    const conexiones = registrarConexiones();
+    const pedidos = contarPedidosDeLista();
+    renderizarApp('/', ENFERMERO);
+    await listaCargada();
+    await waitFor(() => expect(conexiones).toHaveLength(1));
+    const antes = pedidos.length;
+
+    act(() => vi.advanceTimersByTime(60_000));
+    await esperar(100);
+    expect(pedidos.length).toBe(antes);
+    act(() => vi.advanceTimersByTime(30_000));
+    // waitFor revisa con setInterval (acá, falso) y la pantalla no cambia: se espera con setTimeout.
+    await esperarHasta(() => pedidos.length === antes + 1);
   });
 });
 
@@ -283,6 +446,38 @@ describe('aviso de recordatorios nuevos (S16)', () => {
     expect(vibrar).not.toHaveBeenCalled();
   });
 
+  it('el aviso aparece arriba, en la franja fija bajo la barra: no tapa los botones de abajo (E5-05)', async () => {
+    const conexiones = registrarConexiones();
+    renderizarApp('/', ENFERMERO);
+    await waitFor(() => expect(conexiones).toHaveLength(1));
+
+    avisarCambio(1, 0);
+
+    const franja = await screen.findByRole('note');
+    await waitFor(() => expect(franja).toHaveTextContent('1 recordatorio nuevo'));
+    expect(franja.parentElement).toBe(screen.getByRole('main'));
+    expect(getComputedStyle(franja).position).toBe('sticky');
+    expect(within(franja).getByRole('button', { name: 'Ver recordatorios' })).toBeInTheDocument();
+    expect(within(franja).getByRole('button', { name: 'Cerrar el aviso' })).toBeInTheDocument();
+  });
+
+  it('con un diálogo abierto, el aviso igual se anuncia: la región no queda oculta (E5-05)', async () => {
+    const conexiones = registrarConexiones();
+    simularRecordatorios([recordatorio()]);
+    renderizarApp('/recordatorios', ENFERMERO);
+    await waitFor(() => expect(conexiones).toHaveLength(1));
+    await act(async () =>
+      (await screen.findByRole('button', { name: /^No se administró/ })).click(),
+    );
+    const dialogo = await screen.findByRole('dialog', { name: 'No se administró' });
+
+    avisarCambio(1, 0);
+
+    await waitFor(() => expect(regionDeAvisos()).toHaveTextContent('1 recordatorio nuevo'));
+    await waitFor(() => expect(dialogo).toContainElement(regionDeAvisos()));
+    expect(regionDeAvisos().closest('[aria-hidden="true"]')).toBeNull();
+  });
+
   it('el aviso se puede cerrar', async () => {
     const conexiones = registrarConexiones();
     renderizarApp('/', ENFERMERO);
@@ -306,5 +501,55 @@ describe('hora del servidor (R6)', () => {
 
     const tarjetas = await screen.findAllByRole('listitem');
     await waitFor(() => expect(tarjetas[2]).toHaveTextContent(/Faltan 12\smin/));
+  });
+});
+
+describe('el tono se repite mientras haya urgentes sin atender (ESC3)', () => {
+  const CINCO_MIN = 5 * 60_000;
+
+  async function conLista(usuario: UsuarioSesion, lista = RECORDATORIOS) {
+    vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] });
+    const audio = simularAudioYVibracion();
+    const conexiones = registrarConexiones();
+    contarPedidosDeLista(() => lista);
+    renderizarApp('/', usuario);
+    await screen.findByRole('link', { name: /^Recordatorios: \d+ para atender/ });
+    await waitFor(() => expect(conexiones).toHaveLength(1));
+    return audio;
+  }
+
+  it('a quien atiende, con urgentes o vencidos, suena cada 5 min', async () => {
+    const { notas } = await conLista(ENFERMERO);
+    expect(notas).toHaveLength(0);
+
+    act(() => vi.advanceTimersByTime(CINCO_MIN - 1_000));
+    expect(notas).toHaveLength(0);
+    act(() => vi.advanceTimersByTime(1_000));
+    expect(notas.length).toBeGreaterThan(0);
+    const unTono = notas.length;
+    act(() => vi.advanceTimersByTime(CINCO_MIN));
+    expect(notas).toHaveLength(unTono * 2);
+  });
+
+  it('sin urgentes no se repite', async () => {
+    const { notas } = await conLista(ENFERMERO, NUEVAS);
+
+    act(() => vi.advanceTimersByTime(3 * CINCO_MIN));
+    expect(notas).toHaveLength(0);
+  });
+
+  it('con el sonido apagado en la tablet no se repite', async () => {
+    localStorage.setItem('sgsm.sonidoAvisos', 'no');
+    const { notas } = await conLista(ENFERMERO);
+
+    act(() => vi.advanceTimersByTime(3 * CINCO_MIN));
+    expect(notas).toHaveLength(0);
+  });
+
+  it('a quien solo ve los recordatorios (médico) no le suena', async () => {
+    const { notas } = await conLista(MEDICO);
+
+    act(() => vi.advanceTimersByTime(3 * CINCO_MIN));
+    expect(notas).toHaveLength(0);
   });
 });

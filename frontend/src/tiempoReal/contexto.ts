@@ -1,4 +1,5 @@
 import { createContext, useContext } from 'react';
+import type { Aviso } from './AvisoNuevos';
 import type { EstadoConexion } from './conexion';
 
 export interface ValorTiempoReal {
@@ -12,6 +13,11 @@ export interface ValorTiempoReal {
   /** Si los avisos suenan y vibran en esta tablet. */
   sonido: boolean;
   fijarSonido: (activo: boolean) => void;
+  /** Aviso de recordatorios nuevos a la vista (solo a quien atiende); null si no hay. */
+  aviso: Aviso | null;
+  cerrarAviso: () => void;
+  /** Hay urgentes o vencidos sin atender en todo el hospital (el aviso queda hasta cerrarlo). */
+  hayUrgentes: boolean;
 }
 
 const SIN_PROVEEDOR: ValorTiempoReal = {
@@ -19,6 +25,9 @@ const SIN_PROVEEDOR: ValorTiempoReal = {
   desfaseMs: 0,
   sonido: false,
   fijarSonido: () => {},
+  aviso: null,
+  cerrarAviso: () => {},
+  hayUrgentes: false,
 };
 
 export const ContextoTiempoReal = createContext<ValorTiempoReal>(SIN_PROVEEDOR);
