@@ -124,6 +124,83 @@ describe('Tabla', () => {
     expect(alCambiarPagina).toHaveBeenCalledWith(2);
   });
 
+  // E6-10: dónde se está y cuánto falta, sin contar a mano; y a dónde va la vista al pasar de página.
+  describe('paginación (E6-10)', () => {
+    const muchas = (props: { paginacionArriba?: boolean; tituloVisible?: 'h2' | 'h3' } = {}) => {
+      const alCambiarPagina = vi.fn();
+      const vista = render(
+        <Tabla
+          titulo="Movimientos"
+          columnas={columnas}
+          filas={[{ id: 1, apellido: 'Pérez' }]}
+          claveFila={(f) => f.id}
+          paginacion={{ pagina: 2, porPagina: 50, total: 120, alCambiarPagina }}
+          {...props}
+        />,
+      );
+      return { alCambiarPagina, ...vista };
+    };
+
+    it('dice la página, cuántas hay y qué filas se ven, como estado para el lector de pantalla', () => {
+      muchas();
+      expect(screen.getByRole('status')).toHaveTextContent('Página 2 de 3 · 51–100 de 120');
+    });
+
+    it('lleva a la primera y a la última página, con nombres que dicen a dónde', async () => {
+      const { alCambiarPagina } = muchas();
+      await userEvent.click(screen.getByRole('button', { name: 'Última página' }));
+      expect(alCambiarPagina).toHaveBeenCalledWith(3);
+      await userEvent.click(screen.getByRole('button', { name: 'Primera página' }));
+      expect(alCambiarPagina).toHaveBeenCalledWith(1);
+      expect(screen.getByRole('button', { name: 'Página anterior' })).toBeEnabled();
+      expect(screen.getByRole('button', { name: 'Página siguiente' })).toBeEnabled();
+    });
+
+    it('en la primera página no se puede ir más atrás', () => {
+      const alCambiarPagina = vi.fn();
+      render(
+        <Tabla
+          titulo="Movimientos"
+          columnas={columnas}
+          filas={[{ id: 1, apellido: 'Pérez' }]}
+          claveFila={(f) => f.id}
+          paginacion={{ pagina: 1, porPagina: 50, total: 120, alCambiarPagina }}
+        />,
+      );
+      expect(screen.getByRole('button', { name: 'Primera página' })).toBeDisabled();
+      expect(screen.getByRole('button', { name: 'Página anterior' })).toBeDisabled();
+    });
+
+    it('con paginacionArriba también está arriba de las filas (y el estado se anuncia una vez)', () => {
+      muchas({ paginacionArriba: true });
+      expect(screen.getAllByRole('button', { name: 'Página siguiente' })).toHaveLength(2);
+      expect(screen.getAllByText('Página 2 de 3 · 51–100 de 120')).toHaveLength(2);
+      expect(screen.getAllByRole('status')).toHaveLength(1);
+      const [arriba] = screen.getAllByRole('button', { name: 'Página siguiente' });
+      expect(
+        arriba!.compareDocumentPosition(screen.getByRole('table')) &
+          Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
+    });
+
+    it('con el título a la vista, al cambiar de página el foco va al título', async () => {
+      muchas({ tituloVisible: 'h2', paginacionArriba: true });
+      const titulo = screen.getByRole('heading', { name: 'Movimientos', level: 2 });
+      expect(screen.getByRole('table', { name: 'Movimientos' })).toBeInTheDocument();
+
+      const abajo = screen.getAllByRole('button', { name: 'Página siguiente' }).at(-1)!;
+      await userEvent.click(abajo);
+
+      expect(titulo).toHaveFocus();
+    });
+
+    it('sin título a la vista, el foco va a la tabla, que se llama como ella', async () => {
+      muchas();
+      await userEvent.click(screen.getByRole('button', { name: 'Página siguiente' }));
+      expect(screen.getByRole('table', { name: 'Movimientos' })).toHaveFocus();
+    });
+  });
+
   describe('filas tocables en la tabla', () => {
     const filas = [
       { id: 1, apellido: 'Pérez' },

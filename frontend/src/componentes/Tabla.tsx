@@ -1,4 +1,4 @@
-import { Fragment, useId, type MouseEvent, type ReactNode } from 'react';
+import { Fragment, useId, useRef, type MouseEvent, type ReactNode } from 'react';
 import {
   Box,
   ButtonBase,
@@ -48,6 +48,13 @@ interface Props<T> {
    */
   etiquetaFila?: (fila: T) => string;
   paginacion?: Paginacion;
+  /** La paginación también arriba de las filas (listas largas: no hay que bajar para pasar). */
+  paginacionArriba?: boolean;
+  /**
+   * Muestra el título arriba, con ese nivel: nombra la tabla y es adonde va el foco al cambiar de
+   * página. Sin él, el foco va a la tabla misma (que lleva el título como nombre).
+   */
+  tituloVisible?: 'h2' | 'h3';
   /** Si la consulta falló: se muestra el error en lugar del mensaje de "sin resultados". */
   error?: string | null;
 }
@@ -73,6 +80,13 @@ const SOLO_LECTOR = {
   clip: 'rect(0 0 0 0)',
   whiteSpace: 'nowrap',
   border: 0,
+} as const;
+
+const NOMBRES_DE_PAGINA = {
+  first: 'Primera página',
+  previous: 'Página anterior',
+  next: 'Página siguiente',
+  last: 'Última página',
 } as const;
 
 /** Chevron que avisa que la fila o tarjeta se abre; el lector de pantalla lo ignora. */
@@ -210,9 +224,54 @@ export function Tabla<T>({
   alTocarFila,
   etiquetaFila,
   paginacion,
+  paginacionArriba = false,
+  tituloVisible,
   error,
 }: Props<T>) {
   const telefono = useMediaQuery(useTheme().breakpoints.down('sm'));
+  const idTitulo = useId();
+  // Adonde va el foco al cambiar de página: el título a la vista o, si no hay, la tabla o la lista.
+  const destino = useRef<HTMLElement | null>(null);
+  const fijarDestino = (elemento: HTMLElement | null) => {
+    destino.current = elemento;
+  };
+  const nombre = tituloVisible
+    ? { 'aria-labelledby': idTitulo }
+    : { 'aria-label': titulo, tabIndex: -1, ref: fijarDestino };
+
+  const irAPagina = (pagina: number) => {
+    paginacion?.alCambiarPagina(pagina);
+    // La página nueva se lee desde arriba: la vista y el foco vuelven al título (E6-10).
+    destino.current?.scrollIntoView?.({ block: 'start' });
+    destino.current?.focus({ preventScroll: true });
+  };
+
+  const barraDePaginas = (anunciar: boolean) =>
+    paginacion && (
+      <TablePagination
+        component="div"
+        count={paginacion.total}
+        page={paginacion.pagina - 1}
+        rowsPerPage={paginacion.porPagina}
+        rowsPerPageOptions={[paginacion.porPagina]}
+        onPageChange={(_e, p) => irAPagina(p + 1)}
+        showFirstButton
+        showLastButton
+        labelDisplayedRows={({ from, to, count, page }) =>
+          `Página ${page + 1} de ${Math.max(1, Math.ceil(count / paginacion.porPagina))} · ${from}–${to} de ${count}`
+        }
+        getItemAriaLabel={(tipo) => NOMBRES_DE_PAGINA[tipo]}
+        // Con la paginación arriba y abajo, el cambio se anuncia una sola vez.
+        slotProps={{ displayedRows: anunciar ? { role: 'status' } : {} }}
+        sx={{
+          '& .MuiTablePagination-toolbar': { flexWrap: 'wrap', justifyContent: 'flex-end' },
+          '& .MuiTablePagination-actions .MuiIconButton-root': {
+            minWidth: TAMANO_TACTIL_MINIMO,
+            minHeight: TAMANO_TACTIL_MINIMO,
+          },
+        }}
+      />
+    );
   // En el teléfono las tarjetas van sueltas sobre el fondo, sin el marco de la tabla.
   const marcoDeMensaje = telefono
     ? { border: 1, borderColor: 'divider', borderRadius: 1, bgcolor: 'background.paper' }
@@ -220,6 +279,19 @@ export function Tabla<T>({
 
   return (
     <Paper variant="outlined" sx={telefono ? { border: 0, bgcolor: 'transparent' } : undefined}>
+      {tituloVisible && (
+        <Typography
+          id={idTitulo}
+          ref={fijarDestino}
+          variant="h6"
+          component={tituloVisible}
+          tabIndex={-1}
+          sx={{ px: telefono ? 0 : 2, pt: telefono ? 0 : 2, pb: 1, outline: 'none' }}
+        >
+          {titulo}
+        </Typography>
+      )}
+      {paginacionArriba && barraDePaginas(false)}
       {cargando && <LinearProgress aria-label="Cargando" sx={telefono ? { mb: 1.5 } : undefined} />}
       {telefono ? (
         filas.length > 0 && (
@@ -227,7 +299,7 @@ export function Tabla<T>({
             component="ul"
             // role explícito: Safari no anuncia como lista a una <ul> sin viñetas.
             role="list"
-            aria-label={titulo}
+            {...nombre}
             sx={{
               listStyle: 'none',
               m: 0,
@@ -250,7 +322,7 @@ export function Tabla<T>({
         )
       ) : (
         <TableContainer>
-          <Table aria-label={titulo}>
+          <Table {...nombre} sx={{ outline: 'none' }}>
             <TableHead>
               <TableRow>
                 {columnas.map((c) => (
@@ -324,18 +396,7 @@ export function Tabla<T>({
           </Box>
         )
       )}
-      {paginacion && (
-        <TablePagination
-          component="div"
-          count={paginacion.total}
-          page={paginacion.pagina - 1}
-          rowsPerPage={paginacion.porPagina}
-          rowsPerPageOptions={[paginacion.porPagina]}
-          onPageChange={(_e, p) => paginacion.alCambiarPagina(p + 1)}
-          labelDisplayedRows={({ from, to, count }) => `${from}–${to} de ${count}`}
-          getItemAriaLabel={(tipo) => (tipo === 'next' ? 'Página siguiente' : 'Página anterior')}
-        />
-      )}
+      {barraDePaginas(true)}
     </Paper>
   );
 }
