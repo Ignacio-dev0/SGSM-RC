@@ -24,9 +24,12 @@ import { formatearFechaHora } from '../../utilidades/formato';
 import { compararValores, textoDeValor, type FilaComparacion } from './comparacion';
 import { accionEnPalabras, entidadConId, nombreDeCampo, pacienteConDni } from './palabras';
 
-/** Un valor guardado, legible: simple en una línea; un objeto como pares; una lista numerada. */
-function Valor({ valor }: { valor: unknown }) {
-  const texto = textoDeValor(valor);
+/**
+ * Un valor guardado, legible: simple en una línea (con el campo, los códigos en palabras); un
+ * objeto como pares; una lista numerada.
+ */
+function Valor({ valor, clave }: { valor: unknown; clave?: string }) {
+  const texto = textoDeValor(valor, clave);
   if (texto === 'Sin valor') {
     return (
       <Typography component="span" color="text.secondary">
@@ -62,7 +65,7 @@ function Valor({ valor }: { valor: unknown }) {
             {nombreDeCampo(clave)}:{' '}
           </Box>
           <Box component="dd" sx={{ m: 0, minWidth: 0 }}>
-            <Valor valor={v} />
+            <Valor valor={v} clave={clave} />
           </Box>
         </Fragment>
       ))}
@@ -109,10 +112,10 @@ function TablaComparacion({ filas }: { filas: FilaComparacion[] }) {
                 {f.cambio && <MarcaCambio />}
               </TableCell>
               <TableCell sx={{ verticalAlign: 'top' }}>
-                <Valor valor={f.antes} />
+                <Valor valor={f.antes} clave={f.clave} />
               </TableCell>
               <TableCell sx={{ verticalAlign: 'top' }}>
-                <Valor valor={f.despues} />
+                <Valor valor={f.despues} clave={f.clave} />
               </TableCell>
             </TableRow>
           ))}
@@ -160,13 +163,13 @@ function ListaComparacion({ filas }: { filas: FilaComparacion[] }) {
               Antes
             </Typography>
             <Box component="dd" sx={{ m: 0, minWidth: 0 }}>
-              <Valor valor={f.antes} />
+              <Valor valor={f.antes} clave={f.clave} />
             </Box>
             <Typography component="dt" color="text.secondary">
               Después
             </Typography>
             <Box component="dd" sx={{ m: 0, minWidth: 0 }}>
-              <Valor valor={f.despues} />
+              <Valor valor={f.despues} clave={f.clave} />
             </Box>
           </Box>
         </Paper>
@@ -188,7 +191,7 @@ function resumenDeCambios(e: EntradaAuditoria, filas: FilaComparacion[]) {
 }
 
 /**
- * Detalle de un registro de auditoría (T607): quién, cuándo, sobre qué paciente y, campo por
+ * Detalle de un movimiento de la auditoría (T607): quién, cuándo, sobre qué paciente y, campo por
  * campo, el valor de antes y el de después, con lo que cambió marcado con ícono y texto. En el
  * teléfono ocupa toda la pantalla y los campos pasan a tarjetas.
  */
@@ -250,6 +253,12 @@ export function DetalleAuditoria({
         <Typography color="text.secondary" sx={{ mb: 1.5 }}>
           {resumenDeCambios(e, filas)}
         </Typography>
+        {/* E6-12: una sola nota, no un aviso por campo. */}
+        {filas.some((f) => f.protegido) && (
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
+            Los datos protegidos (contraseñas, rostros) no se muestran: solo se sabe que cambiaron.
+          </Typography>
+        )}
         {filas.length > 0 &&
           (telefono ? <ListaComparacion filas={filas} /> : <TablaComparacion filas={filas} />)}
       </DialogContent>

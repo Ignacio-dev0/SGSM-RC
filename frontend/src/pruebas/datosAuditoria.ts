@@ -80,25 +80,51 @@ export const paginaDeAuditoria = (
     meta: { pagina: 1, porPagina: 50, total: data.length, totalPaginas: 1, ...meta },
   });
 
+/** Sin tildes ni mayúsculas, como busca el servidor ("ben" encuentra a "Benítez"). */
+const normalizar = (t: string) => t.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase();
+
+/** Lo que devolvería el servidor al buscar por `texto` (apellido, nombre o comienzo del DNI). */
+const buscarPor = <T extends { apellido: string; nombre: string; dni: string }>(
+  lista: T[],
+  pedido: URLSearchParams,
+) => {
+  const texto = normalizar(pedido.get('texto') ?? '');
+  return lista.filter(
+    (x) =>
+      !texto || normalizar(`${x.apellido} ${x.nombre}`).includes(texto) || x.dni.startsWith(texto),
+  );
+};
+
 /**
- * Respuestas por defecto de la pantalla de auditoría: las entradas, sus opciones, el personal y
- * los pacientes de los filtros. Devuelve los pedidos que llegaron (el último es el que se ve).
+ * Respuestas por defecto de la pantalla de auditoría: las entradas, sus opciones y la búsqueda del
+ * personal y de los pacientes de los filtros. Devuelve los pedidos que llegaron (el último es el
+ * que se ve); los de las búsquedas quedan en `pedidos.personal` y `pedidos.pacientes`.
  */
 export function prepararAuditoria(entradas: EntradaAuditoria[] = ENTRADAS) {
-  const pedidos: URLSearchParams[] = [];
+  const pedidos = Object.assign([] as URLSearchParams[], {
+    personal: [] as URLSearchParams[],
+    pacientes: [] as URLSearchParams[],
+  });
   servidor.use(
     http.get('*/api/auditoria', ({ request }) => {
       pedidos.push(new URL(request.url).searchParams);
       return paginaDeAuditoria(entradas);
     }),
     http.get('*/api/auditoria/opciones', () => HttpResponse.json({ data: OPCIONES })),
-    http.get('*/api/usuarios', () =>
-      HttpResponse.json({
-        data: USUARIOS,
-        meta: { pagina: 1, porPagina: 100, total: USUARIOS.length, totalPaginas: 1 },
-      }),
-    ),
-    http.get('*/api/pacientes', () => listaDePacientes(PACIENTES)),
+    http.get('*/api/usuarios', ({ request }) => {
+      const p = new URL(request.url).searchParams;
+      pedidos.personal.push(p);
+      const data = buscarPor(USUARIOS, p);
+      return HttpResponse.json({
+        data,
+        meta: { pagina: 1, porPagina: 10, total: data.length, totalPaginas: 1 },
+      });
+    }),
+    http.get('*/api/pacientes', ({ request }) => {
+      const p = new URL(request.url).searchParams;
+      pedidos.pacientes.push(p);
+      return listaDePacientes(buscarPor(PACIENTES, p));
+    }),
   );
   return pedidos;
 }

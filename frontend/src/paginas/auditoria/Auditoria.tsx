@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Box } from '@mui/material';
+import { Box, useMediaQuery, useTheme } from '@mui/material';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { auditoriaApi, type EntradaAuditoria } from '../../api/auditoria';
 import { ErrorApi, erroresPorCampo } from '../../api/cliente';
@@ -27,19 +27,27 @@ const COLUMNAS: Columna<EntradaAuditoria>[] = [
     titulo: 'Acción',
     valor: (e) => <ColumnaPrincipal ancho={130}>{accionEnPalabras(e.accion)}</ColumnaPrincipal>,
   },
-  { titulo: 'Registro', valor: (e) => entidadConId(e.entidad, e.entidadId) },
+  // E6-08: la misma palabra que el filtro.
+  { titulo: 'Sobre qué', valor: (e) => entidadConId(e.entidad, e.entidadId) },
   { titulo: 'Paciente', valor: (e) => (e.paciente ? pacienteConDni(e.paciente) : null) },
 ];
 
-/** Vista inicial: todo, de lo más reciente a lo más viejo. Lo que se aparta va en la URL. */
+/**
+ * Vista inicial: los movimientos de las personas (ESC2), de lo más reciente a lo más viejo. Lo
+ * que se aparta va en la URL; `origen=` (vacío) es "Todos".
+ */
 const FILTROS_INICIALES: ValoresFiltros = {
   desde: '',
   hasta: '',
+  origen: 'personas',
   usuarioId: '',
   pacienteId: '',
   accion: '',
   entidad: '',
 };
+
+/** Movimientos por página: en el teléfono, menos, para no bajar de más (E6-10). */
+const POR_PAGINA = { pantalla: 50, telefono: 25 };
 
 /** Mismo mensaje que el servidor si "hasta" es anterior a "desde" (no hay límite de días). */
 const validarFechas = ({ desde, hasta }: ValoresFiltros) =>
@@ -47,23 +55,36 @@ const validarFechas = ({ desde, hasta }: ValoresFiltros) =>
     ? { hasta: 'La fecha "hasta" no puede ser anterior a "desde"' }
     : {};
 
+const DE_ORIGEN: Record<string, string> = {
+  personas: 'de personas',
+  sistema: 'del sistema',
+};
+
 /** Qué no se encontró y qué probar, con los filtros usados. */
-function mensajeSinRegistros(f: ValoresFiltros, conFiltros: boolean, entradas: EntradaAuditoria[]) {
-  if (!conFiltros) return 'Todavía no hay registros de auditoría.';
+function mensajeSinMovimientos(
+  f: ValoresFiltros,
+  conFiltros: boolean,
+  entradas: EntradaAuditoria[],
+) {
+  if (!conFiltros) {
+    return 'Todavía no hay movimientos de personas. Para ver los del sistema, cambie Origen a Todos.';
+  }
   const usuario = entradas.find((e) => String(e.usuario.id) === f.usuarioId)?.usuario.nombre;
   const causa = oracionDe([
-    'No hay registros de auditoría',
+    'No hay movimientos',
+    DE_ORIGEN[f.origen],
     f.usuarioId && `de ${usuario ?? 'el usuario elegido'}`,
     f.pacienteId && 'sobre el paciente elegido',
     f.accion && `con la acción "${accionEnPalabras(f.accion)}"`,
-    f.entidad && `de la entidad "${entidadEnPalabras(f.entidad)}"`,
+    f.entidad && `sobre "${entidadEnPalabras(f.entidad)}"`,
     rangoDeFechas(f.desde, f.hasta),
   ]);
   const pasos = pasosParaProbar([
+    f.origen === 'sistema' && 'cambie Origen a Todos',
     f.usuarioId && 'elija otro usuario',
     f.pacienteId && 'elija otro paciente',
     f.accion && 'cambie Acción a Todas',
-    f.entidad && 'cambie Entidad a Todas',
+    f.entidad && 'cambie Sobre qué a Todo',
     (f.desde || f.hasta) && 'amplíe las fechas',
   ]);
   return `${causa} ${pasos}`;
@@ -71,17 +92,23 @@ function mensajeSinRegistros(f: ValoresFiltros, conFiltros: boolean, entradas: E
 
 /**
  * Consulta de la auditoría (E6 · T607 · CU35): quién hizo qué y cuándo, con filtros en la URL y
- * paginada de a 50, de lo más reciente a lo más viejo. Al abrir un registro (toque o teclado) se ve
- * el valor de antes y el de después de cada campo, con lo que cambió marcado.
+ * paginada (de a 50; 25 en el teléfono), de lo más reciente a lo más viejo. Cada fila es un
+ * movimiento; al abrirlo (toque o teclado) se ve el valor de antes y el de después de cada campo,
+ * con lo que cambió marcado.
  */
 export function Auditoria() {
   const filtros = useFiltrosEnUrl(FILTROS_INICIALES);
   const valores = filtros.valores;
+  const telefono = useMediaQuery(useTheme().breakpoints.down('sm'));
   const [abierta, setAbierta] = useState<EntradaAuditoria | null>(null);
   const erroresCliente = validarFechas(valores);
   const valido = !erroresCliente.hasta;
 
-  const pedido = { ...valores, pagina: filtros.pagina };
+  const pedido = {
+    ...valores,
+    pagina: filtros.pagina,
+    tamano: telefono ? POR_PAGINA.telefono : POR_PAGINA.pantalla,
+  };
   const consulta = useQuery({
     queryKey: ['auditoria', pedido],
     queryFn: () => auditoriaApi.buscar(pedido),
@@ -113,7 +140,14 @@ export function Auditoria() {
       />
       {!valido ? null : rechazado ? (
         // Un 400 dice qué corregir en los filtros: reintentar daría lo mismo.
-        <Alerta tipo="error">{`No se pudo consultar la auditoría. ${consulta.error?.message ?? ''}`}</Alerta>
+        <Alerta
+          tipo="error"
+          accion={
+            <Boton variante="texto" onClick={filtros.quitarFiltros}>
+              Quitar filtros
+            </Boton>
+          }
+        >{`No se pudo consultar la auditoría. ${consulta.error?.message ?? ''}`}</Alerta>
       ) : consulta.isError ? (
         <ErrorDeCarga
           que="la auditoría"
@@ -123,16 +157,18 @@ export function Auditoria() {
       ) : (
         <Recargando activo={consulta.isFetching && consulta.isPlaceholderData}>
           <Tabla
-            titulo="Registros de auditoría"
+            titulo="Movimientos"
+            tituloVisible="h2"
             columnas={COLUMNAS}
             filas={entradas}
             claveFila={(e) => e.id}
             cargando={consulta.isFetching}
-            mensajeVacio={mensajeSinRegistros(valores, conFiltros, entradas)}
+            mensajeVacio={mensajeSinMovimientos(valores, conFiltros, entradas)}
             alTocarFila={setAbierta}
             etiquetaFila={(e) =>
               `Ver el detalle: ${accionEnPalabras(e.accion)} · ${entidadConId(e.entidad, e.entidadId)}, ${formatearFechaHoraCorta(e.fechaHora)}`
             }
+            paginacionArriba
             {...(consulta.data && {
               paginacion: { ...consulta.data.meta, alCambiarPagina: filtros.irAPagina },
             })}

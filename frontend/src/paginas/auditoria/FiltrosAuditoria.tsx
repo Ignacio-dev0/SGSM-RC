@@ -2,21 +2,30 @@ import { Box } from '@mui/material';
 import { useQuery } from '@tanstack/react-query';
 import { auditoriaApi, type EntradaAuditoria } from '../../api/auditoria';
 import { mensajeDeError } from '../../api/cliente';
-import { pacientesApi } from '../../api/pacientes';
 import { useSesion } from '../../auth/useSesion';
 import { CampoTexto } from '../../componentes/CampoTexto';
 import { Selector, type OpcionSelector } from '../../componentes/Selector';
+import { BuscadorEnServidor } from './BuscadorEnServidor';
 import { accionEnPalabras, entidadEnPalabras } from './palabras';
 
 /** Un `type` (no `interface`): useFiltrosEnUrl pide un registro de textos. */
 export type ValoresFiltros = {
   desde: string;
   hasta: string;
+  /** personas, sistema o '' (todos). */
+  origen: string;
   usuarioId: string;
   pacienteId: string;
   accion: string;
   entidad: string;
 };
+
+/** Quién hizo los movimientos (ESC2): por defecto, las personas; el sistema genera muchos. */
+const OPCIONES_ORIGEN: OpcionSelector[] = [
+  { valor: 'personas', etiqueta: 'Personas' },
+  { valor: 'sistema', etiqueta: 'Sistema' },
+  { valor: '', etiqueta: 'Todos' },
+];
 
 /** Una lista del servidor que falló: lo dice en el selector, que ofrece reintentar. */
 const errorDeLista = (que: string, consulta: { isError: boolean; error: unknown }) =>
@@ -41,14 +50,15 @@ interface Props {
   alCambiar: (cambios: Partial<ValoresFiltros>) => void;
   /** Error de las fechas: el del cliente o el del servidor. */
   errores: { desde?: string; hasta?: string };
-  /** Las entradas a la vista, para nombrar al paciente o usuario elegidos que no estén en las listas. */
+  /** Los movimientos a la vista, para nombrar al paciente o usuario de un enlace guardado. */
   entradas: EntradaAuditoria[];
 }
 
 /**
- * Filtros de la auditoría (T607): fechas, usuario, paciente, acción y entidad. Las acciones y las
- * entidades son las que hay en la base (`/api/auditoria/opciones`), dichas en palabras. El filtro
- * de usuario usa la lista del personal, que pide `usuarios.gestionar`: sin ese permiso no se ofrece.
+ * Filtros de la auditoría (T607): fechas, origen, usuario, paciente, acción y sobre qué. Las
+ * acciones y lo que se tocó son lo que hay en la base (`/api/auditoria/opciones`), dicho en
+ * palabras. El usuario y el paciente se buscan en el servidor mientras se escribe (E6-09); el
+ * usuario usa la lista del personal, que pide `usuarios.gestionar`: sin ese permiso no se ofrece.
  */
 export function FiltrosAuditoria({ valores, alCambiar, errores, entradas }: Props) {
   const { tienePermiso } = useSesion();
@@ -57,17 +67,6 @@ export function FiltrosAuditoria({ valores, alCambiar, errores, entradas }: Prop
   const opciones = useQuery({
     queryKey: ['auditoria', 'opciones'],
     queryFn: auditoriaApi.opciones,
-  });
-  const personal = useQuery({
-    queryKey: ['auditoria', 'personal'],
-    queryFn: auditoriaApi.personal,
-    enabled: verPersonal,
-  });
-  // Todos los pacientes, también los que ya se fueron: la auditoría es de toda la historia.
-  const pacientes = useQuery({
-    queryKey: ['auditoria', 'pacientes'],
-    queryFn: () => pacientesApi.buscar({ porPagina: 100 }),
-    enabled: verPacientes,
   });
 
   const pacienteVisto = entradas.find(
@@ -85,7 +84,7 @@ export function FiltrosAuditoria({ valores, alCambiar, errores, entradas }: Prop
         gridTemplateColumns: {
           xs: 'minmax(0, 1fr)',
           sm: 'repeat(2, minmax(0, 1fr))',
-          lg: 'repeat(3, minmax(0, 1fr))',
+          lg: 'repeat(4, minmax(0, 1fr))',
         },
         mb: 2,
       }}
@@ -106,44 +105,54 @@ export function FiltrosAuditoria({ valores, alCambiar, errores, entradas }: Prop
         error={errores.hasta}
         slotProps={{ inputLabel: { shrink: true } }}
       />
+      <Selector
+        etiqueta="Origen"
+        valor={valores.origen}
+        alCambiar={(v) => alCambiar({ origen: v })}
+        opciones={OPCIONES_ORIGEN}
+      />
       {verPersonal && (
-        <Selector
+        <BuscadorEnServidor
           etiqueta="Usuario"
+          clave="personal"
           valor={valores.usuarioId}
+          etiquetaDelValor={usuarioVisto?.nombre ?? `Usuario n.º ${valores.usuarioId}`}
+          buscar={async (texto) => {
+            const r = await auditoriaApi.personal(texto);
+            return {
+              total: r.meta.total,
+              sugerencias: r.data.map((u) => ({
+                valor: String(u.id),
+                etiqueta: `${u.apellido}, ${u.nombre}`,
+              })),
+            };
+          }}
           alCambiar={(v) => alCambiar({ usuarioId: v })}
-          textoVacio={personal.isLoading ? 'Cargando el personal…' : 'Todos'}
-          opciones={conElegido(
-            (personal.data?.data ?? []).map((u) => ({
-              valor: String(u.id),
-              etiqueta: `${u.apellido}, ${u.nombre}`,
-            })),
-            valores.usuarioId,
-            usuarioVisto?.nombre ?? `Usuario n.º ${valores.usuarioId}`,
-          )}
-          error={errorDeLista('personal', personal)}
-          alReintentar={() => void personal.refetch()}
-          reintentando={personal.isFetching}
+          ayuda="Escriba el apellido, el nombre o el DNI."
         />
       )}
       {verPacientes && (
-        <Selector
+        <BuscadorEnServidor
           etiqueta="Paciente"
+          clave="pacientes"
           valor={valores.pacienteId}
-          alCambiar={(v) => alCambiar({ pacienteId: v })}
-          textoVacio={pacientes.isLoading ? 'Cargando pacientes…' : 'Todos'}
-          opciones={conElegido(
-            (pacientes.data?.data ?? []).map((p) => ({
-              valor: String(p.id),
-              etiqueta: `${p.apellido}, ${p.nombre} · DNI ${p.dni}`,
-            })),
-            valores.pacienteId,
+          etiquetaDelValor={
             pacienteVisto
               ? `${pacienteVisto.nombre}${pacienteVisto.dni ? ` · DNI ${pacienteVisto.dni}` : ''}`
-              : `Paciente n.º ${valores.pacienteId}`,
-          )}
-          error={errorDeLista('pacientes', pacientes)}
-          alReintentar={() => void pacientes.refetch()}
-          reintentando={pacientes.isFetching}
+              : `Paciente n.º ${valores.pacienteId}`
+          }
+          buscar={async (texto) => {
+            const r = await auditoriaApi.pacientes(texto);
+            return {
+              total: r.meta.total,
+              sugerencias: r.data.map((p) => ({
+                valor: String(p.id),
+                etiqueta: `${p.apellido}, ${p.nombre} · DNI ${p.dni}`,
+              })),
+            };
+          }}
+          alCambiar={(v) => alCambiar({ pacienteId: v })}
+          ayuda="Escriba el apellido, el nombre o el DNI (también de quienes ya se fueron)."
         />
       )}
       <Selector
@@ -165,11 +174,12 @@ export function FiltrosAuditoria({ valores, alCambiar, errores, entradas }: Prop
         alReintentar={() => void opciones.refetch()}
         reintentando={opciones.isFetching}
       />
+      {/* E6-08: "Sobre qué", la misma palabra que la columna. */}
       <Selector
-        etiqueta="Entidad"
+        etiqueta="Sobre qué"
         valor={valores.entidad}
         alCambiar={(v) => alCambiar({ entidad: v })}
-        textoVacio={opciones.isLoading ? 'Cargando entidades…' : 'Todas'}
+        textoVacio={opciones.isLoading ? 'Cargando…' : 'Todo'}
         opciones={conElegido(
           ordenadas(
             (opciones.data?.entidades ?? []).map((e) => ({
@@ -180,7 +190,7 @@ export function FiltrosAuditoria({ valores, alCambiar, errores, entradas }: Prop
           valores.entidad,
           entidadEnPalabras(valores.entidad),
         )}
-        error={errorDeLista('entidades', opciones)}
+        error={errorDeLista('opciones', opciones)}
         alReintentar={() => void opciones.refetch()}
         reintentando={opciones.isFetching}
       />

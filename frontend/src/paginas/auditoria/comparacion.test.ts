@@ -13,8 +13,16 @@ describe('antes y después, campo por campo', () => {
         antes: 'Sala A · A-01',
         despues: 'Sala A · A-02',
         cambio: true,
+        protegido: false,
       },
-      { clave: 'estado', campo: 'Estado', antes: 'INTERNADO', despues: 'INTERNADO', cambio: false },
+      {
+        clave: 'estado',
+        campo: 'Estado',
+        antes: 'INTERNADO',
+        despues: 'INTERNADO',
+        cambio: false,
+        protegido: false,
+      },
     ]);
   });
 
@@ -43,6 +51,13 @@ describe('antes y después, campo por campo', () => {
     expect(otra?.cambio).toBe(true);
   });
 
+  it('un dato protegido que está de los dos lados cambió: el servidor solo guarda lo que cambió (E6-12)', () => {
+    const [fila] = compararValores({ contrasena: '[oculto]' }, { contrasena: '[oculto]' });
+    expect(fila).toMatchObject({ cambio: true, protegido: true });
+    const [comun] = compararValores({ cama: 'A-01' }, { cama: 'A-02' });
+    expect(comun?.protegido).toBe(false);
+  });
+
   it('sin valores anteriores (se creó con la acción) no marca nada como cambiado', () => {
     const filas = compararValores(null, { tipo: 'MEDICAMENTO', prioridad: 'MEDIA' });
     expect(filas.map((f) => [f.campo, f.cambio])).toEqual([
@@ -62,13 +77,25 @@ describe('cada valor como se lee', () => {
     [false, 'No'],
     [0.5, '0,5'],
     [1000, '1000'],
-    ['[oculto]', '[oculto]'],
+    ['[oculto]', 'Dato protegido (no se muestra)'],
     ['2026-10-02T02:30:00.000Z', '01/10/2026 23:30'],
     ['2026-10-02', '02/10/2026'],
     ['Sala A · A-02', 'Sala A · A-02'],
     [['a', 'b'], 'a, b'],
   ])('%j → "%s"', (valor, texto) => {
     expect(textoDeValor(valor)).toBe(texto);
+  });
+
+  it('con el campo, los códigos e ids se leen en palabras (E6-07)', () => {
+    expect(textoDeValor('PENDIENTE', 'estado')).toBe('Pendiente');
+    expect(textoDeValor('ALTA', 'prioridad')).toBe('Urgente');
+    expect(textoDeValor(40, 'prescripcionId')).toBe('n.º 40');
+    expect(textoDeValor(null, 'salaId')).toBe('Todas las salas');
+    expect(textoDeValor(undefined, 'salaId')).toBe('Sin valor');
+    expect(textoDeValor(['reportes.ver', 'auditoria.ver'], 'permisosAdicionales')).toBe(
+      'Ver reportes, Ver la auditoría',
+    );
+    expect(textoDeValor(true, 'validadoBiometricamente')).toBe('Sí');
   });
 
   it('un objeto anidado no es un texto: se arma aparte', () => {

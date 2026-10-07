@@ -1,4 +1,5 @@
 import type { EntradaAuditoria } from '../../api/auditoria';
+import { VIAS } from '../prescripciones/etiquetas';
 
 /**
  * La auditoría en palabras (T607). El backend guarda códigos (`TRASLADAR`, `AsignacionCama`,
@@ -72,60 +73,78 @@ export function entidadConId(entidad: string, id: string | null) {
 export const pacienteConDni = (p: NonNullable<EntradaAuditoria['paciente']>) =>
   p.dni ? `${p.nombre} · DNI ${p.dni}` : p.nombre;
 
-/** Los campos que más aparecen en los valores guardados, con su nombre en la interfaz. */
+/**
+ * Cada campo que el backend guarda en los valores de antes y después (registrarAuditoria de cada
+ * servicio), con su nombre en la interfaz. La prueba de palabras.test.ts recorre las claves del
+ * servidor y falla si alguna no está.
+ */
 const CAMPOS: Record<string, string> = {
   activo: 'Activo',
-  agruparPor: 'Agrupar por',
+  agruparPor: 'Agrupado por',
   apellido: 'Apellido',
+  bloqueadoHasta: 'Bloqueado hasta',
   cama: 'Cama',
-  camaId: 'Cama',
-  cantidad: 'Cantidad',
   contactoEmergenciaNombre: 'Contacto de emergencia',
   contactoEmergenciaTelefono: 'Teléfono de emergencia',
-  contrasena: 'Contraseña',
   desde: 'Desde',
-  detalles: 'Detalle',
+  detalles: 'Medicamentos e insumos',
   diagnostico: 'Diagnóstico',
   dni: 'DNI',
   dosis: 'Dosis',
   email: 'Correo electrónico',
   estado: 'Estado',
+  estudioId: 'Estudio',
+  fechaBaja: 'Fecha de baja',
   fechaEgreso: 'Fecha de egreso',
   fechaFin: 'Fecha de fin',
   fechaHora: 'Fecha y hora',
+  fechaHoraObjetivo: 'Hora programada',
+  fechaIngreso: 'Fecha de ingreso',
   fechaInicio: 'Fecha de inicio',
   fechaNacimiento: 'Fecha de nacimiento',
   formato: 'Formato',
-  frecuenciaHoras: 'Frecuencia (horas)',
+  frecuenciaHoras: 'Frecuencia',
   hasta: 'Hasta',
-  horaObjetivo: 'Hora objetivo',
-  insumoId: 'Insumo',
-  items: 'Insumos',
   matricula: 'Matrícula',
+  medicamento: 'Medicamento',
   motivo: 'Motivo',
+  motivoCambioEstado: 'Motivo del cambio de estado',
+  motivoCancelacion: 'Motivo de la cancelación',
   motivoEgreso: 'Motivo del egreso',
+  motivoNoAdministrado: 'Motivo por el que no se administró',
   nombre: 'Nombre',
-  nombreUsuario: 'Usuario',
+  nombreUsuario: 'Nombre de usuario',
+  numeroAfiliado: 'Número de afiliado',
   obraSocial: 'Obra social',
   observaciones: 'Observaciones',
-  pacienteId: 'Paciente',
-  permisos: 'Permisos',
+  permisosAdicionales: 'Permisos adicionales',
+  preparacion: 'Preparación',
   prescripcionId: 'Prescripción',
   presentacion: 'Presentación',
   prioridad: 'Prioridad',
+  realizadoEn: 'Realizado el',
   rol: 'Rol',
-  sala: 'Sala',
   salaId: 'Sala',
   sexo: 'Sexo',
+  suministroId: 'Suministro',
   tipo: 'Tipo',
-  unidad: 'Unidad',
+  tipoEstudio: 'Tipo de estudio',
   unidadDosis: 'Unidad de la dosis',
   unidadMedida: 'Unidad de medida',
-  usuarioId: 'Usuario',
+  validadoBiometricamente: 'Confirmado con el rostro',
+  vencidoEn: 'Venció el',
   via: 'Vía',
+  // Sensibles: la consulta los entrega ocultos (D49), pero el nombre se dice igual.
+  contrasena: 'Contraseña',
+  contrasenaHash: 'Contraseña',
+  patron: 'Rostro',
+  fotoReferencia: 'Foto del rostro',
 };
 
-/** "unidadDosis" → "Unidad de la dosis"; uno desconocido, separado en palabras ("Numero afiliado"). */
+/** ¿El campo tiene su nombre en la interfaz (y no el armado por la regla)? */
+export const campoConNombre = (clave: string) => Object.hasOwn(CAMPOS, clave);
+
+/** "unidadDosis" → "Unidad de la dosis"; uno desconocido, separado en palabras ("Otro campo"). */
 export function nombreDeCampo(clave: string) {
   const conocido = CAMPOS[clave];
   if (conocido) return conocido;
@@ -135,4 +154,97 @@ export function nombreDeCampo(clave: string) {
     .trim()
     .toLowerCase();
   return palabras.charAt(0).toUpperCase() + palabras.slice(1);
+}
+
+/**
+ * Los códigos de cada campo con las palabras de las pantallas: las de los chips (Vigente,
+ * Suspendida, Egresado), las de la urgencia de los recordatorios (DESIGN.md: ALTA es "Urgente") y
+ * las del glosario (PRODUCT.md).
+ */
+const VALORES: Record<string, Record<string, string>> = {
+  estado: {
+    INTERNADO: 'Internado',
+    EGRESADO: 'Egresado',
+    VIGENTE: 'Vigente',
+    SUSPENDIDA: 'Suspendida',
+    FINALIZADA: 'Finalizada',
+    PROGRAMADO: 'Programado',
+    REALIZADO: 'Realizado',
+    CANCELADO: 'Cancelado',
+    PENDIENTE: 'Pendiente',
+    ATENDIDO: 'Atendido',
+    VENCIDO: 'Vencido',
+  },
+  tipo: {
+    MEDICAMENTO: 'Medicamento',
+    INSUMO: 'Insumo',
+    // El de un suministro: los insumos que se registraron juntos.
+    INSUMOS: 'Insumos',
+    ESTUDIO: 'Estudio',
+  },
+  prioridad: { ALTA: 'Urgente', MEDIA: 'Pronto', BAJA: 'Programada' },
+  via: Object.fromEntries(VIAS.map((v) => [v.valor, v.etiqueta])),
+  sexo: { FEMENINO: 'Femenino', MASCULINO: 'Masculino', OTRO: 'Otro' },
+  rol: { ADMINISTRADOR: 'Administrador', MEDICO: 'Médico', ENFERMERO: 'Enfermero' },
+  // Por qué se asignó la cama.
+  motivo: { INGRESO: 'Internación', TRASLADO: 'Traslado', REINGRESO: 'Reingreso' },
+  formato: { pdf: 'PDF', xlsx: 'Excel' },
+  agruparPor: {
+    paciente: 'Paciente',
+    insumo: 'Medicamento o insumo',
+    usuario: 'Personal',
+    dia: 'Día',
+  },
+};
+
+/** Los permisos del catálogo, con lo que dejan hacer. */
+const PERMISOS: Record<string, string> = {
+  'usuarios.gestionar': 'Gestionar usuarios',
+  'usuarios.permisos': 'Asignar permisos',
+  'biometria.gestionar': 'Registrar el rostro del personal',
+  'pacientes.ver': 'Ver pacientes',
+  'pacientes.gestionar': 'Internar, trasladar y dar de alta pacientes',
+  'catalogo.ver': 'Ver el catálogo',
+  'catalogo.gestionar': 'Mantener el catálogo',
+  'prescripciones.ver': 'Ver prescripciones',
+  'prescripciones.gestionar': 'Indicar y cambiar prescripciones',
+  'suministros.registrar': 'Administrar y registrar insumos',
+  'suministros.ver': 'Ver lo que se registró',
+  'suministros.corregir': 'Corregir lo registrado',
+  'recordatorios.ver': 'Ver recordatorios',
+  'recordatorios.atender': 'Atender recordatorios',
+  'estudios.ver': 'Ver estudios',
+  'estudios.gestionar': 'Programar estudios',
+  'estudios.confirmar': 'Confirmar estudios',
+  'reportes.ver': 'Ver reportes',
+  'reportes.exportar': 'Descargar reportes',
+  'auditoria.ver': 'Ver la auditoría',
+};
+
+/** Campos que son el id de otro registro: se leen "n.º 40", como en "Prescripción n.º 40". */
+const IDS = new Set(['prescripcionId', 'estudioId', 'suministroId', 'salaId']);
+
+/** Lo que significa "sin valor" en un reporte exportado: no se filtró. */
+const SIN_FILTRO: Record<string, string> = {
+  salaId: 'Todas las salas',
+  tipo: 'Medicamentos e insumos',
+};
+
+const NBSP = String.fromCharCode(160);
+
+/**
+ * El valor de un campo en palabras: los códigos con su nombre ("PENDIENTE" → "Pendiente"), los
+ * ids con "n.º", la frecuencia como en la prescripción y los permisos con lo que dejan hacer. Un
+ * código desconocido o un texto libre quedan como están (las fechas y los números los escribe
+ * `textoDeValor`).
+ */
+export function valorEnPalabras(clave: string, valor: unknown): unknown {
+  if (valor === null && SIN_FILTRO[clave]) return SIN_FILTRO[clave];
+  if (IDS.has(clave) && typeof valor === 'number') return `n.º ${valor}`;
+  if (clave === 'frecuenciaHoras' && typeof valor === 'number') return `cada ${valor}${NBSP}h`;
+  if (clave === 'permisosAdicionales' && Array.isArray(valor)) {
+    return valor.map((p) => (typeof p === 'string' ? (PERMISOS[p] ?? p) : p));
+  }
+  if (typeof valor === 'string') return VALORES[clave]?.[valor] ?? valor;
+  return valor;
 }
