@@ -19,6 +19,7 @@ import {
 import { rutasInsumos } from './modulos/insumos/insumos.rutas';
 import { rutasNotificaciones } from './modulos/notificaciones/notificaciones.rutas';
 import { rutasRecordatorios } from './modulos/recordatorios/recordatorios.rutas';
+import { rutasReportes } from './modulos/reportes/reportes.rutas';
 import { rutasSuministros } from './modulos/suministros/suministros.rutas';
 import { rutasPermisos, rutasRoles } from './modulos/seguridad/seguridad.rutas';
 import { rutasUsuarios } from './modulos/usuarios/usuarios.rutas';
@@ -53,6 +54,7 @@ export function crearApp() {
   app.use('/api/recordatorios', autenticar, rutasRecordatorios);
   app.use('/api/tipos-estudio', autenticar, rutasTiposEstudio);
   app.use('/api/estudios', autenticar, rutasEstudios);
+  app.use('/api/reportes', autenticar, rutasReportes);
 
   app.use(rutaNoEncontrada);
   app.use(manejarErrores);
