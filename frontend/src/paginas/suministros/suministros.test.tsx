@@ -132,7 +132,7 @@ describe('administración de medicamento (T413 · CU20)', () => {
     renderizarApp('/suministros/medicamento?pacienteId=7', ENFERMERO);
 
     expect(await screen.findByText(/Benítez, Rosa/)).toBeInTheDocument();
-    await userEvent.click(await screen.findByRole('button', { name: /Paracetamol 500 mg/ }));
+    await userEvent.click(await screen.findByRole('button', { name: /Paracetamol 500\smg/ }));
     expect(screen.getByLabelText(/^Cantidad/)).toHaveValue(500);
     await userEvent.click(screen.getByRole('button', { name: 'Confirmar con mi rostro' }));
     await userEvent.click(
@@ -161,7 +161,7 @@ describe('administración de medicamento (T413 · CU20)', () => {
       screen.getByRole('option', { name: /Benítez, Rosa/ }),
     );
 
-    expect(await screen.findByRole('button', { name: /Paracetamol 500 mg/ })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: /Paracetamol 500\smg/ })).toBeInTheDocument();
   });
 
   it('si se cancela la validación facial no registra nada', async () => {
@@ -169,7 +169,7 @@ describe('administración de medicamento (T413 · CU20)', () => {
     servidor.use(http.post('*/api/suministros/medicamentos', registrar));
     renderizarApp('/suministros/medicamento?pacienteId=7', ENFERMERO);
 
-    await userEvent.click(await screen.findByRole('button', { name: /Paracetamol 500 mg/ }));
+    await userEvent.click(await screen.findByRole('button', { name: /Paracetamol 500\smg/ }));
     await userEvent.click(screen.getByRole('button', { name: 'Confirmar con mi rostro' }));
     const dialogo = await screen.findByRole('dialog', { name: /Confirmar con su rostro/ });
     await userEvent.click(within(dialogo).getByRole('button', { name: 'Cancelar' }));
@@ -195,7 +195,7 @@ describe('administración de medicamento (T413 · CU20)', () => {
     );
     renderizarApp('/suministros/medicamento?pacienteId=7', ENFERMERO);
 
-    await userEvent.click(await screen.findByRole('button', { name: /Paracetamol 500 mg/ }));
+    await userEvent.click(await screen.findByRole('button', { name: /Paracetamol 500\smg/ }));
     await userEvent.click(screen.getByRole('button', { name: 'Confirmar con mi rostro' }));
     await userEvent.click(
       await screen.findByRole('button', { name: /Simular el rostro de enfermero/ }),
@@ -241,7 +241,7 @@ describe('administración de medicamento (T413 · CU20)', () => {
   it('antes de confirmar muestra un resumen para revisar, también en la validación facial', async () => {
     renderizarApp('/suministros/medicamento?pacienteId=7', ENFERMERO);
 
-    await userEvent.click(await screen.findByRole('button', { name: /Paracetamol 500 mg/ }));
+    await userEvent.click(await screen.findByRole('button', { name: /Paracetamol 500\smg/ }));
     const resumen = screen.getByRole('region', { name: 'Revise antes de confirmar' });
     expect(resumen).toHaveTextContent('Benítez, Rosa');
     expect(resumen).toHaveTextContent('Cama A-01');
@@ -259,7 +259,7 @@ describe('administración de medicamento (T413 · CU20)', () => {
   it('avisa si la cantidad es distinta de la prescripta, sin impedir registrarla', async () => {
     renderizarApp('/suministros/medicamento?pacienteId=7', ENFERMERO);
 
-    await userEvent.click(await screen.findByRole('button', { name: /Paracetamol 500 mg/ }));
+    await userEvent.click(await screen.findByRole('button', { name: /Paracetamol 500\smg/ }));
     const cantidad = screen.getByLabelText(/^Cantidad/);
     await userEvent.clear(cantidad);
     await userEvent.type(cantidad, '1000');
@@ -275,7 +275,7 @@ describe('administración de medicamento (T413 · CU20)', () => {
     conPrescripciones({ ...vigente, proximaToma: enMinutos(185) });
     renderizarApp('/suministros/medicamento?pacienteId=7', ENFERMERO);
 
-    await userEvent.click(await screen.findByRole('button', { name: /Paracetamol 500 mg/ }));
+    await userEvent.click(await screen.findByRole('button', { name: /Paracetamol 500\smg/ }));
 
     expect(screen.getByText(/Faltan 3 h 5 min para la toma de las \d\d:\d\d/)).toBeVisible();
     expect(screen.getByRole('button', { name: 'Confirmar con mi rostro' })).toBeEnabled();
@@ -291,7 +291,7 @@ describe('administración de medicamento (T413 · CU20)', () => {
     });
     renderizarApp('/suministros/medicamento?pacienteId=7', ENFERMERO);
 
-    await userEvent.click(await screen.findByRole('button', { name: /Paracetamol 500 mg/ }));
+    await userEvent.click(await screen.findByRole('button', { name: /Paracetamol 500\smg/ }));
 
     expect(screen.getByText(/ya se dio a las \d\d:\d\d \(Acosta, Sofía\)/)).toBeVisible();
     const confirmar = screen.getByRole('button', { name: 'Confirmar con mi rostro' });
@@ -320,7 +320,7 @@ describe('administración de medicamento (T413 · CU20)', () => {
     expect(screen.queryByText(/no tiene prescripciones vigentes/)).not.toBeInTheDocument();
     fallar = false;
     await userEvent.click(screen.getByRole('button', { name: 'Reintentar' }));
-    expect(await screen.findByRole('button', { name: /Paracetamol 500 mg/ })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: /Paracetamol 500\smg/ })).toBeInTheDocument();
   });
 
   it('sin respuesta del servidor al registrar, pide revisar el historial antes de reintentar', async () => {
@@ -328,7 +328,7 @@ describe('administración de medicamento (T413 · CU20)', () => {
     servidor.use(http.post('*/api/suministros/medicamentos', () => HttpResponse.error()));
     renderizarApp('/suministros/medicamento?pacienteId=7', ENFERMERO);
 
-    await userEvent.click(await screen.findByRole('button', { name: /Paracetamol 500 mg/ }));
+    await userEvent.click(await screen.findByRole('button', { name: /Paracetamol 500\smg/ }));
     await userEvent.click(screen.getByRole('button', { name: 'Confirmar con mi rostro' }));
     await userEvent.click(
       await screen.findByRole('button', { name: /Simular el rostro de enfermero/ }),

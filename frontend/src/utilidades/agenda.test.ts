@@ -23,10 +23,20 @@ describe('vista previa de horarios', () => {
   });
 });
 
+/** Espacio no separable (U+00A0). */
+const NBSP = String.fromCharCode(160);
+
 describe('formato de dosis', () => {
   it('usa coma decimal y no agrupa miles, para no confundir 1000 con 1,000', async () => {
     const { formatearDosis } = await import('../paginas/prescripciones/etiquetas');
-    expect(formatearDosis(1000, 'mg')).toBe('1000 mg');
-    expect(formatearDosis(0.5, 'comprimido')).toBe('0,5 comprimido');
+    expect(formatearDosis(1000, 'mg')).toBe(`1000${NBSP}mg`);
+    expect(formatearDosis(0.5, 'comprimido')).toBe(`0,5${NBSP}comprimido`);
+  });
+
+  it('el número y la unidad nunca quedan en renglones distintos (espacio no separable)', async () => {
+    const { formatearDosis, formatearFrecuencia } =
+      await import('../paginas/prescripciones/etiquetas');
+    expect(formatearDosis(500, 'mg')).not.toContain(' ');
+    expect(formatearFrecuencia(8)).toBe(`cada 8${NBSP}h`);
   });
 });

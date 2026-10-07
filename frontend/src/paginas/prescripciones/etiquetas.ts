@@ -30,14 +30,17 @@ export const ESTADOS: Record<
   FINALIZADA: { etiqueta: 'Finalizada', color: 'default' },
 };
 
+/** Espacio no separable: el número y su unidad nunca quedan en renglones distintos. */
+const NBSP = String.fromCharCode(160);
+
 /**
  * "500 mg", "0,5 comprimido": decimales con coma, como se leen en Argentina, y SIN separador de
  * miles ("1000 mg", no "1.000 mg"), para que una dosis no se confunda con un decimal.
  */
 export const formatearDosis = (dosis: number, unidad: string) =>
-  `${dosis.toLocaleString('es-AR', { useGrouping: false, maximumFractionDigits: 3 })} ${unidad}`;
+  `${dosis.toLocaleString('es-AR', { useGrouping: false, maximumFractionDigits: 3 })}${NBSP}${unidad}`;
 
-export const formatearFrecuencia = (horas: number) => `cada ${horas} h`;
+export const formatearFrecuencia = (horas: number) => `cada ${horas}${NBSP}h`;
 
 export const resumenPrescripcion = (
   p: Pick<Prescripcion, 'dosis' | 'unidadDosis' | 'frecuenciaHoras'>,
