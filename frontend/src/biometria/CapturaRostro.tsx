@@ -16,6 +16,8 @@ interface Props {
   /** Nombre de usuario de la persona: en modo demostración se simula su rostro. */
   persona: string;
   alCapturar: (r: RostroCapturado) => void;
+  /** Ocultar el aviso de demostración cuando quien la usa ya lo muestra (diálogo facial). */
+  sinAvisoDeDemostracion?: boolean;
 }
 
 type Estado = 'iniciando' | 'buscando' | 'varios' | 'listo' | 'error';
@@ -166,12 +168,14 @@ function CapturaConCamara({ alCapturar }: Pick<Props, 'alCapturar'>) {
   );
 }
 
-function CapturaSimulada({ persona, alCapturar }: Props) {
+function CapturaSimulada({ persona, alCapturar, sinAvisoDeDemostracion = false }: Props) {
   return (
     <Box sx={{ display: 'grid', gap: 2 }}>
-      <Alerta tipo="info" titulo="Modo de demostración">
-        Esta instalación no usa la cámara: elija qué rostro simular.
-      </Alerta>
+      {!sinAvisoDeDemostracion && (
+        <Alerta tipo="info" titulo="Modo de demostración">
+          Esta instalación no usa la cámara: elija qué rostro simular.
+        </Alerta>
+      )}
       <Boton
         startIcon={<FaceRetouchingNaturalIcon />}
         onClick={() => alCapturar({ descriptor: descriptorSimulado(persona), foto: FOTO_SIMULADA })}

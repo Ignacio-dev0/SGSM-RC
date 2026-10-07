@@ -290,6 +290,8 @@ describe('validación facial reutilizable (T405 · CU10)', () => {
     expect(within(dialogo).getByRole('note')).toHaveTextContent(
       'Modo demostración: el rostro se simula.',
     );
+    // Un solo aviso: la captura no repite el suyo dentro del diálogo.
+    expect(within(dialogo).getAllByText(/Modo (de )?demostración/)).toHaveLength(1);
   });
 
   it('con la cámara real no muestra el aviso de demostración en el diálogo', async () => {

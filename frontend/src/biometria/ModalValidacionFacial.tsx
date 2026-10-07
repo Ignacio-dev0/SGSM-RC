@@ -167,6 +167,7 @@ export function ModalValidacionFacial({ operacion, detalle, alValidar, alCancela
                 key={intento}
                 persona={usuario.nombreUsuario}
                 alCapturar={(r) => void validar(r)}
+                sinAvisoDeDemostracion
               />
             )}
           </>
