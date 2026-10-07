@@ -1,0 +1,28 @@
+# Dependencias
+node_modules/
+
+# Builds
+dist/
+build/
+coverage/
+*.tsbuildinfo
+
+# Variables de entorno (las plantillas .env.example sí se versionan)
+.env
+.env.*
+!.env.example
+!.env.test
+
+# Modelos de reconocimiento facial copiados desde node_modules
+frontend/public/models/
+
+# Sistema operativo / editores
+.DS_Store
+Thumbs.db
+.vscode/*
+!.vscode/extensions.json
+.idea/
+
+# Logs
+*.log
+npm-debug.log*

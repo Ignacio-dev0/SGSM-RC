@@ -1,0 +1,25 @@
+{
+  "name": "sgsm-rc",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Sistema de Gestión de Suministros Médicos y Recordatorios Clínicos — Hospital Zonal Especializado en Rehabilitación \"El Dique\"",
+  "workspaces": [
+    "backend",
+    "frontend"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "db:up": "docker compose up -d db",
+    "db:down": "docker compose down",
+    "dev:backend": "npm run dev -w backend",
+    "dev:frontend": "npm run dev -w frontend",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "typecheck": "npm run typecheck --workspaces",
+    "test": "npm run test --workspaces",
+    "verificar": "npm run format:check && npm run lint && npm run typecheck && npm run test"
+  }
+}
