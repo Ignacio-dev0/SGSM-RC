@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { servidor } from '../pruebas/servidor';
 import { renderizarApp } from '../pruebas/renderizar';
-import { ENFERMERO } from '../pruebas/datos';
+import { ENFERMERO, MEDICO } from '../pruebas/datos';
 
 const responderLogin = (respuesta: () => Response) =>
   servidor.use(http.post('*/api/auth/login', respuesta));
@@ -119,5 +119,34 @@ describe('pantalla de inicio de sesión (T107 · CU06)', () => {
     expect(screen.getByText('Ingrese su contraseña')).toBeInTheDocument();
     await waitFor(() => expect(screen.getByLabelText('Usuario')).toHaveFocus());
     await waitFor(() => expect(login).not.toHaveBeenCalled());
+  });
+});
+
+describe('después del cierre por inactividad (ESC1)', () => {
+  /** Una sesión que se cierra por inactividad enseguida (0,3 s), sin tocar nada. */
+  function cerrarPorInactividad(usuario: typeof ENFERMERO) {
+    servidor.use(
+      http.post('*/api/auth/logout', () => HttpResponse.json({ data: { cerrada: true } })),
+    );
+    renderizarApp('/', { ...usuario, inactividadMinutos: 0.005 });
+  }
+
+  it('a quien atiende recordatorios le explica que los avisos quedaron apagados', async () => {
+    cerrarPorInactividad(ENFERMERO);
+
+    expect(await screen.findByRole('heading', { name: /Ingresar/ })).toBeInTheDocument();
+    expect(screen.getByRole('status')).toHaveTextContent(
+      'Se cerró la sesión por inactividad. Los avisos de recordatorios quedan apagados hasta que vuelva a ingresar.',
+    );
+  });
+
+  it('a quien no recibe avisos le dice solo que vuelva a ingresar', async () => {
+    cerrarPorInactividad(MEDICO);
+
+    expect(await screen.findByRole('heading', { name: /Ingresar/ })).toBeInTheDocument();
+    expect(screen.getByRole('status')).toHaveTextContent(
+      'Se cerró la sesión por inactividad. Vuelva a ingresar.',
+    );
+    expect(screen.getByRole('status')).not.toHaveTextContent('recordatorios');
   });
 });

@@ -6,6 +6,16 @@ import { AvisoInactividad } from './AvisoInactividad';
 import { useInactividad } from './useInactividad';
 import { Contexto, type ValorSesion } from './useSesion';
 
+/**
+ * Por qué se cerró la sesión, para la pantalla de ingreso (ESC1). A quien atiende recordatorios
+ * se le aclara que, sin sesión, la tablet ya no suena ni avisa los nuevos.
+ */
+function motivoCierrePorInactividad(usuario: UsuarioSesion | null | undefined) {
+  return usuario?.permisos.includes('recordatorios.atender')
+    ? 'Se cerró la sesión por inactividad. Los avisos de recordatorios quedan apagados hasta que vuelva a ingresar.'
+    : 'Se cerró la sesión por inactividad. Vuelva a ingresar.';
+}
+
 /** Sesión del usuario (T105 · T107): quién está conectado, sus permisos y el cierre por inactividad. */
 export function ProveedorSesion({ children }: { children: ReactNode }) {
   const [usuario, setUsuario] = useState<UsuarioSesion | null | undefined>(undefined);
@@ -68,7 +78,8 @@ export function ProveedorSesion({ children }: { children: ReactNode }) {
 
   const { segundosRestantes, seguir } = useInactividad(
     usuario ? usuario.inactividadMinutos : null,
-    () => void cerrarSesion('La sesión se cerró por inactividad. Vuelva a ingresar.'),
+    // El motivo llega al ingreso por `aviso` (el contexto sigue montado al cambiar de pantalla).
+    () => void cerrarSesion(motivoCierrePorInactividad(usuarioRef.current)),
     { alHaberActividad: renovarEnServidor },
   );
 
