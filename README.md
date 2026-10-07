@@ -18,7 +18,7 @@ sobre las prescripciones que carga el equipo médico.
 | E3    | Prescripciones y catálogo                                      | ✅                                                                                                          |
 | E4    | Biometría y registro de suministros                            | ✅ (falta la prueba en la tablet real)                                                                      |
 | E5    | Recordatorios de tomas en tiempo real y estudios (mínimo)      | ✅ (falta la prueba en la tablet real)                                                                      |
-| E6    | Reportes, estadísticas, exportación y auditoría                | 🔧 servidor listo (PDF con pdfkit, Excel con exceljs); interfaz en curso                                    |
+| E6    | Reportes, estadísticas, exportación y auditoría                | ✅ (PDF con pdfkit, Excel con exceljs, gráficos con @mui/x-charts)                                          |
 | E7    | Integración, rendimiento, seguridad                            | 🔧 seguridad lista (rostro cifrado, encabezados, límite por IP); e2e de recordatorios; rendimiento en curso |
 | E8    | Despliegue local, manuales, documentación técnica              | 🔧 HTTPS local, respaldos y monitoreo listos; manuales pendientes                                           |
 
