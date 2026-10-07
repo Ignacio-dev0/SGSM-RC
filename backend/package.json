@@ -15,7 +15,9 @@
     "db:aplicar": "prisma migrate deploy",
     "db:sembrar": "prisma db seed",
     "db:reiniciar": "prisma migrate reset --force",
-    "biometria:cifrar": "tsx src/scripts/cifrar-biometria.ts"
+    "biometria:cifrar": "tsx src/scripts/cifrar-biometria.ts",
+    "volumen:sembrar": "tsx src/scripts/volumen.ts",
+    "volumen:medir": "tsx src/scripts/medir-rendimiento.ts"
   },
   "devDependencies": {
     "@types/cookie-parser": "^1.4.10",
