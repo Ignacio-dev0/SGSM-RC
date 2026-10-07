@@ -127,3 +127,54 @@ export interface HistorialPaciente {
     detalles: { insumo: string; cantidad: number; unidad: string }[];
   }[];
 }
+
+export type TipoInsumo = 'MEDICAMENTO' | 'INSUMO';
+
+export interface Insumo {
+  id: number;
+  nombre: string;
+  tipo: TipoInsumo;
+  unidadMedida: string;
+  presentacion: string;
+  activo: boolean;
+}
+
+export type EstadoPrescripcion = 'VIGENTE' | 'SUSPENDIDA' | 'FINALIZADA';
+
+export type Via =
+  | 'ORAL'
+  | 'SUBLINGUAL'
+  | 'INTRAVENOSA'
+  | 'INTRAMUSCULAR'
+  | 'SUBCUTANEA'
+  | 'TOPICA'
+  | 'INHALATORIA'
+  | 'SONDA'
+  | 'RECTAL'
+  | 'OTRA';
+
+export interface Prescripcion {
+  id: number;
+  pacienteId: number;
+  medicamento: { id: number; nombre: string; presentacion: string; unidadMedida: string };
+  dosis: number;
+  unidadDosis: string;
+  frecuenciaHoras: number;
+  via: Via;
+  fechaInicio: string;
+  fechaFin: string | null;
+  observaciones: string | null;
+  estado: EstadoPrescripcion;
+  motivoCambioEstado: string | null;
+  prescriptor: string;
+  creadoEn: string;
+  proximaToma: string | null;
+  ultimasAdministraciones: {
+    id: number;
+    fechaHora: string;
+    cantidad: number | null;
+    usuario: string;
+  }[];
+  /** Solo en el detalle: tomas de las próximas 24 horas. */
+  agenda?: string[];
+}
