@@ -1,0 +1,25 @@
+# Base de datos de desarrollo (T005). Levantar con: npm run db:up
+services:
+  db:
+    image: postgres:17-alpine
+    container_name: sgsm-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: sgsm
+      POSTGRES_PASSWORD: sgsm
+      POSTGRES_DB: sgsm
+      TZ: America/Argentina/Buenos_Aires
+    ports:
+      - '${DB_PUERTO:-5432}:5432'
+    volumes:
+      - sgsm-db-datos:/var/lib/postgresql/data
+      # Crea también la base sgsm_test que usan las pruebas automáticas.
+      - ./docker/postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U sgsm -d sgsm']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  sgsm-db-datos:
