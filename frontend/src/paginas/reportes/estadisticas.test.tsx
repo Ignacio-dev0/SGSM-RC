@@ -15,6 +15,11 @@ import {
 import { renderizarApp } from '../../pruebas/renderizar';
 import { servidor } from '../../pruebas/servidor';
 
+// Reportes se descarga al abrirla (React.lazy, con los gráficos): se carga antes, como si ya
+// estuviera en la caché del navegador, para que la espera de cada búsqueda no incluya la descarga.
+beforeAll(async () => {
+  await import('./Reportes');
+});
 beforeEach(() => fijarHoy());
 afterEach(restaurarReportes);
 

@@ -109,6 +109,12 @@ describe('tareas de gestión primero para quien administra (F34)', () => {
 });
 
 describe('reportes desde el inicio (E6)', () => {
+  // Reportes se descarga al abrirla (con los gráficos): se carga antes, como si ya estuviera en
+  // la caché del navegador, para que la espera del título no incluya la descarga.
+  beforeAll(async () => {
+    await import('./reportes/Reportes');
+  });
+
   it('quien ve reportes tiene "Ver reportes" al final de sus tareas y llega en un toque', async () => {
     prepararReportes();
     renderizarApp('/', MEDICO);

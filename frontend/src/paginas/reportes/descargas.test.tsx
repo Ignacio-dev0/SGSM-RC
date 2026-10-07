@@ -16,6 +16,12 @@ import { servidor } from '../../pruebas/servidor';
 import { bajarArchivo } from './Descargas';
 
 let descargas: ReturnType<typeof simularDescargas>;
+
+// Reportes se descarga al abrirla (React.lazy, con los gráficos): se carga antes, como si ya
+// estuviera en la caché del navegador, para que la espera de cada búsqueda no incluya la descarga.
+beforeAll(async () => {
+  await import('./Reportes');
+});
 beforeEach(() => {
   fijarHoy();
   descargas = simularDescargas();
