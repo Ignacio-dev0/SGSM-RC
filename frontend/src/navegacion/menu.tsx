@@ -4,6 +4,7 @@ import HomeOutlinedIcon from '@mui/icons-material/HomeOutlined';
 import HotelOutlinedIcon from '@mui/icons-material/HotelOutlined';
 import Inventory2OutlinedIcon from '@mui/icons-material/Inventory2Outlined';
 import ManageAccountsOutlinedIcon from '@mui/icons-material/ManageAccountsOutlined';
+import MedicationOutlinedIcon from '@mui/icons-material/MedicationOutlined';
 
 export interface OpcionDelMenu {
   ruta: string;
@@ -21,6 +22,12 @@ export const OPCIONES_DEL_MENU: OpcionDelMenu[] = [
     etiqueta: 'Pacientes',
     icono: <HotelOutlinedIcon />,
     permiso: 'pacientes.ver',
+  },
+  {
+    ruta: '/suministros',
+    etiqueta: 'Suministros',
+    icono: <MedicationOutlinedIcon />,
+    permiso: 'suministros.ver',
   },
   {
     ruta: '/catalogo',

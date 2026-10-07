@@ -9,6 +9,9 @@ import { CatalogoInsumos } from './paginas/catalogo/CatalogoInsumos';
 import { Inicio } from './paginas/Inicio';
 import { CargaPrescripcion } from './paginas/prescripciones/CargaPrescripcion';
 import { DetallePrescripcion } from './paginas/prescripciones/DetallePrescripcion';
+import { AdministracionMedicamento } from './paginas/suministros/AdministracionMedicamento';
+import { HistorialSuministros } from './paginas/suministros/HistorialSuministros';
+import { RegistroInsumos } from './paginas/suministros/RegistroInsumos';
 import { BusquedaPacientes } from './paginas/pacientes/BusquedaPacientes';
 import { EdicionPaciente } from './paginas/pacientes/EdicionPaciente';
 import { FichaPaciente } from './paginas/pacientes/FichaPaciente';
@@ -73,6 +76,32 @@ export function RutasApp() {
             </ConPermiso>
           }
         />
+        <Route
+          path="suministros"
+          element={
+            <ConPermiso permiso="suministros.ver">
+              <Outlet />
+            </ConPermiso>
+          }
+        >
+          <Route index element={<HistorialSuministros />} />
+          <Route
+            path="medicamento"
+            element={
+              <ConPermiso permiso="suministros.registrar">
+                <AdministracionMedicamento />
+              </ConPermiso>
+            }
+          />
+          <Route
+            path="insumos"
+            element={
+              <ConPermiso permiso="suministros.registrar">
+                <RegistroInsumos />
+              </ConPermiso>
+            }
+          />
+        </Route>
         <Route
           path="biometria"
           element={
