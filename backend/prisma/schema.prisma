@@ -324,6 +324,8 @@ model Suministro {
   @@index([usuarioId])
   /// Reportes de todo el hospital por período (E6).
   @@index([fechaHora])
+  /// Últimas administraciones de cada prescripción y tomas ya dadas del ciclo (T702).
+  @@index([prescripcionId, fechaHora])
   @@map("suministros")
 }
 
@@ -336,6 +338,8 @@ model DetalleSuministro {
   suministro Suministro @relation(fields: [suministroId], references: [id], onDelete: Cascade)
   insumo     Insumo     @relation(fields: [insumoId], references: [id])
 
+  /// Los detalles de cada suministro (sin él, cada lista recorría la tabla entera · T702).
+  @@index([suministroId])
   @@map("detalles_suministro")
 }
 
@@ -453,7 +457,10 @@ model Auditoria {
   usuario Usuario? @relation(fields: [usuarioId], references: [id])
 
   @@index([entidad, entidadId])
-  @@index([fechaHora])
+  /// Orden de la consulta (fecha y id): páginas lejanas por el índice solo (T702).
+  @@index([fechaHora, id])
+  /// Filtro por acción en ese orden y acciones distintas para los filtros (T702).
+  @@index([accion, fechaHora, id])
   @@index([usuarioId])
   @@index([pacienteId])
   @@map("auditoria")
