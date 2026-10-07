@@ -9,6 +9,8 @@ import { opcionesDelMenu } from './menu';
 const etiquetas = (permisos: string[]) => opcionesDelMenu(permisos).map((o) => o.etiqueta);
 
 describe('menú principal por rol (T108 · CU06 · RF15)', () => {
+  afterEach(() => vi.unstubAllEnvs());
+
   it('el administrador ve la gestión de usuarios', () => {
     expect(etiquetas(ADMIN.permisos)).toEqual(expect.arrayContaining(['Inicio', 'Usuarios']));
   });
@@ -45,7 +47,22 @@ describe('menú principal por rol (T108 · CU06 · RF15)', () => {
     expect(
       await screen.findByText(/Modo demostración: la validación facial se simula/),
     ).toBeInTheDocument();
-    vi.unstubAllEnvs();
+  });
+
+  it('el aviso de demostración es una franja fija de borde a borde que no se va con el scroll (F27)', async () => {
+    vi.stubEnv('VITE_BIOMETRIA_MODO', 'simulado');
+    renderizarApp('/', ENFERMERO);
+
+    const franja = await screen.findByRole('note');
+    expect(franja).toHaveTextContent(
+      'Modo demostración: la validación facial se simula. No usar con pacientes reales.',
+    );
+    // Hija directa del contenido (no de su recuadro con margen) y pegada bajo la barra.
+    expect(franja.parentElement).toBe(screen.getByRole('main'));
+    const estilo = getComputedStyle(franja);
+    expect(estilo.position).toBe('sticky');
+    expect(estilo.top).toBe('56px');
+    expect(estilo.borderRadius).not.toMatch(/[1-9]/);
   });
 
   it('con la cámara real no muestra el aviso de demostración', async () => {

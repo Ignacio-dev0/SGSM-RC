@@ -9,6 +9,10 @@ import { SelectorTema } from '../componentes/SelectorTema';
 import { CampanaNotificaciones } from './CampanaNotificaciones';
 import { opcionesDelMenu } from './menu';
 
+/** Franja fija bajo la barra superior mientras la validación facial es simulada (F27). */
+const AVISO_DEMOSTRACION =
+  'Modo demostración: la validación facial se simula. No usar con pacientes reales.';
+
 /** Estructura común de todas las pantallas con sesión: menú por rol y barra superior. */
 export function Disposicion() {
   const usuario = useUsuario();
@@ -19,6 +23,7 @@ export function Disposicion() {
   return (
     <PlantillaTablet
       opciones={opcionesDelMenu(usuario.permisos)}
+      {...(modoBiometria() === 'simulado' ? { aviso: AVISO_DEMOSTRACION } : {})}
       acciones={
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <SelectorTema />
@@ -49,24 +54,6 @@ export function Disposicion() {
         </Box>
       }
     >
-      {modoBiometria() === 'simulado' && (
-        <Box
-          role="note"
-          sx={{
-            mb: 2,
-            px: 2,
-            py: 0.75,
-            borderRadius: 2,
-            border: 1,
-            borderColor: 'warning.main',
-            color: 'text.primary',
-            fontWeight: 700,
-            fontSize: '0.95rem',
-          }}
-        >
-          Modo demostración: la validación facial se simula. No usar con pacientes reales.
-        </Box>
-      )}
       <Outlet />
     </PlantillaTablet>
   );

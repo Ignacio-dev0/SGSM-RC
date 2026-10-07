@@ -15,11 +15,14 @@ export interface Tarea {
   descripcion: string;
   icono: ReactNode;
   permiso: string;
+  /** Tarea de administración del sistema: quien gestiona usuarios la ve antes que las clínicas. */
+  gestion?: boolean;
 }
 
 /**
  * Tareas del día que ofrece el Inicio, ordenadas por frecuencia: primero lo de enfermería al
- * lado de la cama, después lo médico y al final la gestión. Cada rol ve solo las que puede hacer.
+ * lado de la cama, después lo médico y al final la gestión. Cada rol ve solo las que puede hacer;
+ * quien gestiona usuarios ve primero las de gestión (ver `tareasDe`).
  */
 export const TAREAS: Tarea[] = [
   {
@@ -63,6 +66,7 @@ export const TAREAS: Tarea[] = [
     descripcion: 'Registrar a alguien del personal con su rol',
     icono: <GroupAddOutlinedIcon />,
     permiso: 'usuarios.gestionar',
+    gestion: true,
   },
   {
     ruta: '/biometria',
@@ -70,6 +74,7 @@ export const TAREAS: Tarea[] = [
     descripcion: 'Sin rostro registrado no se pueden confirmar suministros',
     icono: <FaceOutlinedIcon />,
     permiso: 'biometria.gestionar',
+    gestion: true,
   },
   {
     ruta: '/catalogo',
@@ -77,7 +82,17 @@ export const TAREAS: Tarea[] = [
     descripcion: 'Medicamentos e insumos que se pueden prescribir y registrar',
     icono: <PlaylistAddOutlinedIcon />,
     permiso: 'catalogo.gestionar',
+    gestion: true,
   },
 ];
 
-export const tareasDe = (permisos: string[]) => TAREAS.filter((t) => permisos.includes(t.permiso));
+/**
+ * Las tareas que puede hacer quien tiene esos permisos, en el orden en que se muestran: el de
+ * `TAREAS`, salvo para quien administra el sistema (`usuarios.gestionar`), cuya gestión va
+ * primero. La primera es la más frecuente del rol y el Inicio la destaca.
+ */
+export function tareasDe(permisos: string[]) {
+  const posibles = TAREAS.filter((t) => permisos.includes(t.permiso));
+  if (!permisos.includes('usuarios.gestionar')) return posibles;
+  return [...posibles.filter((t) => t.gestion), ...posibles.filter((t) => !t.gestion)];
+}

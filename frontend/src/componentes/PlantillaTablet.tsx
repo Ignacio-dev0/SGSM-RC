@@ -12,9 +12,11 @@ import {
   Typography,
   useMediaQuery,
   useTheme,
+  type Theme,
 } from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
 import { NavLink } from 'react-router-dom';
+import { tinte } from '../tema';
 
 export interface OpcionMenu {
   ruta: string;
@@ -26,11 +28,29 @@ interface Props {
   opciones: OpcionMenu[];
   /** Zona derecha de la barra superior (usuario, cerrar sesión). */
   acciones?: ReactNode;
+  /**
+   * Aviso permanente (por ejemplo, el modo demostración): una franja de borde a borde que queda
+   * fija bajo la barra superior mientras se desplaza el contenido.
+   */
+  aviso?: ReactNode;
   children: ReactNode;
 }
 
 const ANCHO_MENU = 264;
 const ANCHO_RIEL = 96;
+
+type Estilos = { [clave: string]: unknown };
+
+/** Pasa cada `minHeight` de un estilo (también dentro de consultas anidadas) a `top`. */
+const minHeightATop = (estilos: Estilos): Estilos =>
+  Object.fromEntries(
+    Object.entries(estilos).map(([clave, valor]) =>
+      clave === 'minHeight' ? ['top', valor] : [clave, minHeightATop(valor as Estilos)],
+    ),
+  );
+
+/** `top` igual al alto de la barra superior: reutiliza theme.mixins.toolbar con sus consultas. */
+const topBajoLaBarra = (t: Theme) => minHeightATop(t.mixins.toolbar as Estilos);
 
 function ListaMenu({
   opciones,
@@ -51,7 +71,7 @@ function ListaMenu({
             to={o.ruta}
             end={o.ruta === '/'}
             onClick={alElegir}
-            sx={{
+            sx={(t) => ({
               mx: 1,
               my: 0.5,
               borderRadius: 2,
@@ -61,8 +81,13 @@ function ListaMenu({
                 bgcolor: 'primary.main',
                 color: 'primary.contrastText',
                 '& .MuiListItemIcon-root': { color: 'inherit' },
+                // De noche el relleno cian brillante encandila: tinte tenue y texto claro (F26).
+                ...t.applyStyles('dark', {
+                  backgroundColor: tinte(t, 'primary', 0.16),
+                  color: t.vars?.palette.primary.light ?? t.palette.primary.light,
+                }),
               },
-            }}
+            })}
           >
             {o.icono && (
               <ListItemIcon sx={{ minWidth: compacto ? 0 : 44, justifyContent: 'center' }}>
@@ -88,7 +113,7 @@ function ListaMenu({
  * - Tablet vertical: riel con ícono y etiqueta corta, para no tapar el contenido.
  * - Teléfono: el menú se abre en un cajón con el botón de menú y deja todo el ancho al contenido.
  */
-export function PlantillaTablet({ opciones, acciones, children }: Props) {
+export function PlantillaTablet({ opciones, acciones, aviso, children }: Props) {
   const tema = useTheme();
   const telefono = useMediaQuery(tema.breakpoints.down('sm'));
   const riel = useMediaQuery(tema.breakpoints.down('md'));
@@ -156,9 +181,34 @@ export function PlantillaTablet({ opciones, acciones, children }: Props) {
         </Drawer>
       )}
 
-      <Box component="main" sx={{ flexGrow: 1, p: { xs: 2, md: 3 }, minWidth: 0 }}>
+      <Box component="main" sx={{ flexGrow: 1, minWidth: 0 }}>
         <Toolbar />
-        {children}
+        {aviso && (
+          <Box
+            role="note"
+            sx={(t) => ({
+              position: 'sticky',
+              ...topBajoLaBarra(t),
+              // Debajo de la barra superior y del cajón del menú, encima del contenido.
+              zIndex: t.zIndex.appBar - 1,
+              px: { xs: 2, md: 3 },
+              py: 0.75,
+              borderRadius: 0,
+              borderBottom: 1,
+              borderColor: 'warning.main',
+              // Base opaca con el tinte encima: el contenido que se desplaza no se transparenta.
+              bgcolor: 'background.default',
+              backgroundImage: `linear-gradient(${tinte(t, 'warning', 0.14)}, ${tinte(t, 'warning', 0.14)})`,
+              color: 'text.primary',
+              fontWeight: 700,
+              fontSize: { xs: '0.9rem', sm: '0.95rem' },
+              lineHeight: 1.35,
+            })}
+          >
+            {aviso}
+          </Box>
+        )}
+        <Box sx={{ p: { xs: 2, md: 3 } }}>{children}</Box>
       </Box>
     </Box>
   );

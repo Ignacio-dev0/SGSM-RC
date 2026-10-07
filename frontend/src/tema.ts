@@ -1,4 +1,4 @@
-import { createTheme } from '@mui/material';
+import { alpha, createTheme, type Theme } from '@mui/material';
 import '@fontsource/atkinson-hyperlegible/400.css';
 import '@fontsource/atkinson-hyperlegible/700.css';
 
@@ -16,6 +16,26 @@ export const TAMANO_TACTIL_MINIMO = 56;
 export const CLAVE_TEMA = 'sgsm.tema';
 
 const RADIO = 12;
+
+/**
+ * Tinte translúcido de un rol de la paleta, para fondos tenues (avisos, ítem activo). Con variables
+ * CSS sigue al tema claro u oscuro sin recalcular.
+ */
+export function tinte(t: Theme, rol: 'primary' | 'warning', opacidad: number) {
+  return t.vars
+    ? `rgba(${t.vars.palette[rol].mainChannel} / ${opacidad})`
+    : alpha(t.palette[rol].main, opacidad);
+}
+
+/** Consulta de pantallas por debajo de `sm` (teléfono): igual a `theme.breakpoints.down('sm')`. */
+const BAJO_SM = '@media (max-width:599.95px)';
+
+/**
+ * Los indicadores de carga no se congelan con movimiento reducido: quietos, un círculo o una
+ * barra no dejan distinguir "cargando" de "colgado" (UX-24).
+ */
+const SIN_INDICADORES_DE_CARGA =
+  ':not(.MuiCircularProgress-root):not(.MuiCircularProgress-svg):not(.MuiCircularProgress-circle):not(.MuiLinearProgress-bar)';
 
 export const tema = createTheme({
   // El tema activo se marca con <html data-tema="light|dark"> (ver index.html y SelectorTema).
@@ -53,9 +73,10 @@ export const tema = createTheme({
     htmlFontSize: 16,
     fontSize: 15,
     fontFamily: '"Atkinson Hyperlegible", "Segoe UI", Roboto, Arial, sans-serif',
-    h4: { fontWeight: 700, fontSize: '1.9rem' },
+    // El título de pantalla baja a 1.5rem en teléfono para no ocupar dos líneas (F33).
+    h4: { fontWeight: 700, fontSize: '1.9rem', [BAJO_SM]: { fontSize: '1.5rem' } },
     h5: { fontWeight: 700, fontSize: '1.5rem' },
-    h6: { fontWeight: 700 },
+    h6: { fontWeight: 700, lineHeight: 1.3 },
     body1: { fontSize: '1.0625rem' },
     button: { textTransform: 'none', fontWeight: 700, fontSize: '1.05rem' },
   },
@@ -68,12 +89,13 @@ export const tema = createTheme({
           outlineOffset: 2,
         },
         '@media (prefers-reduced-motion: reduce)': {
-          '*, *::before, *::after': {
-            animationDuration: '0.01ms !important',
-            animationIterationCount: '1 !important',
-            transitionDuration: '0.01ms !important',
-            scrollBehavior: 'auto !important',
-          },
+          [`*${SIN_INDICADORES_DE_CARGA}, *${SIN_INDICADORES_DE_CARGA}::before, *${SIN_INDICADORES_DE_CARGA}::after`]:
+            {
+              animationDuration: '0.01ms !important',
+              animationIterationCount: '1 !important',
+              transitionDuration: '0.01ms !important',
+              scrollBehavior: 'auto !important',
+            },
         },
       }),
     },
@@ -137,8 +159,17 @@ export const tema = createTheme({
       },
     },
     MuiAppBar: {
-      // Barra superior en el color de la marca también de noche, pero apagado.
       defaultProps: { enableColorOnDark: true },
+      styleOverrides: {
+        // De día, la barra va en el color de la marca. De noche el cian brillante encandila:
+        // pasa a la superficie del tema con texto normal y un borde sutil (F26).
+        root: ({ theme }) =>
+          theme.applyStyles('dark', {
+            backgroundColor: theme.vars.palette.background.paper,
+            color: theme.vars.palette.text.primary,
+            borderBottom: `1px solid ${theme.vars.palette.divider}`,
+          }),
+      },
     },
     MuiDialog: {
       styleOverrides: { paper: { borderRadius: RADIO + 4 } },
