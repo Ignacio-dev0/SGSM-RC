@@ -178,3 +178,33 @@ export interface Prescripcion {
   /** Solo en el detalle: tomas de las próximas 24 horas. */
   agenda?: string[];
 }
+
+export interface Suministro {
+  id: number;
+  tipo: 'MEDICAMENTO' | 'INSUMOS';
+  fechaHora: string;
+  paciente: { id: number; apellido: string; nombre: string; dni: string; cama: string | null };
+  usuario: { id: number; nombre: string };
+  prescripcion: {
+    id: number;
+    medicamento: string;
+    dosis: number;
+    unidadDosis: string;
+    frecuenciaHoras: number;
+  } | null;
+  tomaProgramada: string | null;
+  detalles: {
+    insumoId: number;
+    insumo: string;
+    tipoInsumo: TipoInsumo;
+    cantidad: number;
+    unidad: string;
+  }[];
+  observaciones: string | null;
+  validadoBiometricamente: boolean;
+  corregido: boolean;
+  motivoCorreccion: string | null;
+  corregidoEn: string | null;
+  corregidoPor: string | null;
+  corregibleHasta: string;
+}

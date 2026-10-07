@@ -21,6 +21,7 @@ export interface FiltrosPacientes {
   salaId?: string;
   estado?: string;
   pagina?: number;
+  porPagina?: number;
 }
 
 export const pacientesApi = {

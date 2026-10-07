@@ -1,6 +1,8 @@
 import { useState, type ReactNode } from 'react';
 import { Box, Chip, Paper, Tab, Tabs, Typography } from '@mui/material';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
+import InventoryOutlinedIcon from '@mui/icons-material/Inventory2Outlined';
+import MedicationOutlinedIcon from '@mui/icons-material/MedicationOutlined';
 import SwapHorizIcon from '@mui/icons-material/SwapHoriz';
 import { useQueryClient } from '@tanstack/react-query';
 import { useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
@@ -98,6 +100,7 @@ export function FichaPaciente() {
   if (!p) return null;
 
   const gestiona = tienePermiso('pacientes.gestionar') && p.estado === 'INTERNADO';
+  const suministra = tienePermiso('suministros.registrar') && p.estado === 'INTERNADO';
 
   return (
     <>
@@ -116,25 +119,46 @@ export function FichaPaciente() {
           </Box>
         }
         acciones={
-          gestiona && (
+          (gestiona || suministra) && (
             <>
-              <Boton
-                variante="secundario"
-                startIcon={<EditOutlinedIcon />}
-                onClick={() => navegar(`/pacientes/${id}/editar`)}
-              >
-                Editar datos
-              </Boton>
-              <Boton
-                variante="secundario"
-                startIcon={<SwapHorizIcon />}
-                onClick={() => setDialogo('traslado')}
-              >
-                Trasladar
-              </Boton>
-              <Boton variante="peligro" onClick={() => setDialogo('egreso')}>
-                Dar de alta
-              </Boton>
+              {suministra && (
+                <>
+                  <Boton
+                    startIcon={<MedicationOutlinedIcon />}
+                    onClick={() => navegar(`/suministros/medicamento?pacienteId=${id}`)}
+                  >
+                    Administrar medicamento
+                  </Boton>
+                  <Boton
+                    variante="secundario"
+                    startIcon={<InventoryOutlinedIcon />}
+                    onClick={() => navegar(`/suministros/insumos?pacienteId=${id}`)}
+                  >
+                    Registrar insumos
+                  </Boton>
+                </>
+              )}
+              {gestiona && (
+                <>
+                  <Boton
+                    variante="secundario"
+                    startIcon={<EditOutlinedIcon />}
+                    onClick={() => navegar(`/pacientes/${id}/editar`)}
+                  >
+                    Editar datos
+                  </Boton>
+                  <Boton
+                    variante="secundario"
+                    startIcon={<SwapHorizIcon />}
+                    onClick={() => setDialogo('traslado')}
+                  >
+                    Trasladar
+                  </Boton>
+                  <Boton variante="peligro" onClick={() => setDialogo('egreso')}>
+                    Dar de alta
+                  </Boton>
+                </>
+              )}
             </>
           )
         }
