@@ -17,6 +17,10 @@ const NOMBRE_MODULO: Record<string, string> = {
   catalogo: 'Catálogo',
   prescripciones: 'Prescripciones',
   suministros: 'Suministros',
+  recordatorios: 'Recordatorios',
+  estudios: 'Estudios',
+  reportes: 'Reportes',
+  auditoria: 'Auditoría',
 };
 
 /**
