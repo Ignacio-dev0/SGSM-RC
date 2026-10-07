@@ -1,3 +1,4 @@
+import type { TipoRecordatorio } from '../../api/recordatorios';
 import { ASPECTO_URGENCIA, minutosHasta, nivelDeUrgencia, textoTiempo } from './urgencia';
 
 const NBSP = String.fromCharCode(160);
@@ -22,8 +23,11 @@ describe('nivel de urgencia de un recordatorio (escala de DESIGN.md)', () => {
   });
 
   it('cada nivel tiene su texto y su ícono: nunca solo el color', () => {
-    const etiquetas = Object.values(ASPECTO_URGENCIA).map((a) => a.etiqueta);
-    expect(etiquetas).toEqual(['Vencida', 'Urgente', 'Pronto', 'Programada']);
+    const etiquetas = (tipo: TipoRecordatorio) =>
+      Object.values(ASPECTO_URGENCIA).map((a) => a.etiqueta[tipo]);
+    expect(etiquetas('MEDICAMENTO')).toEqual(['Vencida', 'Urgente', 'Pronto', 'Programada']);
+    // El estudio concuerda en masculino.
+    expect(etiquetas('ESTUDIO')).toEqual(['Vencido', 'Urgente', 'Pronto', 'Programado']);
     const iconos = new Set(Object.values(ASPECTO_URGENCIA).map((a) => a.Icono));
     expect(iconos.size).toBe(4);
   });
@@ -44,5 +48,11 @@ describe('cuánto falta para la toma, con la hora del servidor', () => {
     expect(textoTiempo(-8)).toBe(`Atrasada 8${NBSP}min`);
     expect(textoTiempo(-65)).toBe(`Atrasada 1${NBSP}h 5${NBSP}min`);
     expect(textoTiempo(0)).toBe('Toca ahora');
+  });
+
+  it('un estudio atrasado se dice en masculino: "Atrasado 8 min"', () => {
+    expect(textoTiempo(-8, 'ESTUDIO')).toBe(`Atrasado 8${NBSP}min`);
+    expect(textoTiempo(12, 'ESTUDIO')).toBe(`Faltan 12${NBSP}min`);
+    expect(textoTiempo(0, 'ESTUDIO')).toBe('Toca ahora');
   });
 });

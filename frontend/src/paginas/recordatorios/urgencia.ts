@@ -3,7 +3,7 @@ import AccessAlarmOutlinedIcon from '@mui/icons-material/AccessAlarmOutlined';
 import HourglassBottomOutlinedIcon from '@mui/icons-material/HourglassBottomOutlined';
 import ScheduleOutlinedIcon from '@mui/icons-material/ScheduleOutlined';
 import WarningAmberOutlinedIcon from '@mui/icons-material/WarningAmberOutlined';
-import type { Recordatorio } from '../../api/recordatorios';
+import type { Recordatorio, TipoRecordatorio } from '../../api/recordatorios';
 import { sinCortes } from '../../utilidades/formato';
 import { duracion } from '../suministros/estadoToma';
 
@@ -22,7 +22,8 @@ export function nivelDeUrgencia(r: Pick<Recordatorio, 'estado' | 'prioridad'>): 
 }
 
 interface Aspecto {
-  etiqueta: string;
+  /** Concuerda con lo que se recuerda: la toma (femenino) o el estudio (masculino). */
+  etiqueta: Record<TipoRecordatorio, string>;
   /** Sin verde (una toma no es un "todo bien") ni rojo (queda para errores y peligro). */
   color: 'warning' | 'primary' | 'default';
   variante: 'filled' | 'outlined';
@@ -33,28 +34,28 @@ interface Aspecto {
 export const ASPECTO_URGENCIA: Record<NivelUrgencia, Aspecto> = {
   // Pasaron 60 min sin atenderse: ya se avisó al administrador; se puede atender tarde.
   VENCIDA: {
-    etiqueta: 'Vencida',
+    etiqueta: { MEDICAMENTO: 'Vencida', ESTUDIO: 'Vencido' },
     color: 'warning',
     variante: 'filled',
     Icono: HourglassBottomOutlinedIcon,
   },
   // 5 min o menos para la toma, o atrasada.
   URGENTE: {
-    etiqueta: 'Urgente',
+    etiqueta: { MEDICAMENTO: 'Urgente', ESTUDIO: 'Urgente' },
     color: 'warning',
     variante: 'filled',
     Icono: WarningAmberOutlinedIcon,
   },
   // Entre 5 y 15 min.
   PRONTO: {
-    etiqueta: 'Pronto',
+    etiqueta: { MEDICAMENTO: 'Pronto', ESTUDIO: 'Pronto' },
     color: 'primary',
     variante: 'outlined',
     Icono: AccessAlarmOutlinedIcon,
   },
   // Más de 15 min: todavía no hay que hacer nada.
   PROGRAMADA: {
-    etiqueta: 'Programada',
+    etiqueta: { MEDICAMENTO: 'Programada', ESTUDIO: 'Programado' },
     color: 'default',
     variante: 'outlined',
     Icono: ScheduleOutlinedIcon,
@@ -67,13 +68,18 @@ export const nombrePaciente = (r: Pick<Recordatorio, 'paciente'>) =>
 
 const MINUTO = 60_000;
 
-/** Minutos enteros que faltan para la toma (negativos si ya pasó), con la hora del servidor. */
+/** Minutos enteros que faltan para la toma o el estudio (negativos si ya pasó), con la hora del servidor. */
 export const minutosHasta = (fechaHoraObjetivo: string, ahoraServidorMs: number) =>
   Math.round((new Date(fechaHoraObjetivo).getTime() - ahoraServidorMs) / MINUTO) || 0;
 
-/** "Faltan 12 min", "Atrasada 1 h 5 min", "Toca ahora"; número y unidad sin cortes. */
-export function textoTiempo(minutos: number) {
+/**
+ * "Faltan 12 min", "Atrasada 1 h 5 min" (la toma; "Atrasado", el estudio), "Toca ahora"; número y
+ * unidad sin cortes.
+ */
+export function textoTiempo(minutos: number, tipo: TipoRecordatorio = 'MEDICAMENTO') {
   if (minutos > 0) return sinCortes(`Faltan ${duracion(minutos)}`);
-  if (minutos < 0) return sinCortes(`Atrasada ${duracion(-minutos)}`);
+  if (minutos < 0) {
+    return sinCortes(`${tipo === 'ESTUDIO' ? 'Atrasado' : 'Atrasada'} ${duracion(-minutos)}`);
+  }
   return 'Toca ahora';
 }

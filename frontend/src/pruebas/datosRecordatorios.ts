@@ -39,6 +39,27 @@ export const recordatorio = (extra: Partial<Recordatorio> = {}): Recordatorio =>
   ...extra,
 });
 
+/**
+ * Recordatorio del estudio 60 de Rosa Benítez (el de datosEstudios.ts): Rx de tórax en 5 min
+ * (12:05). Los de estudio tienen siempre prioridad MEDIA y no traen prescripción.
+ */
+export const recordatorioDeEstudio = (extra: Partial<Recordatorio> = {}): Recordatorio =>
+  recordatorio({
+    id: 20,
+    tipo: 'ESTUDIO',
+    prioridad: 'MEDIA',
+    fechaHoraObjetivo: aLos(5),
+    generadoEn: aLos(-25),
+    prescripcion: null,
+    estudio: {
+      id: 60,
+      nombre: 'Rx de tórax frente y perfil',
+      tipoEstudio: 'Radiografía',
+      preparacion: 'Retirar alhajas y objetos metálicos',
+    },
+    ...extra,
+  });
+
 /** Cuatro tomas como las ordena el servidor (por urgencia): una de cada nivel. */
 export const RECORDATORIOS: Recordatorio[] = [
   recordatorio({
