@@ -18,6 +18,9 @@ import { formatearFechaHora, formatearHora } from '../../utilidades/formato';
 import { etiquetaVia, formatearDosis, formatearFrecuencia } from '../prescripciones/etiquetas';
 import { SelectorPaciente } from './comunes';
 
+/** Cierra la oración sin duplicar el punto de "a. m." / "p. m.". */
+const conPunto = (texto: string) => (texto.endsWith('.') ? texto : `${texto}.`);
+
 function TarjetaPrescripcion({
   p,
   elegida,
@@ -154,7 +157,7 @@ export function AdministracionMedicamento() {
           )}{' '}
           a {registrado.paciente.apellido}, {registrado.paciente.nombre}
           {registrado.paciente.cama ? ` (cama ${registrado.paciente.cama})` : ''} a las{' '}
-          {formatearHora(registrado.fechaHora)}.
+          {conPunto(formatearHora(registrado.fechaHora))}
         </Alerta>
       )}
       {registrar.isError && <Alerta tipo="error">{mensajeDeError(registrar.error)}</Alerta>}
