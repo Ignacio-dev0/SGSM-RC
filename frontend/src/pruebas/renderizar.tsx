@@ -2,7 +2,7 @@
 import { render } from '@testing-library/react';
 import { ThemeProvider } from '@mui/material';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { MemoryRouter } from 'react-router-dom';
+import { createMemoryRouter, RouterProvider } from 'react-router-dom';
 import { http, HttpResponse } from 'msw';
 import type { UsuarioSesion } from '../api/tipos';
 import { ProveedorSesion } from '../auth/ContextoSesion';
@@ -29,15 +29,27 @@ export function renderizarApp(ruta: string, usuario: UsuarioSesion | null) {
   const cliente = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
-  return render(
-    <QueryClientProvider client={cliente}>
-      <ThemeProvider theme={tema}>
-        <MemoryRouter initialEntries={[ruta]}>
+  // Router de datos, como en App.tsx: así las pantallas pueden usar useBlocker.
+  const router = createMemoryRouter(
+    [
+      {
+        path: '*',
+        element: (
           <ProveedorSesion>
             <RutasApp />
           </ProveedorSesion>
-        </MemoryRouter>
+        ),
+      },
+    ],
+    { initialEntries: [ruta] },
+  );
+  const pantalla = render(
+    <QueryClientProvider client={cliente}>
+      <ThemeProvider theme={tema}>
+        <RouterProvider router={router} />
       </ThemeProvider>
     </QueryClientProvider>,
   );
+  // El router queda a mano para probar el botón Atrás del navegador (router.navigate(-1)).
+  return Object.assign(pantalla, { router });
 }

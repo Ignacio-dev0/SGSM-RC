@@ -4,6 +4,24 @@ import { afterAll, afterEach, beforeAll, expect } from 'vitest';
 import { validarContrato } from './contrato';
 import { servidor } from './servidor';
 
+// jsdom trae su propio AbortController y el Request nativo de Node rechaza sus señales
+// ("Expected signal to be an instance of AbortSignal"). El router de datos de react-router arma
+// un Request con señal en cada navegación: si el Request la rechaza se vuelve a armar sin ella
+// (acá no hay cargadores que cancelar) y el resto queda igual.
+globalThis.Request = new Proxy(globalThis.Request, {
+  construct(objetivo, [entrada, init]: [RequestInfo | URL, RequestInit?]) {
+    try {
+      return Reflect.construct(objetivo, [entrada, init]);
+    } catch (error) {
+      if (!init?.signal || !(error instanceof TypeError) || !/signal/i.test(error.message)) {
+        throw error;
+      }
+      const { signal: _ajena, ...resto } = init;
+      return Reflect.construct(objetivo, [entrada, resto]);
+    }
+  },
+});
+
 // Con todos los archivos en paralelo, una pantalla de MUI puede tardar más de 1 s (el valor por
 // defecto) en mostrar el resultado de un guardado: se espera hasta 5 s antes de dar por fallido.
 configure({ asyncUtilTimeout: 5_000 });
