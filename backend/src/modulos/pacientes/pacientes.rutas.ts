@@ -5,10 +5,12 @@ import { usuarioActual } from '../auth/sesion';
 import { requierePermiso } from '../seguridad/permisos';
 import {
   esquemaAltaPaciente,
+  esquemaBusquedaPacientes,
   esquemaModificacionPaciente,
   esquemaReingreso,
 } from './pacientes.esquemas';
 import {
+  buscarPacientes,
   crearPaciente,
   modificarPaciente,
   obtenerPaciente,
@@ -20,6 +22,10 @@ export const rutasPacientes = Router();
 
 const ver = requierePermiso('pacientes.ver');
 const gestionar = requierePermiso('pacientes.gestionar');
+
+rutasPacientes.get('/', ver, async (req, res) => {
+  res.json(await buscarPacientes(validar(esquemaBusquedaPacientes, req.query)));
+});
 
 rutasPacientes.get('/:id', ver, async (req, res) => {
   res.json({ data: await obtenerPaciente(idDeRuta(req.params.id)) });

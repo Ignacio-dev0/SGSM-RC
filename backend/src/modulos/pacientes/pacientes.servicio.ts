@@ -1,10 +1,16 @@
-import type { Paciente } from '@prisma/client';
+import type { Paciente, Prisma } from '@prisma/client';
 import { conflicto, noEncontrado } from '../../comun/errores';
+import { respuestaPaginada } from '../../comun/paginacion';
 import { reloj } from '../../comun/reloj';
 import { prisma, type ClienteDb } from '../../db';
 import { cambios, registrarAuditoria } from '../auditoria/auditoria.servicio';
 import { asignacionActiva, asignarCama } from '../camas/camas.servicio';
-import type { AltaPaciente, ModificacionPaciente, Reingreso } from './pacientes.esquemas';
+import type {
+  AltaPaciente,
+  BusquedaPacientes,
+  ModificacionPaciente,
+  Reingreso,
+} from './pacientes.esquemas';
 
 /**
  * Gestión de pacientes (T202 · T204 · CU11, CU13, CU14). La ficha del paciente es única por DNI
@@ -169,3 +175,61 @@ export async function reingresarPaciente(id: number, datos: Reingreso, actorId: 
 }
 
 export type DtoPaciente = ReturnType<typeof aDtoPaciente>;
+
+/** Escapa los comodines de LIKE para que el texto se busque tal cual. */
+const escaparLike = (t: string) => t.replace(/[\\%_]/g, (c) => '\\' + c);
+
+/**
+ * Ids de pacientes cuyo apellido o nombre contiene el texto sin importar mayúsculas ni tildes
+ * (extensión unaccent de PostgreSQL), o cuyo DNI empieza con él.
+ */
+async function idsQueCoinciden(texto: string, incluirDniYNombre: boolean) {
+  const patron = `%${escaparLike(texto)}%`;
+  const filas = incluirDniYNombre
+    ? await prisma.$queryRaw<{ id: number }[]>`
+        SELECT id FROM pacientes
+        WHERE dni LIKE ${`${escaparLike(texto)}%`}
+           OR unaccent(apellido) ILIKE unaccent(${patron})
+           OR unaccent(nombre) ILIKE unaccent(${patron})`
+    : await prisma.$queryRaw<{ id: number }[]>`
+        SELECT id FROM pacientes WHERE unaccent(apellido) ILIKE unaccent(${patron})`;
+  return filas.map((f) => f.id);
+}
+
+/** Búsqueda de pacientes para la grilla (T203 · CU12): DNI, apellido, cama, sala y estado. */
+export async function buscarPacientes(filtros: BusquedaPacientes) {
+  const { pagina, porPagina, texto, dni, apellido, cama, salaId, estado } = filtros;
+  const camaActual = (condicion: Prisma.CamaWhereInput): Prisma.PacienteWhereInput => ({
+    asignaciones: { some: { fechaHasta: null, cama: condicion } },
+  });
+  const condiciones: Prisma.PacienteWhereInput[] = [
+    ...(texto ? [{ id: { in: await idsQueCoinciden(texto, true) } }] : []),
+    ...(dni ? [{ dni: { startsWith: dni } }] : []),
+    ...(apellido ? [{ id: { in: await idsQueCoinciden(apellido, false) } }] : []),
+    ...(cama ? [camaActual({ numero: { equals: cama, mode: 'insensitive' } })] : []),
+    ...(salaId ? [camaActual({ salaId })] : []),
+    ...(estado ? [{ estado }] : []),
+  ];
+  const where: Prisma.PacienteWhereInput = { AND: condiciones };
+
+  const [filas, total] = await prisma.$transaction([
+    prisma.paciente.findMany({
+      where,
+      include: {
+        asignaciones: {
+          where: { fechaHasta: null },
+          include: { cama: { include: { sala: true } } },
+        },
+      },
+      orderBy: [{ apellido: 'asc' }, { nombre: 'asc' }, { id: 'asc' }],
+      skip: (pagina - 1) * porPagina,
+      take: porPagina,
+    }),
+    prisma.paciente.count({ where }),
+  ]);
+  return respuestaPaginada(
+    filas.map((p) => aDtoPaciente(p, p.asignaciones[0] ?? null)),
+    total,
+    { pagina, porPagina },
+  );
+}
