@@ -32,8 +32,10 @@ export function RegistroInsumos() {
   const [observaciones, setObservaciones] = useState('');
   const [aviso, setAviso] = useState<string | null>(null);
 
+  // Al cambiar de paciente no queda nada del anterior (ni los insumos ni la nota).
   useEffect(() => {
     setItems([]);
+    setObservaciones('');
     setAviso(null);
   }, [pacienteId]);
 

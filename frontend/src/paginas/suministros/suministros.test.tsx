@@ -398,6 +398,25 @@ describe('registro de insumos (T414 · CU21)', () => {
     });
   });
 
+  it('al cambiar de paciente no arrastra los insumos ni las observaciones del anterior', async () => {
+    const otro = paciente({ id: 8, dni: '27444555', nombre: 'Luis', apellido: 'Gómez' });
+    servidor.use(
+      http.get('*/api/pacientes', () => listaDePacientes([paciente(), otro])),
+      http.get('*/api/pacientes/8', () => HttpResponse.json({ data: otro })),
+    );
+    renderizarApp('/suministros/insumos?pacienteId=7', ENFERMERO);
+
+    await userEvent.click(await screen.findByRole('button', { name: /Agregar Gasa estéril/ }));
+    await userEvent.type(screen.getByLabelText('Observaciones'), 'Curación de escara');
+    await userEvent.selectOptions(
+      screen.getByLabelText('Paciente'),
+      await screen.findByRole('option', { name: /Gómez, Luis/ }),
+    );
+
+    await waitFor(() => expect(screen.getByLabelText('Observaciones')).toHaveValue(''));
+    expect(screen.queryByRole('list', { name: 'Insumos a registrar' })).not.toBeInTheDocument();
+  });
+
   it('no deja confirmar sin insumos', async () => {
     renderizarApp('/suministros/insumos?pacienteId=7', ENFERMERO);
     expect(await screen.findByRole('button', { name: 'Confirmar con mi rostro' })).toBeDisabled();
