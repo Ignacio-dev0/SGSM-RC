@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useId, useState, type FormEvent } from 'react';
 import { Box, List, ListItem, Paper, Typography } from '@mui/material';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -13,9 +13,10 @@ import { EncabezadoPagina } from '../../componentes/EncabezadoPagina';
 import { Selector } from '../../componentes/Selector';
 import { proximasTomas } from '../../utilidades/agenda';
 import { formatearFechaHora, formatearHora } from '../../utilidades/formato';
-import { IdentidadPaciente } from '../pacientes/IdentidadPaciente';
-import { FRECUENCIAS, VIAS, aLocal, etiquetaVia, resumenPrescripcion } from './etiquetas';
 import { useFocoEnPrimerError } from '../../utilidades/useFocoEnPrimerError';
+import { FRECUENCIAS, VIAS, aLocal, etiquetaVia, resumenPrescripcion } from './etiquetas';
+import { motivoSinPaciente } from './estadoDelPaciente';
+import { IdentidadOEstado } from './IdentidadOEstado';
 
 interface Formulario {
   insumoId: string;
@@ -37,10 +38,17 @@ interface Duplicada {
   via: Via;
 }
 
+/**
+ * La dosis se valida al salir del campo o al guardar, no en cada tecla: al escribir el "0" de
+ * "0,5" todavía no es un error.
+ */
+function validarDosis(f: Formulario): Errores {
+  return f.dosis !== '' && !(Number(f.dosis) > 0) ? { dosis: 'La dosis debe ser mayor a 0' } : {};
+}
+
 /** Validaciones en línea: se muestran mientras se escribe, no recién al guardar. */
 function validarEnLinea(f: Formulario): Errores {
   const e: Errores = {};
-  if (f.dosis !== '' && !(Number(f.dosis) > 0)) e.dosis = 'La dosis debe ser mayor a 0';
   if (f.fin && f.inicio && new Date(f.fin) <= new Date(f.inicio)) {
     e.fin = 'La fecha de fin debe ser posterior al inicio';
   }
@@ -55,6 +63,7 @@ function validarCompleto(f: Formulario): Errores {
     ...(f.frecuenciaHoras ? {} : { frecuenciaHoras: 'Elija la frecuencia' }),
     ...(f.via ? {} : { via: 'Elija la vía' }),
     ...(f.inicio ? {} : { inicio: 'Ingrese el inicio' }),
+    ...validarDosis(f),
     ...validarEnLinea(f),
   };
 }
@@ -82,6 +91,8 @@ export function CargaPrescripcion() {
   const [errores, setErrores] = useState<Errores>({});
   const { ref: refFormulario, enfocarPrimerError } = useFocoEnPrimerError<HTMLFormElement>();
   const [duplicadas, setDuplicadas] = useState<Duplicada[] | null>(null);
+  const motivoBloqueo = motivoSinPaciente(paciente);
+  const idMotivo = useId();
 
   const cambiar = (campo: keyof Formulario) => (valor: string) => {
     setF((actual) => {
@@ -131,8 +142,13 @@ export function CargaPrescripcion() {
     },
   });
 
+  // Al salir del campo de la dosis se avisa si no sirve; mientras se escribe no.
+  const validarDosisAlSalir = () => setErrores((e) => ({ ...e, ...validarDosis(f) }));
+
   const enviar = (e: FormEvent) => {
     e.preventDefault();
+    // Sin ver a qué paciente se le indica no se guarda (el botón también está deshabilitado).
+    if (motivoBloqueo) return;
     const faltan = validarCompleto(f);
     setErrores(faltan);
     enfocarPrimerError();
@@ -145,7 +161,6 @@ export function CargaPrescripcion() {
     f.fin ? new Date(f.fin).toISOString() : null,
     4,
   );
-  const p = paciente.data;
   const errorGeneral =
     guardar.isError && !duplicadas && Object.keys(errores).length === 0
       ? mensajeDeError(guardar.error)
@@ -157,7 +172,7 @@ export function CargaPrescripcion() {
         titulo="Nueva prescripción"
         volverA={`/pacientes/${pacienteId}?pestana=prescripciones`}
       />
-      {p && <IdentidadPaciente paciente={p} />}
+      <IdentidadOEstado consulta={paciente} />
       {errorGeneral && <Alerta tipo="error">{errorGeneral}</Alerta>}
       {duplicadas && (
         <Alerta
@@ -212,6 +227,10 @@ export function CargaPrescripcion() {
             valor={f.dosis}
             alCambiar={cambiar('dosis')}
             error={errores.dosis}
+            // Reserva el renglón del aviso: si apareciera al salir del campo, correría el botón
+            // Guardar justo cuando se lo está tocando y el toque se perdería.
+            ayuda={' '}
+            onBlur={validarDosisAlSalir}
             required
             type="number"
             slotProps={{ htmlInput: { inputMode: 'decimal', min: 0, step: 'any' } }}
@@ -289,14 +308,39 @@ export function CargaPrescripcion() {
           </Box>
         )}
 
-        <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, mt: 3 }}>
+        <Box
+          sx={{
+            display: 'flex',
+            justifyContent: 'flex-end',
+            alignItems: 'center',
+            flexWrap: 'wrap',
+            columnGap: 1,
+            rowGap: 1,
+            mt: 3,
+          }}
+        >
+          {motivoBloqueo && (
+            <Typography
+              id={idMotivo}
+              variant="body2"
+              color="text.secondary"
+              sx={{ mr: 1, textAlign: 'right' }}
+            >
+              {motivoBloqueo}
+            </Typography>
+          )}
           <Boton
             variante="texto"
             onClick={() => navegar(`/pacientes/${pacienteId}?pestana=prescripciones`)}
           >
             Cancelar
           </Boton>
-          <Boton type="submit" cargando={guardar.isPending && !duplicadas}>
+          <Boton
+            type="submit"
+            disabled={Boolean(motivoBloqueo)}
+            aria-describedby={motivoBloqueo ? idMotivo : undefined}
+            cargando={guardar.isPending && !duplicadas}
+          >
             Guardar prescripción
           </Boton>
         </Box>

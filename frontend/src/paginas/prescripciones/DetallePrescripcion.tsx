@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useId, useState, type ReactNode } from 'react';
 import {
   Box,
   Chip,
@@ -27,7 +27,6 @@ import { Cargando, ErrorDeCarga } from '../../componentes/EstadoDeCarga';
 import { ModalConfirmacion } from '../../componentes/ModalConfirmacion';
 import { Selector } from '../../componentes/Selector';
 import { formatearFechaHora, formatearHora } from '../../utilidades/formato';
-import { IdentidadPaciente } from '../pacientes/IdentidadPaciente';
 import {
   ACCIONES,
   cambiosDe,
@@ -37,6 +36,8 @@ import {
   type Edicion,
 } from './edicionPrescripcion';
 import { ESTADOS, FRECUENCIAS, VIAS, etiquetaVia, resumenPrescripcion } from './etiquetas';
+import { motivoSinPaciente } from './estadoDelPaciente';
+import { IdentidadOEstado } from './IdentidadOEstado';
 
 function Dato({ etiqueta, children }: { etiqueta: string; children: ReactNode }) {
   return (
@@ -61,6 +62,7 @@ export function DetallePrescripcion() {
   const [confirmandoCambios, setConfirmandoCambios] = useState(false);
   const [cambioEstado, setCambioEstado] = useState<EstadoPrescripcion | null>(null);
   const [aviso, setAviso] = useState<string | null>(null);
+  const idMotivo = useId();
 
   useEffect(() => {
     if (p) setEdicion(desde(p));
@@ -110,6 +112,10 @@ export function DetallePrescripcion() {
   const editable = gestiona && p.estado === 'VIGENTE';
   const hayCambios = Object.keys(cambiosDe(p, edicion)).length > 0;
   const dosisInvalida = !(Number(edicion.dosis) > 0);
+  // Por qué Guardar cambios está deshabilitado (UX-17), o null si se puede guardar.
+  const motivoBloqueo =
+    motivoSinPaciente(paciente) ??
+    (dosisInvalida ? 'Revise la dosis' : hayCambios ? null : 'No hay cambios para guardar');
   const transiciones: EstadoPrescripcion[] =
     p.estado === 'VIGENTE'
       ? ['SUSPENDIDA', 'FINALIZADA']
@@ -148,7 +154,7 @@ export function DetallePrescripcion() {
           ))
         }
       />
-      {paciente.data && <IdentidadPaciente paciente={paciente.data} />}
+      <IdentidadOEstado consulta={paciente} />
       {aviso && (
         <Alerta tipo="exito" alCerrar={() => setAviso(null)}>
           {aviso}
@@ -217,9 +223,30 @@ export function DetallePrescripcion() {
                   multiline
                 />
               </Box>
-              <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 3 }}>
+              <Box
+                sx={{
+                  display: 'flex',
+                  justifyContent: 'flex-end',
+                  alignItems: 'center',
+                  flexWrap: 'wrap',
+                  columnGap: 2,
+                  rowGap: 1,
+                  mt: 3,
+                }}
+              >
+                {motivoBloqueo && (
+                  <Typography
+                    id={idMotivo}
+                    variant="body2"
+                    color="text.secondary"
+                    sx={{ textAlign: 'right' }}
+                  >
+                    {motivoBloqueo}
+                  </Typography>
+                )}
                 <Boton
-                  disabled={!hayCambios || dosisInvalida}
+                  disabled={Boolean(motivoBloqueo)}
+                  aria-describedby={motivoBloqueo ? idMotivo : undefined}
                   onClick={() => setConfirmandoCambios(true)}
                 >
                   Guardar cambios

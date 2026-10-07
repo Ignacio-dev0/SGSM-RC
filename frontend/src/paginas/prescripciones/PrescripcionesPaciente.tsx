@@ -1,21 +1,25 @@
 import { useState } from 'react';
-import { Box, Chip, Typography } from '@mui/material';
+import { Box, Chip, Typography, useMediaQuery, useTheme } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import MedicationOutlinedIcon from '@mui/icons-material/MedicationOutlined';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import { mensajeDeError } from '../../api/cliente';
 import { prescripcionesApi } from '../../api/prescripciones';
 import type { EstadoPrescripcion, Paciente, Prescripcion } from '../../api/tipos';
 import { useSesion } from '../../auth/useSesion';
-import { Alerta } from '../../componentes/Alerta';
 import { Boton } from '../../componentes/Boton';
+import { ErrorDeCarga } from '../../componentes/EstadoDeCarga';
 import { Selector } from '../../componentes/Selector';
 import { Tabla, type Columna } from '../../componentes/Tabla';
-import { formatearFechaHora, formatearHora } from '../../utilidades/formato';
+import { formatearFechaHora } from '../../utilidades/formato';
+import { useAhora } from '../../utilidades/useAhora';
+import { ChipEstadoToma } from './ChipEstadoToma';
 import { ESTADOS, etiquetaVia, formatearDosis, formatearFrecuencia } from './etiquetas';
+import { formatearProximaToma } from './proximaToma';
+import { TarjetasPrescripciones } from './TarjetasPrescripciones';
 
-const COLUMNAS: Columna<Prescripcion>[] = [
+/** Columnas de la tabla (pantallas desde md); "ahora" sirve para decir el día y el estado de la toma. */
+const columnas = (ahora: Date): Columna<Prescripcion>[] => [
   {
     titulo: 'Medicamento',
     valor: (p) => (
@@ -32,7 +36,12 @@ const COLUMNAS: Columna<Prescripcion>[] = [
   { titulo: 'Vía', valor: (p) => etiquetaVia(p.via) },
   {
     titulo: 'Próxima toma',
-    valor: (p) => (p.proximaToma ? <strong>{formatearHora(p.proximaToma)}</strong> : '—'),
+    valor: (p) => (
+      <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 0.5 }}>
+        {p.proximaToma ? <strong>{formatearProximaToma(p.proximaToma, ahora)}</strong> : '—'}
+        <ChipEstadoToma prescripcion={p} ahora={ahora} />
+      </Box>
+    ),
   },
   {
     titulo: 'Estado',
@@ -51,18 +60,29 @@ const COLUMNAS: Columna<Prescripcion>[] = [
 
 /**
  * Prescripciones del paciente (T305 · CU18): estado, próxima toma y últimas administraciones.
- * Se muestra como pestaña de la ficha del paciente.
+ * Se muestra como pestaña de la ficha del paciente. Desde md es una tabla; en pantallas más
+ * angostas (tablet vertical, teléfono) una tarjeta por prescripción, para no esconder la última
+ * administración ni Administrar detrás de un desplazamiento lateral.
  */
 export function PrescripcionesPaciente({ paciente }: { paciente: Paciente }) {
   const navegar = useNavigate();
-  const { tienePermiso: puede } = useSesion();
-  const administra = puede('suministros.registrar') && paciente.estado === 'INTERNADO';
   const { tienePermiso } = useSesion();
+  const angosta = useMediaQuery(useTheme().breakpoints.down('md'));
+  const ahora = useAhora();
+  const administra = tienePermiso('suministros.registrar') && paciente.estado === 'INTERNADO';
   const [estado, setEstado] = useState<EstadoPrescripcion | ''>('VIGENTE');
   const consulta = useQuery({
     queryKey: ['prescripciones', paciente.id, estado],
     queryFn: () => prescripcionesApi.dePaciente(paciente.id, estado || undefined),
   });
+  // Mientras reintenta no se vuelve a mostrar el error viejo, sino que se ve que está cargando.
+  const fallo = consulta.isError && !consulta.isFetching;
+  const mensajeVacio =
+    estado === 'VIGENTE' ? 'El paciente no tiene prescripciones vigentes' : 'Sin prescripciones';
+
+  const abrir = (p: Prescripcion) => navegar(`/prescripciones/${p.id}`);
+  const administrar = (p: Prescripcion) =>
+    navegar(`/suministros/medicamento?pacienteId=${paciente.id}&prescripcionId=${p.id}`);
 
   return (
     <>
@@ -88,47 +108,59 @@ export function PrescripcionesPaciente({ paciente }: { paciente: Paciente }) {
           </Boton>
         )}
       </Box>
-      {consulta.isError && <Alerta tipo="error">{mensajeDeError(consulta.error)}</Alerta>}
-      <Tabla
-        titulo="Prescripciones"
-        columnas={
-          administra
-            ? [
-                ...COLUMNAS,
-                {
-                  titulo: 'Acción',
-                  valor: (p) =>
-                    p.estado === 'VIGENTE' && (
-                      <Boton
-                        variante="secundario"
-                        startIcon={<MedicationOutlinedIcon />}
-                        aria-label={`Administrar ${p.medicamento.nombre}`}
-                        // Sin esto, el toque o el Enter también abrirían el detalle de la fila.
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          navegar(
-                            `/suministros/medicamento?pacienteId=${paciente.id}&prescripcionId=${p.id}`,
-                          );
-                        }}
-                        onKeyDown={(e) => e.stopPropagation()}
-                      >
-                        Administrar
-                      </Boton>
-                    ),
-                },
-              ]
-            : COLUMNAS
-        }
-        filas={consulta.data ?? []}
-        claveFila={(p) => p.id}
-        cargando={consulta.isFetching}
-        mensajeVacio={
-          estado === 'VIGENTE'
-            ? 'El paciente no tiene prescripciones vigentes'
-            : 'Sin prescripciones'
-        }
-        alTocarFila={(p) => navegar(`/prescripciones/${p.id}`)}
-      />
+      {fallo ? (
+        // Un corte de red no puede decir "no hay prescripciones": dice que no se pudo cargar.
+        <ErrorDeCarga
+          que="las prescripciones"
+          error={consulta.error}
+          alReintentar={() => void consulta.refetch()}
+        />
+      ) : angosta ? (
+        <TarjetasPrescripciones
+          prescripciones={consulta.data ?? []}
+          ahora={ahora}
+          administra={administra}
+          cargando={consulta.isFetching}
+          mensajeVacio={mensajeVacio}
+          alAbrir={abrir}
+          alAdministrar={administrar}
+        />
+      ) : (
+        <Tabla
+          titulo="Prescripciones"
+          columnas={
+            administra
+              ? [
+                  ...columnas(ahora),
+                  {
+                    titulo: 'Acción',
+                    valor: (p) =>
+                      p.estado === 'VIGENTE' && (
+                        <Boton
+                          variante="secundario"
+                          startIcon={<MedicationOutlinedIcon />}
+                          aria-label={`Administrar ${p.medicamento.nombre}`}
+                          // Sin esto, el toque o el Enter también abrirían el detalle de la fila.
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            administrar(p);
+                          }}
+                          onKeyDown={(e) => e.stopPropagation()}
+                        >
+                          Administrar
+                        </Boton>
+                      ),
+                  },
+                ]
+              : columnas(ahora)
+          }
+          filas={consulta.data ?? []}
+          claveFila={(p) => p.id}
+          cargando={consulta.isFetching}
+          mensajeVacio={mensajeVacio}
+          alTocarFila={abrir}
+        />
+      )}
     </>
   );
 }
