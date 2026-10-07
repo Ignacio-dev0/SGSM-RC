@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Alerta } from './Alerta';
 import { Boton } from './Boton';
 import { CampoTexto } from './CampoTexto';
+import { Cargando, ErrorDeCarga } from './EstadoDeCarga';
 import { ModalConfirmacion } from './ModalConfirmacion';
 import { Selector } from './Selector';
 import { Tabla } from './Tabla';
@@ -260,6 +261,30 @@ describe('ModalConfirmacion', () => {
       />,
     );
     expect(screen.getByRole('button', { name: 'Trasladar' })).toBeDisabled();
+  });
+});
+
+describe('estados de carga', () => {
+  it('Cargando se anuncia como estado con su texto', () => {
+    render(<Cargando texto="Cargando la ficha…" />);
+    expect(screen.getByRole('status')).toHaveTextContent('Cargando la ficha…');
+  });
+
+  it('ErrorDeCarga dice qué no se pudo cargar, por qué, y deja reintentar', async () => {
+    const alReintentar = vi.fn();
+    render(
+      <ErrorDeCarga
+        que="la ficha del paciente"
+        error={new Error('No hay conexión con el servidor.')}
+        alReintentar={alReintentar}
+      />,
+    );
+    const alerta = screen.getByRole('alert');
+    expect(alerta).toHaveTextContent(
+      'No se pudo cargar la ficha del paciente. No hay conexión con el servidor.',
+    );
+    await userEvent.click(within(alerta).getByRole('button', { name: 'Reintentar' }));
+    expect(alReintentar).toHaveBeenCalled();
   });
 });
 

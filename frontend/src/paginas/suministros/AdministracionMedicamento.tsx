@@ -6,7 +6,6 @@ import {
   CardContent,
   Checkbox,
   Chip,
-  CircularProgress,
   FormControlLabel,
   Paper,
   Typography,
@@ -25,6 +24,7 @@ import { Alerta } from '../../componentes/Alerta';
 import { Boton } from '../../componentes/Boton';
 import { CampoTexto } from '../../componentes/CampoTexto';
 import { EncabezadoPagina } from '../../componentes/EncabezadoPagina';
+import { Cargando, ErrorDeCarga } from '../../componentes/EstadoDeCarga';
 import { formatearFechaHora, formatearHora } from '../../utilidades/formato';
 import { IdentidadPaciente } from '../pacientes/IdentidadPaciente';
 import { etiquetaVia, formatearDosis, formatearFrecuencia } from '../prescripciones/etiquetas';
@@ -342,39 +342,24 @@ export function AdministracionMedicamento() {
           <Alerta tipo="error">{mensajeDeError(registrar.error)}</Alerta>
         ))}
 
-      {cargando && (
-        <Box role="status" sx={{ display: 'flex', alignItems: 'center', gap: 2, py: 3 }}>
-          <CircularProgress size={28} />
-          <Typography>Cargando las prescripciones…</Typography>
-        </Box>
-      )}
+      {cargando && <Cargando texto="Cargando las prescripciones…" />}
       {paciente.isError && (
-        <Alerta
-          tipo="error"
-          accion={
-            <Boton variante="texto" onClick={() => void paciente.refetch()}>
-              Reintentar
-            </Boton>
-          }
-        >
-          No se pudo cargar el paciente. {mensajeDeError(paciente.error)}
-        </Alerta>
+        <ErrorDeCarga
+          que="el paciente"
+          error={paciente.error}
+          alReintentar={() => void paciente.refetch()}
+        />
       )}
 
       {p && (
         <>
           <IdentidadPaciente paciente={p} />
           {vigentes.isError && (
-            <Alerta
-              tipo="error"
-              accion={
-                <Boton variante="texto" onClick={() => void vigentes.refetch()}>
-                  Reintentar
-                </Boton>
-              }
-            >
-              No se pudieron cargar las prescripciones. {mensajeDeError(vigentes.error)}
-            </Alerta>
+            <ErrorDeCarga
+              que="las prescripciones"
+              error={vigentes.error}
+              alReintentar={() => void vigentes.refetch()}
+            />
           )}
           {vigentes.isSuccess && vigentes.data.length === 0 && (
             <Alerta tipo="info">
