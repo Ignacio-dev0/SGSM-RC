@@ -4,6 +4,7 @@ import type { Express } from 'express';
 import { crearApp } from '../../src/app';
 import { prisma } from '../../src/db';
 import { cifrarContrasena } from '../../src/modulos/auth/contrasenas';
+import { limiteLogin } from '../../src/modulos/auth/limite-ip';
 import type { CodigoPermiso, CodigoRol } from '../../src/modulos/seguridad/catalogo-permisos';
 import { sembrarSeguridad } from '../../src/semillas/catalogo-base';
 import { limpiarBase } from './base';
@@ -13,8 +14,9 @@ export const CONTRASENA = 'Prueba2026';
 let app: Express | undefined;
 export const obtenerApp = () => (app ??= crearApp());
 
-/** Base vacía con los roles y permisos cargados. */
+/** Base vacía con los roles y permisos cargados (y sin fallidos de login por IP en memoria). */
 export async function prepararBaseConSeguridad() {
+  limiteLogin.reiniciar();
   await limpiarBase();
   await sembrarSeguridad(prisma);
 }

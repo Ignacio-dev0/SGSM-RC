@@ -11,6 +11,7 @@ import {
 } from './auth.middleware';
 import { esquemaLogin } from './auth.esquemas';
 import { cerrarSesion, iniciarSesion } from './auth.servicio';
+import { contarSiFallo, frenarLoginPorIp } from './limite-ip';
 import { cargarUsuarioSesion, usuarioActual } from './sesion';
 import { emitirToken, verificarToken } from './tokens';
 
@@ -21,10 +22,13 @@ const conDatosDeSesion = <T extends object>(usuario: T) => ({
 
 export const rutasAuth = Router();
 
-/** POST /api/auth/login — CU06 */
-rutasAuth.post('/login', async (req, res) => {
+/** POST /api/auth/login — CU06. Con límite de fallidos por IP además del bloqueo por cuenta (T705). */
+rutasAuth.post('/login', frenarLoginPorIp, async (req, res) => {
   const { nombreUsuario, contrasena } = validar(esquemaLogin, req.body);
-  const usuarioId = await iniciarSesion(nombreUsuario, contrasena);
+  const usuarioId = await iniciarSesion(nombreUsuario, contrasena).catch((e: unknown) => {
+    contarSiFallo(req, e);
+    throw e;
+  });
   const usuario = await cargarUsuarioSesion(prisma, usuarioId);
   fijarCookieSesion(res, emitirToken({ usuarioId, inicio: reloj.ahora() }));
   res.json({ data: conDatosDeSesion(usuario!) });
