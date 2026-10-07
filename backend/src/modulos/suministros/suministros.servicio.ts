@@ -6,6 +6,8 @@ import { prisma, type ClienteDb } from '../../db';
 import { registrarAuditoria } from '../auditoria/auditoria.servicio';
 import { consumirValidacion } from '../biometria/validacion.servicio';
 import { tomaMasCercana } from '../prescripciones/agenda';
+import { atenderPorAdministracion } from '../recordatorios/atencion.servicio';
+import { avisarCambioRecordatorios } from '../tiempo-real/bus';
 import type { Administracion, RegistroInsumos } from './suministros.esquemas';
 
 /**
@@ -140,13 +142,17 @@ async function crearYAuditar(
   return aDtoSuministro(s);
 }
 
-/** Administración de un medicamento prescripto (CU20 · T408), confirmada con la cara. */
+/**
+ * Administración de un medicamento prescripto (CU20 · T408), confirmada con la cara. En la misma
+ * transacción atiende el recordatorio de su toma (T507) y, si atendió uno, avisa al tiempo real
+ * después del commit.
+ */
 export async function registrarAdministracion(datos: Administracion, usuarioId: number) {
-  return prisma.$transaction(async (tx) => {
+  const { suministro, atendido } = await prisma.$transaction(async (tx) => {
     await pacienteInternado(tx, datos.pacienteId);
     const p = await prescripcionVigente(tx, datos.prescripcionId, datos.pacienteId);
     consumirValidacion(datos.validacionToken, usuarioId);
-    return crearYAuditar(
+    const suministro = await crearYAuditar(
       tx,
       {
         pacienteId: datos.pacienteId,
@@ -160,7 +166,16 @@ export async function registrarAdministracion(datos: Administracion, usuarioId: 
       },
       usuarioId,
     );
+    const atendido = await atenderPorAdministracion(tx, {
+      prescripcion: p,
+      suministroId: suministro.id,
+      fechaHora: suministro.fechaHora,
+      usuarioId,
+    });
+    return { suministro, atendido };
   });
+  if (atendido) avisarCambioRecordatorios();
+  return suministro;
 }
 
 /** Comprueba que los insumos existan, estén activos y no sean medicamentos (T410). */

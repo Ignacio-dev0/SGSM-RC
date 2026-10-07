@@ -3,6 +3,7 @@ import { reloj } from '../../comun/reloj';
 import { prisma } from '../../db';
 import { registrarAuditoria } from '../auditoria/auditoria.servicio';
 import { asignacionActiva, asignarCama, liberarCama } from '../camas/camas.servicio';
+import { avisarCambioRecordatorios } from '../tiempo-real/bus';
 import { aDtoPaciente, obtenerPacienteDb } from './pacientes.servicio';
 
 const noInternado = () => conflicto('PACIENTE_NO_INTERNADO', 'El paciente no está internado');
@@ -36,14 +37,14 @@ export async function trasladarPaciente(id: number, camaId: number, actorId: num
 /**
  * Egreso del paciente (CU14 · T202) con sus efectos (T210): libera la cama, suspende las
  * prescripciones vigentes y cancela los estudios y recordatorios pendientes. Todo en una sola
- * transacción y auditado.
+ * transacción y auditado; si canceló recordatorios, avisa al tiempo real después del commit.
  */
 export async function egresarPaciente(
   id: number,
   datos: { motivo: string; fechaEgreso?: string | undefined },
   actorId: number,
 ) {
-  return prisma.$transaction(async (tx) => {
+  const { dto, cancelados } = await prisma.$transaction(async (tx) => {
     const paciente = await obtenerPacienteDb(tx, id);
     if (paciente.estado !== 'INTERNADO') throw noInternado();
 
@@ -123,6 +124,8 @@ export async function egresarPaciente(
       });
     }
 
-    return aDtoPaciente(egresado, null);
+    return { dto: aDtoPaciente(egresado, null), cancelados: recordatorios.count };
   });
+  if (cancelados > 0) avisarCambioRecordatorios();
+  return dto;
 }

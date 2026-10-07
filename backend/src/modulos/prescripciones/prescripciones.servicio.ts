@@ -3,6 +3,7 @@ import { conflicto, noEncontrado, reglaNegocio } from '../../comun/errores';
 import { reloj } from '../../comun/reloj';
 import { prisma, type ClienteDb } from '../../db';
 import { cambios, registrarAuditoria } from '../auditoria/auditoria.servicio';
+import { avisarCambioRecordatorios } from '../tiempo-real/bus';
 import { proximaTomaPendiente, tomasEntre } from './agenda';
 import type { AltaPrescripcion, ModificacionPrescripcion } from './prescripciones.esquemas';
 
@@ -90,7 +91,10 @@ async function pacienteInternado(db: ClienteDb, pacienteId: number) {
   return paciente;
 }
 
-/** Los recordatorios pendientes de una prescripción que cambió dejan de tener sentido (E5). */
+/**
+ * Los recordatorios pendientes de una prescripción que cambió dejan de tener sentido (E5).
+ * Devuelve cuántos canceló: quien llama avisa al tiempo real después del commit.
+ */
 async function cancelarRecordatoriosPendientes(
   tx: Prisma.TransactionClient,
   prescripcionId: number,
@@ -110,6 +114,13 @@ async function cancelarRecordatoriosPendientes(
       detalle: `${count} recordatorios pendientes de la prescripción ${prescripcionId}`,
     });
   }
+  return count;
+}
+
+/** Avisa al tiempo real si la transacción (ya confirmada) canceló recordatorios. */
+function avisarSiCancelo<T>({ dto, cancelados }: { dto: T; cancelados: number }): T {
+  if (cancelados > 0) avisarCambioRecordatorios();
+  return dto;
 }
 
 export async function listarPrescripcionesDePaciente(
@@ -209,7 +220,7 @@ export async function modificarPrescripcion(
   { motivo, fechaFin, ...datos }: ModificacionPrescripcion,
   actorId: number,
 ) {
-  return prisma.$transaction(async (tx) => {
+  const resultado = await prisma.$transaction(async (tx) => {
     const antes = await obtenerDb(tx, id);
     if (antes.estado !== 'VIGENTE') {
       throw conflicto(
@@ -237,11 +248,13 @@ export async function modificarPrescripcion(
       nuevo,
       detalle: motivo,
     });
-    if ('frecuenciaHoras' in nuevo || 'fechaFin' in nuevo) {
-      await cancelarRecordatoriosPendientes(tx, id, antes.pacienteId, actorId);
-    }
-    return aDtoPrescripcion(despues);
+    const cancelados =
+      'frecuenciaHoras' in nuevo || 'fechaFin' in nuevo
+        ? await cancelarRecordatoriosPendientes(tx, id, antes.pacienteId, actorId)
+        : 0;
+    return { dto: aDtoPrescripcion(despues), cancelados };
   });
+  return avisarSiCancelo(resultado);
 }
 
 /** Transiciones permitidas y la acción que queda en la auditoría. */
@@ -256,7 +269,7 @@ export async function cambiarEstadoPrescripcion(
   { estado, motivo }: { estado: EstadoPrescripcion; motivo: string },
   actorId: number,
 ) {
-  return prisma.$transaction(async (tx) => {
+  const resultado = await prisma.$transaction(async (tx) => {
     const antes = await obtenerDb(tx, id);
     const accion = TRANSICIONES[antes.estado][estado];
     if (!accion) {
@@ -281,9 +294,11 @@ export async function cambiarEstadoPrescripcion(
       anterior: { estado: antes.estado },
       nuevo: { estado, motivoCambioEstado: motivo },
     });
-    if (antes.estado === 'VIGENTE') {
-      await cancelarRecordatoriosPendientes(tx, id, antes.pacienteId, actorId);
-    }
-    return aDtoPrescripcion(despues);
+    const cancelados =
+      antes.estado === 'VIGENTE'
+        ? await cancelarRecordatoriosPendientes(tx, id, antes.pacienteId, actorId)
+        : 0;
+    return { dto: aDtoPrescripcion(despues), cancelados };
   });
+  return avisarSiCancelo(resultado);
 }
