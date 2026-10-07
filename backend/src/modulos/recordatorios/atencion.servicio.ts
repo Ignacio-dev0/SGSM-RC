@@ -51,3 +51,36 @@ export async function atenderPorAdministracion(
   });
   return true;
 }
+
+/**
+ * Atender por confirmación de un estudio (T513): la confirmación con el rostro marca ATENDIDO
+ * cada recordatorio pendiente o vencido del estudio (un vencido conserva vencidoEn), dentro de
+ * la transacción de la confirmación. Devuelve cuántos atendió, para avisar después del commit.
+ */
+export async function atenderPorEstudio(
+  tx: Prisma.TransactionClient,
+  datos: { estudioId: number; fechaHora: Date; usuarioId: number },
+): Promise<number> {
+  const activos = await tx.recordatorio.findMany({
+    where: { estudioId: datos.estudioId, estado: { in: SIN_ATENDER } },
+  });
+  let atendidos = 0;
+  for (const r of activos) {
+    const { count } = await tx.recordatorio.updateMany({
+      where: { id: r.id, estado: { in: SIN_ATENDER } },
+      data: { estado: 'ATENDIDO', atendidoEn: datos.fechaHora, atendidoPorId: datos.usuarioId },
+    });
+    if (count === 0) continue;
+    atendidos++;
+    await registrarAuditoria(tx, {
+      usuarioId: datos.usuarioId,
+      accion: 'ATENDER',
+      entidad: 'Recordatorio',
+      entidadId: r.id,
+      pacienteId: r.pacienteId,
+      anterior: { estado: r.estado },
+      nuevo: { estado: 'ATENDIDO', estudioId: datos.estudioId },
+    });
+  }
+  return atendidos;
+}

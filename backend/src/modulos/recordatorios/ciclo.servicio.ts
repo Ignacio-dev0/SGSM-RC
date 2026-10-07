@@ -10,11 +10,11 @@ import { tomasParaRecordar, ventanaDeGeneracion } from './generacion';
 import { prioridadDe } from './prioridad';
 
 /**
- * Un ciclo del temporizador de recordatorios (T501–T503 · T508): vence los atrasados (y avisa a
- * los administradores), genera los de las tomas que se acercan y recalcula la prioridad de los
- * pendientes. Todo en una transacción con un candado de PostgreSQL, para que dos procesos (o dos
- * ciclos superpuestos) no hagan el mismo trabajo; el índice único parcial es la última barrera
- * contra duplicados. El aviso al tiempo real sale DESPUÉS del commit.
+ * Un ciclo del temporizador de recordatorios (T501–T504 · T508): vence los atrasados (y avisa a
+ * los administradores), genera los de las tomas y los estudios que se acercan y recalcula la
+ * prioridad de los pendientes. Todo en una transacción con un candado de PostgreSQL, para que
+ * dos procesos (o dos ciclos superpuestos) no hagan el mismo trabajo; el índice único parcial es
+ * la última barrera contra duplicados. El aviso al tiempo real sale DESPUÉS del commit.
  */
 
 /** Número del candado de PostgreSQL (pg_try_advisory_xact_lock) del ciclo de recordatorios. */
@@ -24,6 +24,15 @@ const CANDADO_DEL_CICLO = 50_501;
 const MEDIA_FRECUENCIA_MAXIMA = 84 * 3_600_000;
 
 type Tx = Prisma.TransactionClient;
+
+/**
+ * Espera el candado del ciclo dentro de la transacción de quien llama (D30): un cambio de estudio
+ * no se cruza con un ciclo que está generando su recordatorio. El ciclo lo pide sin esperar, así
+ * que mientras tanto ese minuto se saltea y lo hace el siguiente.
+ */
+export async function esperarCandadoDelCiclo(tx: Tx) {
+  await tx.$executeRaw`SELECT pg_advisory_xact_lock(${CANDADO_DEL_CICLO}::bigint)`;
+}
 
 export interface ResultadoCiclo {
   /** false si otro proceso tenía el candado y este ciclo no hizo nada. */
@@ -120,8 +129,42 @@ async function vencerAtrasados(tx: Tx, ahora: Date) {
   return vencidos;
 }
 
-/** T502: un recordatorio por cada toma de la ventana que no tenga administración ni recordatorio. */
+/**
+ * T502 · T504: un recordatorio por cada toma y cada estudio de la ventana que todavía no lo
+ * tenga. Un solo INSERT para los dos tipos.
+ */
 async function generar(tx: Tx, ahora: Date) {
+  const nuevos = [
+    ...(await tomasDeLaVentana(tx, ahora)),
+    ...(await estudiosDeLaVentana(tx, ahora)),
+  ];
+  if (nuevos.length === 0) return 0;
+
+  // ON CONFLICT DO NOTHING: el índice único parcial descarta los que ya tienen uno activo.
+  const creados = await tx.recordatorio.createManyAndReturn({ data: nuevos, skipDuplicates: true });
+  for (const r of creados) {
+    await registrarAuditoria(tx, {
+      accion: 'GENERAR',
+      entidad: 'Recordatorio',
+      entidadId: r.id,
+      pacienteId: r.pacienteId,
+      nuevo: {
+        tipo: r.tipo,
+        prescripcionId: r.prescripcionId ?? undefined,
+        estudioId: r.estudioId ?? undefined,
+        fechaHoraObjetivo: r.fechaHoraObjetivo,
+        prioridad: r.prioridad,
+      },
+    });
+  }
+  return creados.length;
+}
+
+/** T502: las tomas de la ventana que no tienen una administración. */
+async function tomasDeLaVentana(
+  tx: Tx,
+  ahora: Date,
+): Promise<Prisma.RecordatorioCreateManyInput[]> {
   const { desde, hasta } = ventanaDeGeneracion(ahora);
   const prescripciones = await tx.prescripcion.findMany({
     where: {
@@ -146,33 +189,36 @@ async function generar(tx: Tx, ahora: Date) {
     prescripciones.map((p) => ({ ...p, administraciones: p.suministros.map((s) => s.fechaHora) })),
     ahora,
   );
-  if (tomas.length === 0) return 0;
+  return tomas.map((t) => ({
+    tipo: 'MEDICAMENTO',
+    ...t,
+    generadoEn: ahora,
+    prioridad: prioridadDe('MEDICAMENTO', t.fechaHoraObjetivo, ahora),
+  }));
+}
 
-  // ON CONFLICT DO NOTHING: el índice único parcial descarta las tomas que ya tienen uno activo.
-  const creados = await tx.recordatorio.createManyAndReturn({
-    data: tomas.map((t) => ({
-      tipo: 'MEDICAMENTO' as const,
-      ...t,
-      generadoEn: ahora,
-      prioridad: prioridadDe('MEDICAMENTO', t.fechaHoraObjetivo, ahora),
-    })),
-    skipDuplicates: true,
+/** T504: los estudios programados de pacientes internados cuya hora cae en la ventana. */
+async function estudiosDeLaVentana(
+  tx: Tx,
+  ahora: Date,
+): Promise<Prisma.RecordatorioCreateManyInput[]> {
+  const { desde, hasta } = ventanaDeGeneracion(ahora);
+  const estudios = await tx.estudio.findMany({
+    where: {
+      estado: 'PROGRAMADO',
+      paciente: { estado: 'INTERNADO' },
+      fechaHora: { gte: desde, lte: hasta },
+    },
+    select: { id: true, pacienteId: true, fechaHora: true },
   });
-  for (const r of creados) {
-    await registrarAuditoria(tx, {
-      accion: 'GENERAR',
-      entidad: 'Recordatorio',
-      entidadId: r.id,
-      pacienteId: r.pacienteId,
-      nuevo: {
-        tipo: r.tipo,
-        prescripcionId: r.prescripcionId,
-        fechaHoraObjetivo: r.fechaHoraObjetivo,
-        prioridad: r.prioridad,
-      },
-    });
-  }
-  return creados.length;
+  return estudios.map((e) => ({
+    tipo: 'ESTUDIO',
+    estudioId: e.id,
+    pacienteId: e.pacienteId,
+    fechaHoraObjetivo: e.fechaHora,
+    generadoEn: ahora,
+    prioridad: prioridadDe('ESTUDIO', e.fechaHora, ahora),
+  }));
 }
 
 /** T503 · S10: prioridad según lo que falta. Automática y sin auditar (D12). */

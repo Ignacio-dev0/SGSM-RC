@@ -1,8 +1,10 @@
 import { prisma } from '../../db';
 import { reloj } from '../../comun/reloj';
 import {
+  crearEstudio,
   crearInsumo,
   crearPrescripcionBasica,
+  crearTipoEstudio,
   internarPaciente,
 } from '../../../tests/soporte/fabricas';
 import { crearUsuario, prepararBaseConSeguridad } from '../../../tests/soporte/sesion';
@@ -176,6 +178,132 @@ describe('ciclo de recordatorios (T501 · T502 · T503 · T508 · T514)', () => 
       expect(await ciclo('08:31')).toMatchObject({ nuevos: 0, vencidos: 0 });
       expect(await prisma.recordatorio.count()).toBe(1);
       expect(await prisma.notificacion.count()).toBe(1);
+    });
+  });
+
+  describe('estudios (T504)', () => {
+    let estudioId: number;
+
+    beforeEach(async () => {
+      // Sin la prescripción: solo cuentan los recordatorios del estudio.
+      await prisma.prescripcion.update({
+        where: { id: prescripcionId },
+        data: { estado: 'FINALIZADA' },
+      });
+      const tipo = await crearTipoEstudio({ nombre: 'Radiografía' });
+      estudioId = (
+        await crearEstudio(pacienteId, medicoId, {
+          tipoEstudioId: tipo.id,
+          nombre: 'Rx de tórax',
+          fechaHora: a('10:00'),
+        })
+      ).id;
+    });
+
+    it('recuerda el estudio 30 min antes, una sola vez, siempre con prioridad MEDIA', async () => {
+      expect((await ciclo('09:29')).nuevos).toBe(0);
+      expect((await ciclo('09:30')).nuevos).toBe(1);
+      expect((await ciclo('09:31')).nuevos).toBe(0);
+
+      const [r, ...otros] = await recordatorios();
+      expect(otros).toEqual([]);
+      expect(r).toMatchObject({
+        tipo: 'ESTUDIO',
+        pacienteId,
+        estudioId,
+        prescripcionId: null,
+        fechaHoraObjetivo: a('10:00'),
+        generadoEn: a('09:30'),
+        prioridad: 'MEDIA',
+        estado: 'PENDIENTE',
+      });
+      expect(
+        await prisma.auditoria.findFirst({ where: { accion: 'GENERAR', entidad: 'Recordatorio' } }),
+      ).toMatchObject({
+        entidadId: String(r!.id),
+        pacienteId,
+        usuarioId: null,
+        valorNuevo: expect.objectContaining({ tipo: 'ESTUDIO', estudioId, prioridad: 'MEDIA' }),
+      });
+
+      // La prioridad no cambia a medida que se acerca la hora.
+      expect((await ciclo('09:58')).repriorizados).toBe(0);
+      expect((await recordatorios())[0]?.prioridad).toBe('MEDIA');
+    });
+
+    it('vence a los 60 min de generado y avisa a los administradores con el nombre del estudio', async () => {
+      await crearUsuario('ADMINISTRADOR');
+      await ciclo('09:30');
+
+      expect((await ciclo('10:30')).vencidos).toBe(1);
+
+      expect((await recordatorios())[0]).toMatchObject({
+        estado: 'VENCIDO',
+        vencidoEn: a('10:30'),
+        prioridad: 'MEDIA',
+      });
+      // 10:00 UTC son las 07:00 en Argentina.
+      expect((await prisma.notificacion.findFirstOrThrow()).mensaje).toMatch(
+        /estudio Rx de tórax de las 07:00.*A-01/,
+      );
+      expect((await ciclo('10:31')).nuevos).toBe(0);
+    });
+
+    it.each([
+      ['10:20', 1],
+      ['10:31', 0],
+    ])(
+      'tras una caída, al volver a las %s recupera solo los de los últimos 30 min',
+      async (hora, n) => {
+        expect((await ciclo(hora)).nuevos).toBe(n);
+      },
+    );
+
+    it('no recuerda estudios cancelados o realizados ni de pacientes egresados', async () => {
+      await prisma.estudio.update({
+        where: { id: estudioId },
+        data: { estado: 'CANCELADO', motivoCancelacion: 'Turno suspendido' },
+      });
+      await crearEstudio(pacienteId, medicoId, {
+        fechaHora: a('10:00'),
+        estado: 'REALIZADO',
+        realizadoEn: a('09:00'),
+        confirmadoPorId: medicoId,
+      });
+      const { paciente: egresado } = await internarPaciente(medicoId);
+      await crearEstudio(egresado.id, medicoId, { fechaHora: a('10:00') });
+      await prisma.paciente.update({
+        where: { id: egresado.id },
+        data: { estado: 'EGRESADO', fechaEgreso: a('07:00'), motivoEgreso: 'Alta' },
+      });
+
+      expect((await ciclo('09:40')).nuevos).toBe(0);
+    });
+
+    it('un estudio reprogramado (recordatorio viejo cancelado) se recuerda en su hora nueva', async () => {
+      await ciclo('09:30');
+      await prisma.recordatorio.updateMany({ data: { estado: 'CANCELADO' } });
+      await prisma.estudio.update({ where: { id: estudioId }, data: { fechaHora: a('11:00') } });
+
+      expect((await ciclo('09:45')).nuevos).toBe(0);
+      expect((await ciclo('10:30')).nuevos).toBe(1);
+      expect((await recordatorios()).map((r) => [r.estado, r.fechaHoraObjetivo])).toEqual([
+        ['CANCELADO', a('10:00')],
+        ['PENDIENTE', a('11:00')],
+      ]);
+    });
+
+    it('genera tomas y estudios en el mismo ciclo, con un solo aviso', async () => {
+      await prisma.prescripcion.update({
+        where: { id: prescripcionId },
+        data: { estado: 'VIGENTE', fechaInicio: a('10:00') },
+      });
+      const publicar = jest.spyOn(bus, 'publicar').mockImplementation(() => undefined);
+
+      expect((await ciclo('09:30')).nuevos).toBe(2);
+      expect((await recordatorios()).map((r) => r.tipo).sort()).toEqual(['ESTUDIO', 'MEDICAMENTO']);
+      expect(publicar).toHaveBeenCalledTimes(1);
+      expect(publicar).toHaveBeenCalledWith(expect.objectContaining({ nuevos: 2 }));
     });
   });
 
