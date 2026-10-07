@@ -14,7 +14,7 @@ describe('pantalla de inicio de sesión (T107 · CU06)', () => {
     expect(await screen.findByRole('heading', { name: /Ingresar/ })).toBeInTheDocument();
   });
 
-  it('ingresa con usuario y contraseña y recuerda el usuario en la tablet', async () => {
+  it('ingresa con usuario y contraseña y, si se pide, recuerda el usuario en la tablet', async () => {
     let enviado: unknown;
     responderLogin(() => HttpResponse.json({ data: ENFERMERO }));
     servidor.use(
@@ -27,11 +27,24 @@ describe('pantalla de inicio de sesión (T107 · CU06)', () => {
 
     await userEvent.type(await screen.findByLabelText('Usuario'), 'enfermero');
     await userEvent.type(screen.getByLabelText('Contraseña'), 'Enfermero2026');
+    await userEvent.click(screen.getByLabelText(/Recordar mi usuario/));
     await userEvent.click(screen.getByRole('button', { name: 'Ingresar' }));
 
     expect(await screen.findByRole('heading', { name: /Hola, Sofía/ })).toBeInTheDocument();
     expect(enviado).toEqual({ nombreUsuario: 'enfermero', contrasena: 'Enfermero2026' });
     expect(localStorage.getItem('sgsm.usuarioRecordado')).toBe('enfermero');
+  });
+
+  it('en una tablet nueva no recuerda el usuario salvo que se pida (las tablets son compartidas)', async () => {
+    renderizarApp('/', null);
+    expect(await screen.findByLabelText(/Recordar mi usuario/)).not.toBeChecked();
+  });
+
+  it('la pantalla tiene su región principal', async () => {
+    renderizarApp('/', null);
+    expect(await screen.findByRole('main')).toContainElement(
+      screen.getByRole('heading', { name: /Ingresar/ }),
+    );
   });
 
   it('completa el usuario recordado', async () => {
@@ -70,6 +83,8 @@ describe('pantalla de inicio de sesión (T107 · CU06)', () => {
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Usuario o contraseña incorrectos');
     expect(screen.getByLabelText('Contraseña')).toHaveValue('');
+    // El foco vuelve a la contraseña para escribirla de nuevo.
+    await waitFor(() => expect(screen.getByLabelText('Contraseña')).toHaveFocus());
   });
 
   it('informa cuando la cuenta está bloqueada', async () => {
@@ -102,6 +117,7 @@ describe('pantalla de inicio de sesión (T107 · CU06)', () => {
 
     expect(screen.getByText('Ingrese su usuario')).toBeInTheDocument();
     expect(screen.getByText('Ingrese su contraseña')).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByLabelText('Usuario')).toHaveFocus());
     await waitFor(() => expect(login).not.toHaveBeenCalled());
   });
 });

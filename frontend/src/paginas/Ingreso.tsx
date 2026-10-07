@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useRef, useState, type FormEvent } from 'react';
 import {
   Box,
   Checkbox,
@@ -18,6 +18,7 @@ import { Alerta } from '../componentes/Alerta';
 import { Boton } from '../componentes/Boton';
 import { CampoTexto } from '../componentes/CampoTexto';
 import { SelectorTema } from '../componentes/SelectorTema';
+import { useFocoEnPrimerError } from '../utilidades/useFocoEnPrimerError';
 
 const CLAVE_RECORDADO = 'sgsm.usuarioRecordado';
 
@@ -47,11 +48,14 @@ export function Ingreso() {
 
   const [nombreUsuario, setNombreUsuario] = useState(recordado ?? '');
   const [contrasena, setContrasena] = useState('');
-  const [recordar, setRecordar] = useState(true);
+  // Las tablets son compartidas: recordar el usuario es una elección, salvo que ya se haya elegido.
+  const [recordar, setRecordar] = useState(Boolean(recordado));
   const [verContrasena, setVerContrasena] = useState(false);
   const [errores, setErrores] = useState<{ usuario?: string; contrasena?: string }>({});
   const [error, setError] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
+  const refContrasena = useRef<HTMLInputElement>(null);
+  const { ref: refFormulario, enfocarPrimerError } = useFocoEnPrimerError<HTMLFormElement>();
 
   if (usuario) return <Navigate to="/" replace />;
 
@@ -62,7 +66,10 @@ export function Ingreso() {
       ...(contrasena ? {} : { contrasena: 'Ingrese su contraseña' }),
     };
     setErrores(faltan);
-    if (Object.keys(faltan).length > 0) return;
+    if (Object.keys(faltan).length > 0) {
+      enfocarPrimerError();
+      return;
+    }
 
     setEnviando(true);
     setError(null);
@@ -74,6 +81,8 @@ export function Ingreso() {
     } catch (err) {
       setError(mensajeDeError(err));
       setContrasena('');
+      // Para volver a escribirla sin buscar el campo.
+      refContrasena.current?.focus();
     } finally {
       setEnviando(false);
     }
@@ -81,6 +90,7 @@ export function Ingreso() {
 
   return (
     <Box
+      component="main"
       sx={{
         minHeight: '100vh',
         display: 'grid',
@@ -94,6 +104,7 @@ export function Ingreso() {
         <SelectorTema />
       </Box>
       <Paper
+        ref={refFormulario}
         component="form"
         noValidate
         onSubmit={enviar}
@@ -129,6 +140,7 @@ export function Ingreso() {
           type={verContrasena ? 'text' : 'password'}
           autoComplete="current-password"
           autoFocus={Boolean(recordado)}
+          inputRef={refContrasena}
           slotProps={{
             input: {
               endAdornment: (
