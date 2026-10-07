@@ -27,6 +27,11 @@ export const config = {
   puerto: entero('PORT', 3000),
   /** Costo de bcrypt: 10 en desarrollo/producción; las pruebas usan 4 para ir rápido. */
   bcryptCosto: entero('BCRYPT_COSTO', 10),
+  login: {
+    /** Intentos fallidos consecutivos que bloquean la cuenta (T112). */
+    maxIntentos: entero('LOGIN_MAX_INTENTOS', 3),
+    bloqueoMinutos: entero('LOGIN_BLOQUEO_MIN', 15),
+  },
   sesion: {
     secreto: secreto('JWT_SECRETO', 'solo-para-desarrollo-cambiar-en-produccion'),
     /** Minutos sin actividad tras los que se cierra la sesión (RNF05). */
