@@ -3,7 +3,8 @@
 > E5 · T501–T508 · CU24–CU28 (casos de uso inferidos). Diseño aprobado en
 > [diseno-e5.md](diseno-e5.md). Este documento es el **contrato** entre el backend y el frontend:
 > forma de las respuestas, mensajes del tiempo real, códigos de cierre y errores. Los recordatorios
-> de **estudios** (T504, T509–T513) se suman en la fase 3 con la misma forma.
+> de **estudios** (T504) tienen la misma forma; el contrato de los estudios está en
+> [estudios.md](estudios.md).
 >
 > Código: [`modulos/recordatorios/`](../backend/src/modulos/recordatorios/) (prioridad, generación,
 > ciclo, temporizador, API y atención) y [`modulos/tiempo-real/`](../backend/src/modulos/tiempo-real/)
@@ -36,6 +37,10 @@
 - **Cancelar**: suspender, finalizar o modificar la frecuencia o el fin de una prescripción, o
   egresar al paciente, cancela sus recordatorios `PENDIENTE`. Si después se reanuda o cambia la
   agenda, el temporizador vuelve a generar los de las tomas nuevas.
+- **Estudios** (T504): un recordatorio por estudio `PROGRAMADO` de un paciente internado, en la
+  misma ventana que las tomas, siempre con prioridad `MEDIA`. Se atiende confirmando el estudio con
+  el rostro (`POST /api/estudios/:id/confirmar`); reprogramarlo o cancelarlo cancela sus
+  recordatorios sin atender, también el vencido (D28 de [estudios.md](estudios.md)).
 
 ```
 PENDIENTE ─ administración de esa toma ─────────────► ATENDIDO (suministroId)
@@ -44,6 +49,9 @@ PENDIENTE ─ estudio confirmado ───────────────�
 PENDIENTE ─ 60 min sin atención ────────────────────► VENCIDO (vencidoEn; avisa al administrador)
 VENCIDO   ─ administración tardía o motivo ─────────► ATENDIDO (conserva vencidoEn)
 PENDIENTE ─ suspender/finalizar/modificar/egresar ──► CANCELADO
+PENDIENTE ─ estudio reprogramado o cancelado ───────► CANCELADO
+VENCIDO   ─ estudio confirmado ─────────────────────► ATENDIDO (conserva vencidoEn)
+VENCIDO   ─ estudio reprogramado o cancelado ───────► CANCELADO (conserva vencidoEn, D28)
 ```
 
 La base garantiza la coherencia ([modelo-de-datos.md](modelo-de-datos.md)): un recordatorio
@@ -112,7 +120,7 @@ interface Recordatorio {
     via: string; // ViaAdministracion: ORAL, INTRAVENOSA…
     frecuenciaHoras: number;
   } | null;
-  /** Solo en los de ESTUDIO (fase 3). */
+  /** Solo en los de ESTUDIO (ver estudios.md). */
   estudio: { id: number; nombre: string; tipoEstudio: string; preparacion: string | null } | null;
   /** Atención: quién, cuándo y cómo (null mientras no se atendió). */
   atendidoEn: string | null;
@@ -128,24 +136,24 @@ cambios en su contrato) el recordatorio se atiende solo.
 
 ### Errores
 
-| HTTP | `codigo`                    | Cuándo                                                                                      |
-| ---- | --------------------------- | ------------------------------------------------------------------------------------------- |
-| 400  | `VALIDACION`                | Filtro inválido o motivo vacío, de menos de 3 o de más de 255 caracteres                    |
-| 401  | `NO_AUTENTICADO`            | Sin sesión o sesión vencida                                                                 |
-| 403  | `SIN_PERMISO`               | Sin `recordatorios.ver` (listar) o sin `recordatorios.atender` ("No se administró")         |
-| 404  | `NO_ENCONTRADO`             | El recordatorio no existe                                                                   |
-| 409  | `RECORDATORIO_NO_PENDIENTE` | Ya estaba atendido o cancelado (`detalles.estado`): el frontend vuelve a pedir la lista     |
-| 422  | `NO_ES_TOMA`                | Es un recordatorio de estudio: se atiende confirmando el estudio, no con "No se administró" |
+| HTTP | `codigo`                    | Cuándo                                                                                                     |
+| ---- | --------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| 400  | `VALIDACION`                | Filtro inválido o motivo vacío, de menos de 3 o de más de 255 caracteres                                   |
+| 401  | `NO_AUTENTICADO`            | Sin sesión o sesión vencida                                                                                |
+| 403  | `SIN_PERMISO`               | Sin `recordatorios.ver` (listar) o sin `recordatorios.atender` ("No se administró")                        |
+| 404  | `NO_ENCONTRADO`             | El recordatorio no existe                                                                                  |
+| 409  | `RECORDATORIO_NO_PENDIENTE` | Ya estaba atendido o cancelado (`detalles.estado`): el frontend vuelve a pedir la lista                    |
+| 422  | `NO_ES_TOMA`                | Es un recordatorio de estudio: se atiende [confirmando el estudio](estudios.md), no con "No se administró" |
 
 ### Auditoría
 
-| Acción           | Entidad      | Cuándo                                                                                            |
-| ---------------- | ------------ | ------------------------------------------------------------------------------------------------- |
-| `GENERAR`        | Recordatorio | El temporizador lo crea (sin usuario; con el paciente)                                            |
-| `VENCER`         | Recordatorio | Pasó el tiempo sin atenderse (sin usuario; con el paciente)                                       |
-| `ATENDER`        | Recordatorio | Se registró la administración de su toma (usuario que administró, dentro de la misma transacción) |
-| `NO_ADMINISTRAR` | Recordatorio | "No se administró", con el motivo en `detalle`                                                    |
-| `CANCELAR`       | Recordatorio | Suspender, finalizar, modificar o egresar (ya existía: una entrada por grupo)                     |
+| Acción           | Entidad      | Cuándo                                                                                                                           |
+| ---------------- | ------------ | -------------------------------------------------------------------------------------------------------------------------------- |
+| `GENERAR`        | Recordatorio | El temporizador lo crea (sin usuario; con el paciente)                                                                           |
+| `VENCER`         | Recordatorio | Pasó el tiempo sin atenderse (sin usuario; con el paciente)                                                                      |
+| `ATENDER`        | Recordatorio | Se registró la administración de su toma o se confirmó su estudio (usuario que lo hizo, dentro de la misma transacción)          |
+| `NO_ADMINISTRAR` | Recordatorio | "No se administró", con el motivo en `detalle`                                                                                   |
+| `CANCELAR`       | Recordatorio | Suspender, finalizar, modificar o egresar (una entrada por grupo); reprogramar o cancelar un estudio (una por recordatorio, D34) |
 
 El cambio de prioridad no se audita (D12). El volumen de `GENERAR`/`VENCER` es el riesgo R8.
 
@@ -190,8 +198,8 @@ type MensajeTiempoReal =
 ```
 
 `momento` es la hora del servidor (sirve para corregir el reloj de la tablet, R6). Un mismo ciclo
-del temporizador manda **un** mensaje; atender, "No se administró" y las cancelaciones mandan uno
-con `nuevos: 0` y `vencidos: 0`. Lo reciben todas las conexiones de usuarios con
+del temporizador manda **un** mensaje; atender, "No se administró", las cancelaciones y
+confirmar, reprogramar o cancelar un estudio mandan uno con `nuevos: 0` y `vencidos: 0`. Lo reciben todas las conexiones de usuarios con
 `recordatorios.ver`; los filtros (tipo, sala) los aplica el cliente al volver a pedir la lista.
 
 ### Latido y cierre
@@ -329,7 +337,8 @@ primera tarea del inicio ("Tomas para dar ahora").
 ## Decisiones
 
 Tomadas al bajar el diseño al código; complementan D9–D14 de [diseno-e5.md](diseno-e5.md). D15–D19
-son del contrato (fase 0); D20–D25, de la implementación del backend (fase 1).
+son del contrato (fase 0); D20–D25, de la implementación del backend (fase 1). Siguen D26–D35 en
+[estudios.md](estudios.md#decisiones).
 
 | #   | Decisión                                                                                                                                                                                                                                              | Por qué                                                                                                                                                                               |
 | --- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
