@@ -12,47 +12,59 @@ y avisar a tiempo de cada toma y de cada estudio.
 
 ## Actores
 
-| Actor             | Qué hace con el sistema                                                                                           | Dónde y cómo                                                                       |
-| ----------------- | ----------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
-| **Enfermería**    | Da la medicación indicada y registra los insumos que usa con cada paciente; consulta qué le toca a cada uno       | Tablet, al lado de la cama, muchas veces con guantes, de día y de noche, con apuro |
-| **Médicos**       | Internan pacientes, los trasladan y les dan el alta; cargan, cambian y suspenden indicaciones (prescripciones)    | Tablet o PC, en la recorrida o en el office                                        |
-| **Administrador** | Da de alta al personal, sus permisos y su rostro; mantiene el catálogo de insumos; recibe los avisos de seguridad | PC                                                                                 |
+| Actor             | Qué hace con el sistema                                                                                                                                              | Dónde y cómo                                                                       |
+| ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| **Enfermería**    | Da la medicación indicada y registra los insumos que usa con cada paciente; consulta qué le toca a cada uno                                                          | Tablet, al lado de la cama, muchas veces con guantes, de día y de noche, con apuro |
+| **Médicos**       | Internan pacientes, los trasladan y les dan el alta; cargan, cambian y suspenden indicaciones (prescripciones); programan estudios; consultan reportes               | Tablet o PC, en la recorrida o en el office                                        |
+| **Administrador** | Da de alta al personal, sus permisos y su rostro; mantiene el catálogo de insumos; recibe los avisos de seguridad y de tomas vencidas; consulta reportes y auditoría | PC                                                                                 |
 
 ## Tareas núcleo (con las palabras de quien las hace)
 
-| Tarea                                                        | Actor               | Frecuencia | Criticidad                                                |
-| ------------------------------------------------------------ | ------------------- | ---------- | --------------------------------------------------------- |
-| Darle a un paciente la medicación que le toca                | Enfermería          | Muy alta   | Alta (paciente, medicamento, dosis, vía y hora correctos) |
-| Anotar los insumos que usé con un paciente (pañales, gasas…) | Enfermería          | Alta       | Media                                                     |
-| Ver qué medicación le toca a un paciente y a qué hora        | Enfermería, médicos | Alta       | Alta                                                      |
-| Encontrar a un paciente por su cama o apellido               | Todos               | Muy alta   | Media                                                     |
-| Corregir algo que cargué mal                                 | Enfermería          | Baja       | Media                                                     |
-| Internar a un paciente en una cama libre                     | Médicos             | Media      | Media                                                     |
-| Indicar un medicamento (cargar una prescripción)             | Médicos             | Alta       | Alta                                                      |
-| Cambiar o suspender una indicación                           | Médicos             | Media      | Alta                                                      |
-| Cambiar de cama a un paciente                                | Médicos             | Baja       | Baja                                                      |
-| Dar de alta a un paciente                                    | Médicos             | Media      | Alta (libera la cama y suspende indicaciones)             |
-| Dar de alta a un enfermero nuevo y registrar su cara         | Administrador       | Baja       | Media                                                     |
-| Agregar un insumo o medicamento al catálogo                  | Administrador       | Baja       | Baja                                                      |
+| Tarea                                                        | Actor                  | Frecuencia | Criticidad                                                |
+| ------------------------------------------------------------ | ---------------------- | ---------- | --------------------------------------------------------- |
+| Darle a un paciente la medicación que le toca                | Enfermería             | Muy alta   | Alta (paciente, medicamento, dosis, vía y hora correctos) |
+| Anotar los insumos que usé con un paciente (pañales, gasas…) | Enfermería             | Alta       | Media                                                     |
+| Ver qué medicación le toca a un paciente y a qué hora        | Enfermería, médicos    | Alta       | Alta                                                      |
+| Encontrar a un paciente por su cama o apellido               | Todos                  | Muy alta   | Media                                                     |
+| Corregir algo que cargué mal                                 | Enfermería             | Baja       | Media                                                     |
+| Internar a un paciente en una cama libre                     | Médicos                | Media      | Media                                                     |
+| Indicar un medicamento (cargar una prescripción)             | Médicos                | Alta       | Alta                                                      |
+| Cambiar o suspender una indicación                           | Médicos                | Media      | Alta                                                      |
+| Cambiar de cama a un paciente                                | Médicos                | Baja       | Baja                                                      |
+| Dar de alta a un paciente                                    | Médicos                | Media      | Alta (libera la cama y suspende indicaciones)             |
+| Dar de alta a un enfermero nuevo y registrar su cara         | Administrador          | Baja       | Media                                                     |
+| Agregar un insumo o medicamento al catálogo                  | Administrador          | Baja       | Baja                                                      |
+| Ver qué tomas y estudios hay que atender ahora               | Enfermería             | Muy alta   | Alta (que ninguna toma pase sin verse)                    |
+| Anotar que una toma no se dio y por qué                      | Enfermería             | Media      | Alta                                                      |
+| Programar un estudio y confirmar que se hizo                 | Médicos, Enfermería    | Media      | Media                                                     |
+| Ver cuánto se usó en un período y descargarlo                | Administrador, médicos | Baja       | Baja                                                      |
+| Averiguar quién cambió algo y cuándo                         | Administrador          | Baja       | Media                                                     |
 
 ## Glosario
 
 Un concepto, un nombre, en todas las pantallas.
 
-| Término                              | Significa                                                                   | No usar                                  |
-| ------------------------------------ | --------------------------------------------------------------------------- | ---------------------------------------- |
-| **Internar** / **Internación**       | Registrar el ingreso de un paciente con su cama                             | "Alta" de paciente, "crear paciente"     |
-| **Dar de alta** / **Egreso**         | El paciente se va del hospital: libera la cama, suspende sus prescripciones | "Baja" de paciente                       |
-| **Reingreso**                        | Volver a internar a un paciente que ya estuvo, en su misma ficha            |                                          |
-| **Traslado**                         | Cambio de cama                                                              |                                          |
-| **Prescripción**                     | Indicación médica de un medicamento: dosis, frecuencia, vía                 | "Receta"                                 |
-| **Toma**                             | Cada momento en que corresponde dar un medicamento según la prescripción    |                                          |
-| **Administrar**                      | Dar un medicamento a un paciente y registrarlo                              | "Suministrar" en pantallas de enfermería |
-| **Insumo**                           | Material no medicinal (pañal, gasa, filtro…)                                |                                          |
-| **Suministro**                       | Registro de una administración o de insumos usados (historial)              |                                          |
-| **Confirmar con mi rostro**          | Validación facial de quien registra                                         | "Biometría" en pantallas de enfermería   |
-| **Dar de baja**                      | Desactivar un usuario o un insumo del catálogo (nunca un paciente)          | "Eliminar"                               |
-| **Nuevo usuario** / **Nuevo insumo** | Registrar personal o catálogo                                               | "Alta" (en la interfaz)                  |
+| Término                                   | Significa                                                                                           | No usar                                  |
+| ----------------------------------------- | --------------------------------------------------------------------------------------------------- | ---------------------------------------- |
+| **Internar** / **Internación**            | Registrar el ingreso de un paciente con su cama                                                     | "Alta" de paciente, "crear paciente"     |
+| **Dar de alta** / **Egreso**              | El paciente se va del hospital: libera la cama, suspende sus prescripciones                         | "Baja" de paciente                       |
+| **Reingreso**                             | Volver a internar a un paciente que ya estuvo, en su misma ficha                                    |                                          |
+| **Traslado**                              | Cambio de cama                                                                                      |                                          |
+| **Prescripción**                          | Indicación médica de un medicamento: dosis, frecuencia, vía                                         | "Receta"                                 |
+| **Toma**                                  | Cada momento en que corresponde dar un medicamento según la prescripción                            |                                          |
+| **Administrar**                           | Dar un medicamento a un paciente y registrarlo                                                      | "Suministrar" en pantallas de enfermería |
+| **Insumo**                                | Material no medicinal (pañal, gasa, filtro…)                                                        |                                          |
+| **Suministro**                            | Registro de una administración o de insumos usados (historial)                                      |                                          |
+| **Confirmar con mi rostro**               | Validación facial de quien registra                                                                 | "Biometría" en pantallas de enfermería   |
+| **Dar de baja**                           | Desactivar un usuario o un insumo del catálogo (nunca un paciente)                                  | "Eliminar"                               |
+| **Nuevo usuario** / **Nuevo insumo**      | Registrar personal o catálogo                                                                       | "Alta" (en la interfaz)                  |
+| **Recordatorio**                          | Aviso de una toma o de un estudio que se acerca (30 min antes) o que está atrasado                  | "Alarma", "alerta"                       |
+| **Urgente** / **Pronto** / **Programada** | Cuánto falta para la toma: 5 min o menos (o atrasada), entre 5 y 15, más de 15                      | Colores sin texto                        |
+| **Vencida**                               | Toma que pasó unos 30 min sin atenderse: avisa al administrador y se puede atender tarde            | "Perdida"                                |
+| **No se administró**                      | Registrar que una toma no se dio, con el motivo (ayuno, rechazo, estudio…)                          | "Cancelar la toma"                       |
+| **Estudio**                               | Práctica programada a un paciente (laboratorio, radiografía…) que enfermería confirma con su rostro | "Turno"                                  |
+| **Reporte** / **Estadísticas**            | Totales de lo que se usó en un período; se descargan en PDF o Excel                                 |                                          |
+| **Auditoría**                             | Registro de quién hizo cada cambio, cuándo, y qué había antes y después                             | "Log"                                    |
 
 ## Reglas que la interfaz tiene que hacer visibles
 
@@ -70,17 +82,24 @@ Un concepto, un nombre, en todas las pantallas.
 - Toda baja o cambio de estado dice sobre qué se hace y si se puede deshacer (suspender sí,
   finalizar no; un usuario o un insumo dado de baja se reactiva).
 - Un fallo de carga nunca se muestra como "no hay datos".
-- Un minuto antes de cerrar la sesión por inactividad, el sistema avisa.
+- Un minuto antes de cerrar la sesión por inactividad, el sistema avisa; después del cierre, el
+  ingreso dice que los avisos de recordatorios quedaron apagados.
+- Un recordatorio nunca depende solo del sonido: texto, insignia en la barra y vibración. Si se
+  corta el tiempo real, la pantalla lo dice y la lista se sigue actualizando sola.
 
 ## Cómo se llega a cada tarea
 
-El **inicio** de cada rol ofrece sus tareas con estas mismas palabras (Administrar medicamento,
-Registrar insumos, Buscar paciente, Internar paciente, Ver lo que se registró, Nuevo usuario,
-Registrar el rostro del personal, Agregar al catálogo). La ficha del paciente abre en sus
-**prescripciones**, con **Administrar** en cada una; donde se ve un registro, se puede abrir y
-corregir.
+El **inicio** de cada rol ofrece sus tareas con estas mismas palabras (Tomas y estudios para
+atender, Administrar medicamento, Registrar insumos, Buscar paciente, Internar paciente, Ver lo que
+se registró, Nuevo usuario, Registrar el rostro del personal, Agregar al catálogo). La barra tiene
+la **insignia de recordatorios** (cuántos hay para atender y cuántos urgentes) a un toque desde
+cualquier pantalla. La ficha del paciente abre en sus **prescripciones**, con **Administrar** en
+cada una, y tiene la pestaña **Estudios**; donde se ve un registro, se puede abrir y corregir.
+**Reportes** y **Auditoría** están en el menú de quien los puede ver.
 
 ## Fuera del alcance actual
 
-Recordatorios en tiempo real (E5), reportes (E6). Datos clínicos como alergias no están en el
-modelo de la Actividad 6 que se infirió; ver [docs/supuestos.md](docs/supuestos.md).
+Notificaciones del sistema con la tablet bloqueada o el navegador cerrado (necesitan HTTPS y un
+service worker), asignación de pacientes por turno y escalamiento al médico. Datos clínicos como
+alergias no están en el modelo de la Actividad 6 que se infirió; ver
+[docs/supuestos.md](docs/supuestos.md).
