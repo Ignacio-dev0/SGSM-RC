@@ -208,7 +208,7 @@ describe('el catálogo recuerda lo que se filtró (queda en la URL)', () => {
 
     const aviso = await screen.findByRole('alert');
     expect(aviso).toHaveTextContent(/No se pudo cargar el catálogo/);
-    expect(aviso).toHaveTextContent(/Error inesperado/);
+    expect(aviso).toHaveTextContent(/El servidor tuvo un problema/);
     expect(screen.queryByText(/No hay insumos/)).not.toBeInTheDocument();
     expect(screen.queryByRole('group', OPCIONES)).not.toBeInTheDocument();
 
@@ -266,7 +266,9 @@ describe('dar de baja desde el catálogo: la confirmación (UX-10)', () => {
     const { dialogo, confirmacion } = await pedirBajaDeParacetamol();
     await userEvent.click(within(confirmacion).getByRole('button', { name: 'Dar de baja' }));
 
-    expect(await within(confirmacion).findByRole('alert')).toHaveTextContent(/Error inesperado/);
+    expect(await within(confirmacion).findByRole('alert')).toHaveTextContent(
+      /El servidor tuvo un problema/,
+    );
     expect(within(dialogo).queryByRole('alert', { hidden: true })).not.toBeInTheDocument();
     // La confirmación sigue abierta: se puede reintentar o cancelar.
     expect(confirmacion).toBeInTheDocument();

@@ -379,7 +379,7 @@ describe('el listado de usuarios recuerda lo que se buscó (queda en la URL)', (
 
     const aviso = await screen.findByRole('alert');
     expect(aviso).toHaveTextContent(/No se pudo cargar la lista de usuarios/);
-    expect(aviso).toHaveTextContent(/Error inesperado/);
+    expect(aviso).toHaveTextContent(/El servidor tuvo un problema/);
     expect(screen.queryByText(/No hay usuarios/)).not.toBeInTheDocument();
     expect(screen.queryByRole('group', OPCIONES)).not.toBeInTheDocument();
 
@@ -433,7 +433,7 @@ describe('permisos adicionales: carga, fallos y vacíos (UX-03)', () => {
 
     const aviso = await screen.findByRole('alert');
     expect(aviso).toHaveTextContent(/No se pudieron cargar los datos del usuario/);
-    expect(aviso).toHaveTextContent(/Error inesperado/);
+    expect(aviso).toHaveTextContent(/El servidor tuvo un problema/);
     expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Guardar permisos' })).not.toBeInTheDocument();
 
@@ -458,7 +458,7 @@ describe('permisos adicionales: carga, fallos y vacíos (UX-03)', () => {
 
     const aviso = await screen.findByRole('alert');
     expect(aviso).toHaveTextContent(/No se pudo cargar la lista de permisos/);
-    expect(aviso).toHaveTextContent(/Error inesperado/);
+    expect(aviso).toHaveTextContent(/El servidor tuvo un problema/);
     expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Guardar permisos' })).not.toBeInTheDocument();
     expect(screen.queryByText(/No hay permisos/)).not.toBeInTheDocument();

@@ -4,6 +4,7 @@ import AddIcon from '@mui/icons-material/Add';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import RemoveIcon from '@mui/icons-material/Remove';
 import { useQuery } from '@tanstack/react-query';
+import { mensajeDeError } from '../../api/cliente';
 import { pacientesApi } from '../../api/pacientes';
 import { CampoTexto } from '../../componentes/CampoTexto';
 import { Selector } from '../../componentes/Selector';
@@ -31,9 +32,11 @@ export function SelectorPaciente({
       textoVacio={internados.isLoading ? 'Cargando pacientes…' : textoVacio}
       error={
         internados.isError
-          ? 'No se pudo cargar la lista de pacientes. Revise la conexión y vuelva a entrar a esta pantalla.'
+          ? `No se pudo cargar la lista de pacientes. ${mensajeDeError(internados.error)}`
           : undefined
       }
+      alReintentar={() => void internados.refetch()}
+      reintentando={internados.isFetching}
       opciones={(internados.data?.data ?? []).map((p) => ({
         valor: String(p.id),
         etiqueta: `${p.cama ? `${p.cama.numero} · ` : ''}${p.apellido}, ${p.nombre}`,

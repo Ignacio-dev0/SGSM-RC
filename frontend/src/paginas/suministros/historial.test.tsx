@@ -225,7 +225,7 @@ describe('el historial de suministros recuerda lo que se filtró (queda en la UR
 
     const aviso = await screen.findByRole('alert');
     expect(aviso).toHaveTextContent(/No se pudo cargar el historial de suministros/);
-    expect(aviso).toHaveTextContent(/Error inesperado/);
+    expect(aviso).toHaveTextContent(/El servidor tuvo un problema/);
     expect(screen.queryByText(/No hay suministros|Todavía no se registró/)).not.toBeInTheDocument();
     expect(screen.queryByRole('group', OPCIONES)).not.toBeInTheDocument();
 

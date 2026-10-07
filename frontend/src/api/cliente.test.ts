@@ -1,6 +1,6 @@
 import { http, HttpResponse } from 'msw';
 import { servidor } from '../pruebas/servidor';
-import { ErrorApi, api, alExpirarSesion } from './cliente';
+import { ErrorApi, api, alExpirarSesion, mensajeDeError } from './cliente';
 
 describe('cliente de la API', () => {
   it('devuelve el contenido de data', async () => {
@@ -74,5 +74,59 @@ describe('cliente de la API', () => {
       codigo: 'SIN_CONEXION',
       message: expect.stringMatching(/conexión/),
     });
+  });
+});
+
+// F60: un error del servidor dice qué pasó y qué hacer, no "Error interno/inesperado".
+describe('mensajes de error genéricos (F60)', () => {
+  const FALLA_DEL_SERVIDOR =
+    'El servidor tuvo un problema. Intente de nuevo en unos minutos; si sigue, avise al área de sistemas.';
+
+  it('un error interno del servidor se explica y dice qué hacer', async () => {
+    servidor.use(
+      http.get('*/api/eco', () =>
+        HttpResponse.json(
+          { error: { codigo: 'ERROR_INTERNO', mensaje: 'Error interno del servidor' } },
+          { status: 500 },
+        ),
+      ),
+    );
+    await expect(api.get('/api/eco')).rejects.toMatchObject({
+      estado: 500,
+      codigo: 'ERROR_INTERNO',
+      message: FALLA_DEL_SERVIDOR,
+    });
+  });
+
+  it('si el servidor responde sin el cuerpo esperado (proxy caído, página de error) pasa lo mismo', async () => {
+    servidor.use(
+      http.get('*/api/eco', () => new HttpResponse('<html>Bad Gateway</html>', { status: 502 })),
+    );
+    await expect(api.get('/api/eco')).rejects.toMatchObject({
+      estado: 502,
+      codigo: 'ERROR_INTERNO',
+      message: FALLA_DEL_SERVIDOR,
+    });
+  });
+
+  it('los demás errores conservan el mensaje del servidor, que sí dice qué corregir', async () => {
+    servidor.use(
+      http.get('*/api/eco', () =>
+        HttpResponse.json(
+          { error: { codigo: 'CAMA_OCUPADA', mensaje: 'La cama A-01 ya está ocupada' } },
+          { status: 409 },
+        ),
+      ),
+    );
+    await expect(api.get('/api/eco')).rejects.toMatchObject({
+      message: 'La cama A-01 ya está ocupada',
+    });
+  });
+
+  it('mensajeDeError usa el mensaje del error y, si no es un error, un texto con la acción a seguir', () => {
+    expect(mensajeDeError(new Error('No hay conexión'))).toBe('No hay conexión');
+    expect(mensajeDeError('algo')).toBe(
+      'Ocurrió un problema inesperado. Intente de nuevo; si sigue, avise al área de sistemas.',
+    );
   });
 });

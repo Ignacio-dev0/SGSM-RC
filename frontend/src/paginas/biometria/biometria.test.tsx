@@ -205,7 +205,7 @@ describe('gestión biométrica: cuando no hay nada que mostrar (UX-03)', () => {
 
     const aviso = await screen.findByRole('alert');
     expect(aviso).toHaveTextContent(/No se pudo cargar la lista del personal/);
-    expect(aviso).toHaveTextContent(/Error inesperado/);
+    expect(aviso).toHaveTextContent(/El servidor tuvo un problema/);
     // Ni la tabla ni el mensaje de vacío: no es que no haya personal.
     expect(screen.queryByText(/No hay personal/)).not.toBeInTheDocument();
     expect(screen.queryByRole('table', { name: 'Personal' })).not.toBeInTheDocument();

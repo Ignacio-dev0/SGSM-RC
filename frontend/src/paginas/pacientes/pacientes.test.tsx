@@ -768,7 +768,7 @@ describe('pacientes: cuando no hay nada que mostrar', () => {
 
     const aviso = await screen.findByRole('alert');
     expect(aviso).toHaveTextContent(/No se pudo cargar la lista de pacientes/);
-    expect(aviso).toHaveTextContent(/Error inesperado/);
+    expect(aviso).toHaveTextContent(/El servidor tuvo un problema/);
     // Ni el mensaje de "sin resultados" ni sus acciones: no es que no haya pacientes.
     expect(screen.queryByText(/No hay pacientes/)).not.toBeInTheDocument();
     expect(screen.queryByRole('group', OPCIONES)).not.toBeInTheDocument();

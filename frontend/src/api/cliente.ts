@@ -31,6 +31,12 @@ export interface Lista<T> {
 type Metodo = 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE';
 type Query = Record<string, string | number | boolean | undefined | null>;
 
+/** Qué pasó y qué hacer cuando el servidor falla (F60): nunca un "error inesperado" a secas. */
+const FALLA_DEL_SERVIDOR =
+  'El servidor tuvo un problema. Intente de nuevo en unos minutos; si sigue, avise al área de sistemas.';
+const FALLA_INESPERADA =
+  'Ocurrió un problema inesperado. Intente de nuevo; si sigue, avise al área de sistemas.';
+
 let manejadorSesionVencida: ((mensaje: string) => void) | null = null;
 
 /** Registra quién se entera cuando el backend responde que la sesión ya no es válida. */
@@ -72,11 +78,14 @@ async function pedir(metodo: Metodo, ruta: string, cuerpo?: unknown, query?: Que
   };
 
   if (!respuesta.ok) {
-    const e = json.error ?? { codigo: 'ERROR_INTERNO', mensaje: 'Error inesperado del servidor' };
+    // Sin cuerpo con el formato de la API (un proxy caído, una página de error) es lo mismo que un
+    // error interno. El servidor no da detalles de un error interno a propósito: se explica acá.
+    const e = json.error ?? { codigo: 'ERROR_INTERNO', mensaje: FALLA_DEL_SERVIDOR };
     if (respuesta.status === 401 && e.codigo === 'NO_AUTENTICADO') {
       manejadorSesionVencida?.(e.mensaje);
     }
-    throw new ErrorApi(respuesta.status, e.codigo, e.mensaje, e.detalles);
+    const mensaje = e.codigo === 'ERROR_INTERNO' ? FALLA_DEL_SERVIDOR : e.mensaje;
+    throw new ErrorApi(respuesta.status, e.codigo, mensaje, e.detalles);
   }
   return json;
 }
@@ -97,8 +106,7 @@ export const api = {
 };
 
 /** Mensaje para mostrar al usuario a partir de cualquier error. */
-export const mensajeDeError = (e: unknown) =>
-  e instanceof Error ? e.message : 'Ocurrió un error inesperado';
+export const mensajeDeError = (e: unknown) => (e instanceof Error ? e.message : FALLA_INESPERADA);
 
 /** Errores de validación por campo que devuelve el backend (`detalles`). */
 export function erroresPorCampo(e: unknown): Record<string, string> {

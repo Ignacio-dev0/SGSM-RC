@@ -47,7 +47,7 @@ describe('historial del paciente: un fallo de carga no se lee como "no hay nada"
       await userEvent.click(await screen.findByRole('tab', { name: nombre }));
       const aviso = await screen.findByRole('alert');
       expect(aviso).toHaveTextContent(/No se pudo cargar el historial del paciente/);
-      expect(aviso).toHaveTextContent(/Error inesperado/);
+      expect(aviso).toHaveTextContent(/El servidor tuvo un problema/);
       expect(screen.queryByRole('table', { name: tabla })).not.toBeInTheDocument();
       expect(screen.queryByText(vacio)).not.toBeInTheDocument();
       expect(screen.queryByText(/^Sin /)).not.toBeInTheDocument();

@@ -1,4 +1,5 @@
-import { TextField, type TextFieldProps } from '@mui/material';
+import { Box, TextField, type TextFieldProps } from '@mui/material';
+import { Boton } from './Boton';
 
 export interface OpcionSelector {
   valor: string;
@@ -13,6 +14,13 @@ interface Props extends Omit<TextFieldProps, 'value' | 'onChange' | 'error' | 'l
   error?: string | undefined;
   /** Texto de la opción vacía; si se omite, no se ofrece opción vacía. */
   textoVacio?: string;
+  /**
+   * Para listas que se piden al servidor: si hay `error`, aparece "Reintentar" al lado del
+   * selector, para volver a pedirla sin salir de la pantalla ni perder lo ya cargado.
+   */
+  alReintentar?: () => void;
+  /** Se está volviendo a pedir la lista: el botón queda deshabilitado, con su indicador. */
+  reintentando?: boolean;
 }
 
 /**
@@ -26,12 +34,15 @@ export function Selector({
   alCambiar,
   error,
   textoVacio,
+  alReintentar,
+  reintentando = false,
   ...resto
 }: Props) {
-  return (
+  const campo = (
     <TextField
       {...resto}
       select
+      fullWidth={Boolean(alReintentar) || resto.fullWidth}
       label={etiqueta}
       value={valor}
       onChange={(e) => alCambiar(e.target.value)}
@@ -46,5 +57,25 @@ export function Selector({
         </option>
       ))}
     </TextField>
+  );
+  if (!alReintentar) return campo;
+
+  // La estructura es la misma con y sin error: el campo no se vuelve a montar (y no pierde el
+  // foco) cuando aparece o desaparece el botón.
+  return (
+    <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start' }}>
+      <Box sx={{ flex: '1 1 0', minWidth: 0 }}>{campo}</Box>
+      {error && (
+        // Del alto del campo (56 px), para que quede alineado con él y no con el aviso de abajo.
+        <Boton
+          variante="secundario"
+          cargando={reintentando}
+          onClick={alReintentar}
+          sx={{ flexShrink: 0, minHeight: 56 }}
+        >
+          Reintentar
+        </Boton>
+      )}
+    </Box>
   );
 }
