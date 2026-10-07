@@ -51,7 +51,9 @@ describe('recordatorios para atender (T506 · CU24)', () => {
 
     expect(vencida).toHaveTextContent('Vencida');
     expect(vencida).toHaveTextContent('11:15');
-    expect(vencida).toHaveTextContent(/Atrasada 45\smin/);
+    // El chip dice el estado; el texto, cuánto hace de la toma (E5-11): no dos estados.
+    expect(vencida).toHaveTextContent(/Hace 45\smin/);
+    expect(vencida).not.toHaveTextContent('Atrasada');
     expect(vencida).toHaveTextContent('Gómez, Juan');
     expect(vencida).toHaveTextContent('DNI 28999111');
     expect(vencida).toHaveTextContent(/Cama B.03 · Sala B – Traumatología/);
@@ -74,6 +76,15 @@ describe('recordatorios para atender (T506 · CU24)', () => {
     expect(programada).toHaveTextContent(/Faltan 25\smin/);
 
     expect(screen.getByText(/4 para atender · 2 urgentes/)).toBeInTheDocument();
+  });
+
+  it('la lista declara role="list": sin viñetas, Safari y VoiceOver dejan de anunciarla como lista (E5-12)', async () => {
+    simularRecordatorios();
+    renderizarApp('/recordatorios', ENFERMERO);
+
+    const ul = await lista();
+    expect(ul.tagName).toBe('UL');
+    expect(ul).toHaveAttribute('role', 'list');
   });
 
   it('cada tarjeta se nombra por la toma y el paciente', async () => {
@@ -186,7 +197,7 @@ describe('recordatorios de estudio (T504 · T513)', () => {
     expect(within(laboratorio!).getAllByText('Laboratorio')).toHaveLength(1);
   });
 
-  it('un estudio vencido lo dice en masculino ("Vencido", "Atrasado")', async () => {
+  it('un estudio vencido lo dice en masculino ("Vencido") y cuánto hace de su hora', async () => {
     simularRecordatorios([
       recordatorioDeEstudio({
         estado: 'VENCIDO',
@@ -198,8 +209,30 @@ describe('recordatorios de estudio (T504 · T513)', () => {
     const [rx] = await tarjetas();
 
     expect(rx).toHaveTextContent('Vencido');
-    expect(rx).toHaveTextContent(/Atrasado 45\smin/);
+    expect(rx).toHaveTextContent(/Hace 45\smin/);
     expect(rx).not.toHaveTextContent('Vencida');
+    expect(rx).not.toHaveTextContent('Atrasado');
+  });
+
+  it('un estudio pendiente que ya pasó su hora es urgente, aunque el servidor lo mande como "Pronto" (E5-02)', async () => {
+    simularRecordatorios([
+      recordatorio(),
+      recordatorioDeEstudio({ id: 21, fechaHoraObjetivo: aLos(-10) }),
+      recordatorioDeEstudio({ id: 22, fechaHoraObjetivo: aLos(5) }),
+    ]);
+    renderizarApp('/recordatorios', ENFERMERO);
+    const [tomaUrgente, atrasado, pronto] = await tarjetas();
+
+    expect(atrasado).toHaveTextContent(/Atrasado 10\smin/);
+    const chip = within(atrasado!).getByText('Urgente').closest('.MuiChip-root') as HTMLElement;
+    expect(chip).toHaveClass('MuiChip-filled', 'MuiChip-colorWarning');
+    expect(within(chip).getByTestId('WarningAmberOutlinedIcon')).toBeInTheDocument();
+    expect(atrasado).not.toHaveTextContent('Pronto');
+    // Se ve como la toma urgente (borde de advertencia), no como el estudio que todavía no llegó.
+    expect(atrasado!.className).toBe(tomaUrgente!.className);
+    expect(atrasado!.className).not.toBe(pronto!.className);
+    // Y se cuenta en el resumen.
+    expect(screen.getByText(/3 para atender · 2 urgentes/)).toBeInTheDocument();
   });
 
   it('no ofrece "No se administró" ni "Administrar": se atiende confirmando el estudio', async () => {
@@ -249,8 +282,11 @@ describe('recordatorios de estudio (T504 · T513)', () => {
       await screen.findByRole('button', { name: /Simular el rostro de enfermero/ }),
     );
 
+    // El aviso nombra al paciente: la tarjeta ya no está para recordarlo (E5-14).
     const aviso = (
-      await screen.findByText(/Se confirmó que se realizó Rx de tórax frente y perfil/)
+      await screen.findByText(
+        /Se confirmó que se realizó Rx de tórax frente y perfil a Benítez, Rosa/,
+      )
     ).closest('.MuiAlert-root');
     expect(enviado).toEqual({ validacionToken: 'tok-ok' });
     // El hook renueva ['recordatorios']: el estudio confirmado sale de la lista.
@@ -277,7 +313,8 @@ describe('recordatorios de estudio (T504 · T513)', () => {
     );
 
     expect(await screen.findByRole('alert')).toHaveTextContent(
-      'Este estudio ya fue confirmado o cancelado por otra persona',
+      // Puede haber sido la misma persona desde otra tablet (E5-14).
+      'Este estudio ya estaba confirmado o cancelado (por usted o por otra persona). Revise el historial.',
     );
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
   });
@@ -296,12 +333,14 @@ describe('atender un recordatorio (T507)', () => {
     expect(
       await screen.findByRole('heading', { name: 'Administrar medicamento' }),
     ).toBeInTheDocument();
-    // Dice de dónde viene, para que la administración ofrezca volver al panel.
+    // Dice de dónde viene, para que la administración ofrezca volver al panel, y qué toma es
+    // (E5-01): la del recordatorio, aunque ya esté atrasada.
     const destino = new URLSearchParams(router.state.location.search);
     expect(Object.fromEntries(destino)).toEqual({
       pacienteId: '7',
       prescripcionId: '40',
       desde: 'recordatorios',
+      toma: aLos(-8),
     });
     expect(screen.getByRole('link', { name: 'Volver' })).toHaveAccessibleDescription(
       'Volver a Recordatorios',
@@ -371,6 +410,19 @@ describe('atender un recordatorio (T507)', () => {
     await waitFor(() => expect(pedidos.length).toBeGreaterThan(antes));
   });
 
+  it('el diálogo no corta el nombre del medicamento entre el número y su unidad (E5-18)', async () => {
+    const NBSP = String.fromCharCode(160);
+    const r = recordatorio();
+    simularRecordatorios([
+      { ...r, prescripcion: { ...r.prescripcion!, medicamento: 'Vitamina D3 1000 UI' } },
+    ]);
+    renderizarApp('/recordatorios', ENFERMERO);
+
+    await userEvent.click(await screen.findByRole('button', { name: /^No se administró/ }));
+    const dialogo = await screen.findByRole('dialog', { name: 'No se administró' });
+    expect(dialogo.textContent).toContain(`Vitamina D3 1000${NBSP}UI`);
+  });
+
   it('si otra persona ya lo atendió (409), lo avisa y vuelve a pedir la lista', async () => {
     let atendido = false;
     simularRecordatorios();
@@ -400,8 +452,9 @@ describe('atender un recordatorio (T507)', () => {
     const antes = pedidos.length;
     await userEvent.click(within(dialogo).getByRole('button', { name: 'Registrar' }));
 
+    // Puede haber sido la misma persona desde otra tablet (E5-14).
     expect(await screen.findByRole('alert')).toHaveTextContent(
-      'Ese recordatorio ya fue atendido por otra persona',
+      'Ya estaba atendido (por usted o por otra persona). Revise el historial.',
     );
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
     await waitFor(() => expect(pedidos.length).toBeGreaterThan(antes));

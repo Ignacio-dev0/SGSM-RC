@@ -10,6 +10,7 @@ import { ubicacionCama } from '../pacientes/etiquetas';
 import { etiquetaVia, formatearDosis } from '../prescripciones/etiquetas';
 import {
   ASPECTO_URGENCIA,
+  esUrgente,
   minutosHasta,
   nivelDeUrgencia,
   nombrePaciente,
@@ -94,8 +95,9 @@ export function TarjetaRecordatorio({
   alNoAdministrar,
   alConfirmarEstudio,
 }: Props) {
-  const nivel = nivelDeUrgencia(r);
-  const urgente = nivel === 'VENCIDA' || nivel === 'URGENTE';
+  const minutos = minutosHasta(r.fechaHoraObjetivo, ahoraServidorMs);
+  const nivel = nivelDeUrgencia(r, minutos);
+  const urgente = esUrgente(nivel);
   const hora = formatearHora(r.fechaHoraObjetivo);
   const paciente = nombrePaciente(r);
   const p = r.prescripcion;
@@ -137,7 +139,7 @@ export function TarjetaRecordatorio({
             {hora}
           </Typography>
           <Typography sx={{ fontWeight: 700 }}>
-            {textoTiempo(minutosHasta(r.fechaHoraObjetivo, ahoraServidorMs), r.tipo)}
+            {textoTiempo(minutos, r.tipo, nivel === 'VENCIDA')}
           </Typography>
         </Box>
         <ChipUrgencia nivel={nivel} tipo={r.tipo} />

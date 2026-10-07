@@ -2,7 +2,7 @@ import { mensajeDeError } from '../../api/cliente';
 import type { Recordatorio } from '../../api/recordatorios';
 import { Alerta } from '../../componentes/Alerta';
 import { ModalConfirmacion } from '../../componentes/ModalConfirmacion';
-import { formatearHora } from '../../utilidades/formato';
+import { formatearHora, sinCortes } from '../../utilidades/formato';
 import { formatearCama } from '../pacientes/etiquetas';
 import { etiquetaVia, formatearDosis } from '../prescripciones/etiquetas';
 import { nombrePaciente } from './urgencia';
@@ -11,7 +11,7 @@ import { nombrePaciente } from './urgencia';
 function mensaje(r: Recordatorio) {
   const p = r.prescripcion;
   const que = p
-    ? `${p.medicamento} ${formatearDosis(p.dosis, p.unidadDosis)}, ${etiquetaVia(p.via).toLowerCase()}`
+    ? `${sinCortes(p.medicamento)} ${formatearDosis(p.dosis, p.unidadDosis)}, ${etiquetaVia(p.via).toLowerCase()}`
     : 'La toma';
   const cama = r.cama ? `cama ${formatearCama(r.cama.numero)}` : 'sin cama asignada';
   return (

@@ -1,5 +1,11 @@
 import type { TipoRecordatorio } from '../../api/recordatorios';
-import { ASPECTO_URGENCIA, minutosHasta, nivelDeUrgencia, textoTiempo } from './urgencia';
+import {
+  ASPECTO_URGENCIA,
+  contarUrgentes,
+  minutosHasta,
+  nivelDeUrgencia,
+  textoTiempo,
+} from './urgencia';
 
 const NBSP = String.fromCharCode(160);
 
@@ -12,6 +18,36 @@ describe('nivel de urgencia de un recordatorio (escala de DESIGN.md)', () => {
     [{ estado: 'PENDIENTE', prioridad: 'BAJA' }, 'PROGRAMADA'],
   ] as const)('%o → %s', (r, nivel) => {
     expect(nivelDeUrgencia(r)).toBe(nivel);
+  });
+
+  it.each([
+    // Un estudio siempre llega con MEDIA ("Pronto"): atrasado ya es urgente (E5-02).
+    [{ estado: 'PENDIENTE', prioridad: 'MEDIA' }, -3, 'URGENTE'],
+    [{ estado: 'PENDIENTE', prioridad: 'BAJA' }, -1, 'URGENTE'],
+    [{ estado: 'PENDIENTE', prioridad: 'MEDIA' }, 0, 'PRONTO'],
+    [{ estado: 'PENDIENTE', prioridad: 'MEDIA' }, 3, 'PRONTO'],
+    [{ estado: 'PENDIENTE', prioridad: 'BAJA' }, 25, 'PROGRAMADA'],
+    [{ estado: 'VENCIDO', prioridad: 'MEDIA' }, -45, 'VENCIDA'],
+  ] as const)(
+    'con la hora del servidor, %o a %i min → %s (lo atrasado no espera al servidor)',
+    (r, minutos, nivel) => {
+      expect(nivelDeUrgencia(r, minutos)).toBe(nivel);
+    },
+  );
+
+  it('cuenta como urgentes lo vencido, lo de prioridad alta y lo atrasado (aunque el servidor no lo cuente)', () => {
+    const ahora = Date.parse('2026-10-07T15:00:00.000Z');
+    const en = (min: number) => new Date(ahora + min * 60_000).toISOString();
+    const lista = [
+      { estado: 'VENCIDO', prioridad: 'BAJA', fechaHoraObjetivo: en(-45) },
+      { estado: 'PENDIENTE', prioridad: 'ALTA', fechaHoraObjetivo: en(3) },
+      // Estudio atrasado: el servidor lo deja en MEDIA y no lo cuenta en meta.urgentes.
+      { estado: 'PENDIENTE', prioridad: 'MEDIA', fechaHoraObjetivo: en(-10) },
+      { estado: 'PENDIENTE', prioridad: 'MEDIA', fechaHoraObjetivo: en(12) },
+      { estado: 'PENDIENTE', prioridad: 'BAJA', fechaHoraObjetivo: en(25) },
+    ] as const;
+    expect(contarUrgentes(lista, ahora)).toBe(3);
+    expect(contarUrgentes([], ahora)).toBe(0);
   });
 
   it('lo urgente y lo vencido van rellenos de advertencia; nunca verde ni rojo', () => {
@@ -48,6 +84,11 @@ describe('cuánto falta para la toma, con la hora del servidor', () => {
     expect(textoTiempo(-8)).toBe(`Atrasada 8${NBSP}min`);
     expect(textoTiempo(-65)).toBe(`Atrasada 1${NBSP}h 5${NBSP}min`);
     expect(textoTiempo(0)).toBe('Toca ahora');
+  });
+
+  it('lo vencido dice cuánto hace de la toma, no "Atrasada": el chip ya dice "Vencida" (E5-11)', () => {
+    expect(textoTiempo(-45, 'MEDICAMENTO', true)).toBe(`Hace 45${NBSP}min`);
+    expect(textoTiempo(-75, 'ESTUDIO', true)).toBe(`Hace 1${NBSP}h 15${NBSP}min`);
   });
 
   it('un estudio atrasado se dice en masculino: "Atrasado 8 min"', () => {
