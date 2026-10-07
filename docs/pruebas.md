@@ -54,10 +54,22 @@ Solo un lado: `npm test -w backend` o `npm test -w frontend`.
 - `renderizarApp(ruta, usuario)` ([`src/pruebas/renderizar.tsx`](../frontend/src/pruebas/renderizar.tsx))
   monta la aplicación completa (rutas, sesión, tema) con el usuario indicado; los usuarios de
   ejemplo por rol están en [`src/pruebas/datos.ts`](../frontend/src/pruebas/datos.ts) y los
-  datos de cada módulo en `datosPacientes.ts` y `datosSuministros.ts`.
+  datos de cada módulo en `datosPacientes.ts`, `datosPrescripciones.ts`, `datosSuministros.ts`,
+  `datosRecordatorios.ts` y `datosEstudios.ts`.
 - Las esperas asíncronas (`findBy…`, `waitFor`) llegan hasta **5 s**
   ([`configurar.ts`](../frontend/src/pruebas/configurar.ts)): con todos los archivos en
   paralelo, 1 s no siempre alcanzaba.
+- `renderizarApp` usa un **router de datos** (`createMemoryRouter`), como la aplicación, y
+  devuelve el `router` para probar el botón Atrás (`router.navigate(-1)`). En `configurar.ts` el
+  `Request` de Node se envuelve para que acepte la señal de cancelación de jsdom, que el router
+  de datos pasa en cada navegación.
+- El **tiempo real** se simula con `ws.link` de MSW (`canalTiempoReal` en `servidor.ts`, que
+  acepta y manda `conectado`); `datosRecordatorios.ts` trae `avisarCambio()` y
+  `registrarConexiones()`. La lógica de reconexión se prueba aparte con un WebSocket falso
+  ([`conexion.test.ts`](../frontend/src/tiempoReal/conexion.test.ts)).
+- Pruebas transversales: [`cambiosSinGuardar.test.tsx`](../frontend/src/paginas/cambiosSinGuardar.test.tsx)
+  (las 7 pantallas con formulario), [`listasQueFallan.test.tsx`](../frontend/src/paginas/listasQueFallan.test.tsx)
+  (selectores con Reintentar) y [`chipsDeEstado.test.tsx`](../frontend/src/paginas/chipsDeEstado.test.tsx).
 - Lo que depende de la hora ("toca ahora", "atrasada") se arma **relativo a ahora**
   (`enMinutos()`), nunca con fechas fijas.
 - Un archivo por pantalla o tema; **ningún archivo pasa de 1000 líneas** (regla `max-lines`

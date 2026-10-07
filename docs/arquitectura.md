@@ -61,14 +61,28 @@ el aviso a las tablets conectadas, que vuelven a pedir la lista. Detalle en
 
 React 19 + Vite + MUI 7, pensado para **tablet**:
 
-| Carpeta            | Contenido                                                                                   |
-| ------------------ | ------------------------------------------------------------------------------------------- |
-| `src/api/`         | Cliente HTTP, tipos y funciones por módulo (con TanStack Query para el estado del servidor) |
-| `src/auth/`        | Contexto de sesión, cierre por inactividad, rutas protegidas por permiso                    |
-| `src/componentes/` | Componentes reutilizables (guía en [componentes.md](componentes.md))                        |
-| `src/navegacion/`  | Menú por rol, disposición de pantalla, notificaciones                                       |
-| `src/paginas/`     | Una carpeta por módulo con sus pantallas y pruebas                                          |
-| `src/pruebas/`     | Servidor simulado (MSW), datos y ayudantes de render                                        |
+| Carpeta            | Contenido                                                                                                            |
+| ------------------ | -------------------------------------------------------------------------------------------------------------------- |
+| `src/api/`         | Cliente HTTP, tipos y funciones por módulo (con TanStack Query para el estado del servidor)                          |
+| `src/auth/`        | Contexto de sesión, cierre por inactividad, rutas protegidas por permiso                                             |
+| `src/componentes/` | Componentes reutilizables (guía en [componentes.md](componentes.md))                                                 |
+| `src/navegacion/`  | Menú por rol, disposición de pantalla, notificaciones, insignia de recordatorios                                     |
+| `src/paginas/`     | Una carpeta por módulo con sus pantallas y pruebas                                                                   |
+| `src/tiempoReal/`  | Conexión WebSocket con reconexión, proveedor y avisos de recordatorios nuevos ([recordatorios.md](recordatorios.md)) |
+| `src/utilidades/`  | Formatos, filtros en la URL, foco en el primer error, cambios sin guardar                                            |
+| `src/pruebas/`     | Servidor simulado (MSW), datos y ayudantes de render                                                                 |
+
+**Rutas.** [`App.tsx`](../frontend/src/App.tsx) usa un **router de datos** (`createBrowserRouter`)
+con una sola ruta comodín que envuelve `ProveedorSesion` y [`RutasApp`](../frontend/src/RutasApp.tsx),
+donde sigue el mapa de pantallas. El router de datos hace falta para `useBlocker`, que usa
+[`useCambiosSinGuardar`](../frontend/src/utilidades/useCambiosSinGuardar.tsx) para preguntar antes
+de salir de un formulario sin guardar. `QueryClientProvider` y el tema quedan fuera del router. En
+las pruebas, `renderizarApp` arma lo mismo con `createMemoryRouter`: una pantalla con formulario
+se prueba con `renderizarApp`, no con `MemoryRouter`.
+
+**Tiempo real.** `ProveedorTiempoReal` se monta en `Disposicion` (solo con sesión y
+`recordatorios.ver`): abre `/api/tiempo-real`, y cada aviso vuelve a pedir
+`GET /api/recordatorios`, que es la fuente de verdad.
 
 ## Base de datos
 
