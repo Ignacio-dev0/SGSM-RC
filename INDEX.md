@@ -6,15 +6,19 @@
 
 ## Raíz
 
-| Archivo                                                                                                                            | Descripción                                                                      |
-| ---------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
-| [package.json](package.json)                                                                                                       | Workspaces `backend` y `frontend`; scripts `dev:*`, `db:up`, `test`, `verificar` |
-| [docker-compose.yml](docker-compose.yml)                                                                                           | PostgreSQL 17 de desarrollo (crea también `sgsm_test`)                           |
-| [docker/postgres/init/](docker/postgres/init/)                                                                                     | SQL que corre al crear el contenedor                                             |
-| [eslint.config.mjs](eslint.config.mjs) · [.prettierrc.json](.prettierrc.json) · [tsconfig.base.json](tsconfig.base.json)           | Convenciones de código (T002)                                                    |
-| [backend/Dockerfile](backend/Dockerfile) · [frontend/Dockerfile](frontend/Dockerfile) · [frontend/nginx.conf](frontend/nginx.conf) | Entorno completo en Docker (perfil `completo`)                                   |
-| [frontend/scripts/copiar-modelos.mjs](frontend/scripts/copiar-modelos.mjs)                                                         | Copia los modelos de face-api a `public/models`                                  |
-| [.github/workflows/ci.yml](.github/workflows/ci.yml)                                                                               | CI: formato, lint, tipos y pruebas con PostgreSQL de servicio                    |
+| Archivo                                                                                                                            | Descripción                                                                                                                      |
+| ---------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| [package.json](package.json)                                                                                                       | Workspaces `backend` y `frontend`; scripts `dev:*`, `db:up`, `test`, `verificar`                                                 |
+| [docker-compose.yml](docker-compose.yml)                                                                                           | Base de desarrollo (crea también `sgsm_test`) y perfil `completo` del servidor: API, interfaz por HTTPS y respaldo diario        |
+| [docker/postgres/init/](docker/postgres/init/)                                                                                     | SQL que corre al crear el contenedor                                                                                             |
+| [eslint.config.mjs](eslint.config.mjs) · [.prettierrc.json](.prettierrc.json) · [tsconfig.base.json](tsconfig.base.json)           | Convenciones de código (T002)                                                                                                    |
+| [backend/Dockerfile](backend/Dockerfile) · [frontend/Dockerfile](frontend/Dockerfile) · [frontend/nginx.conf](frontend/nginx.conf) | Imágenes del perfil `completo`; nginx sirve la interfaz por HTTPS, redirige 80→443 y deja pasar el WebSocket                     |
+| [.env.ejemplo](.env.ejemplo)                                                                                                       | Variables del servidor (secretos, nombre e IP, puertos, hora del respaldo)                                                       |
+| [docker/nginx/](docker/nginx/)                                                                                                     | Encabezados de seguridad, CSP con el hash del script en línea, chequeo y generación de certificados                              |
+| [docker/respaldo/](docker/respaldo/)                                                                                               | Respaldo diario con `pg_dump`, retención y chequeo de salud del servicio                                                         |
+| [scripts/](scripts/)                                                                                                               | `certificado.sh`/`.ps1`, `respaldar.sh`, `restaurar.sh`, `estado.sh`, `actualizar.sh` ([docs/despliegue.md](docs/despliegue.md)) |
+| [frontend/scripts/copiar-modelos.mjs](frontend/scripts/copiar-modelos.mjs)                                                         | Copia los modelos de face-api a `public/models`                                                                                  |
+| [.github/workflows/ci.yml](.github/workflows/ci.yml)                                                                               | CI: formato, lint, tipos y pruebas con PostgreSQL de servicio                                                                    |
 
 ## Backend (`backend/`)
 
