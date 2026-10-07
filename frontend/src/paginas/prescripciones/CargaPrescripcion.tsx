@@ -13,6 +13,7 @@ import { EncabezadoPagina } from '../../componentes/EncabezadoPagina';
 import { Selector } from '../../componentes/Selector';
 import { proximasTomas } from '../../utilidades/agenda';
 import { formatearFechaHora, formatearHora } from '../../utilidades/formato';
+import { IdentidadPaciente } from '../pacientes/IdentidadPaciente';
 import { FRECUENCIAS, VIAS, aLocal, etiquetaVia, resumenPrescripcion } from './etiquetas';
 
 interface Formulario {
@@ -150,9 +151,9 @@ export function CargaPrescripcion() {
     <>
       <EncabezadoPagina
         titulo="Nueva prescripción"
-        subtitulo={p && `${p.apellido}, ${p.nombre}${p.cama ? ` · Cama ${p.cama.numero}` : ''}`}
         volverA={`/pacientes/${pacienteId}?pestana=prescripciones`}
       />
+      {p && <IdentidadPaciente paciente={p} />}
       {errorGeneral && <Alerta tipo="error">{errorGeneral}</Alerta>}
       {duplicadas && (
         <Alerta

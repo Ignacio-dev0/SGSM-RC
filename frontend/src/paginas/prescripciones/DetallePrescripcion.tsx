@@ -1,14 +1,27 @@
 import { useEffect, useState, type ReactNode } from 'react';
-import { Box, Chip, List, ListItem, Paper, Typography } from '@mui/material';
+import {
+  Box,
+  Chip,
+  List,
+  ListItem,
+  Paper,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableRow,
+  Typography,
+} from '@mui/material';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useParams } from 'react-router-dom';
 import { mensajeDeError } from '../../api/cliente';
+import { usePaciente } from '../../api/pacientes';
 import {
   prescripcionesApi,
   usePrescripcion,
   type CambiosPrescripcion,
 } from '../../api/prescripciones';
-import type { EstadoPrescripcion, Prescripcion, Via } from '../../api/tipos';
+import type { EstadoPrescripcion, Paciente, Prescripcion, Via } from '../../api/tipos';
 import { useSesion } from '../../auth/useSesion';
 import { Alerta } from '../../componentes/Alerta';
 import { Boton } from '../../componentes/Boton';
@@ -17,7 +30,17 @@ import { EncabezadoPagina } from '../../componentes/EncabezadoPagina';
 import { ModalConfirmacion } from '../../componentes/ModalConfirmacion';
 import { Selector } from '../../componentes/Selector';
 import { formatearFechaHora, formatearHora } from '../../utilidades/formato';
-import { ESTADOS, FRECUENCIAS, VIAS, aLocal, etiquetaVia, resumenPrescripcion } from './etiquetas';
+import { IdentidadPaciente } from '../pacientes/IdentidadPaciente';
+import {
+  ESTADOS,
+  FRECUENCIAS,
+  VIAS,
+  aLocal,
+  etiquetaVia,
+  formatearDosis,
+  formatearFrecuencia,
+  resumenPrescripcion,
+} from './etiquetas';
 
 interface Edicion {
   dosis: string;
@@ -50,24 +73,70 @@ function cambiosDe(p: Prescripcion, e: Edicion): Omit<CambiosPrescripcion, 'moti
   return c;
 }
 
+const finTexto = (fin: string | null) => (fin ? formatearFechaHora(fin) : 'Sin fecha de fin');
+
+/** Filas "antes → después" de lo que cambia, para revisar antes de guardar. */
+function filasDeCambios(p: Prescripcion, e: Edicion) {
+  const c = cambiosDe(p, e);
+  const filas: { campo: string; antes: string; despues: string }[] = [];
+  if (c.dosis !== undefined || c.unidadDosis !== undefined) {
+    filas.push({
+      campo: 'Dosis',
+      antes: formatearDosis(p.dosis, p.unidadDosis),
+      despues: formatearDosis(Number(e.dosis), e.unidadDosis.trim()),
+    });
+  }
+  if (c.frecuenciaHoras !== undefined) {
+    filas.push({
+      campo: 'Frecuencia',
+      antes: formatearFrecuencia(p.frecuenciaHoras),
+      despues: formatearFrecuencia(c.frecuenciaHoras),
+    });
+  }
+  if (c.via !== undefined) {
+    filas.push({ campo: 'Vía', antes: etiquetaVia(p.via), despues: etiquetaVia(c.via) });
+  }
+  if (c.fechaFin !== undefined) {
+    filas.push({ campo: 'Fin', antes: finTexto(p.fechaFin), despues: finTexto(c.fechaFin) });
+  }
+  if (c.observaciones !== undefined) {
+    filas.push({
+      campo: 'Observaciones',
+      antes: p.observaciones || '—',
+      despues: c.observaciones || '—',
+    });
+  }
+  return filas;
+}
+
+const nombreConCama = (pac: Paciente | undefined) =>
+  pac
+    ? `${pac.apellido}, ${pac.nombre}${pac.cama ? ` (cama ${pac.cama.numero})` : ''}`
+    : 'el paciente';
+
 const ACCIONES: Record<
   'SUSPENDIDA' | 'FINALIZADA' | 'VIGENTE',
-  { boton: string; titulo: string; aviso: string }
+  { boton: string; titulo: string; aviso: string; mensaje: (descripcion: string) => string }
 > = {
   SUSPENDIDA: {
     boton: 'Suspender',
     titulo: 'Suspender la prescripción',
     aviso: 'La prescripción quedó suspendida',
+    mensaje: (d) =>
+      `Se suspende ${d}. Se cancelarán los recordatorios pendientes; se puede reanudar después.`,
   },
   FINALIZADA: {
     boton: 'Finalizar',
     titulo: 'Finalizar la prescripción',
     aviso: 'La prescripción quedó finalizada',
+    mensaje: (d) =>
+      `Se finaliza ${d}. Se cancelarán los recordatorios pendientes y no se puede reanudar.`,
   },
   VIGENTE: {
     boton: 'Reanudar',
     titulo: 'Reanudar la prescripción',
     aviso: 'La prescripción volvió a estar vigente',
+    mensaje: (d) => `Se reanuda ${d}: vuelve a generar tomas desde ahora.`,
   },
 };
 
@@ -89,6 +158,7 @@ export function DetallePrescripcion() {
   const { tienePermiso } = useSesion();
   const consulta = usePrescripcion(id);
   const p = consulta.data;
+  const paciente = usePaciente(p?.pacienteId ?? 0);
   const [edicion, setEdicion] = useState<Edicion | null>(null);
   const [confirmandoCambios, setConfirmandoCambios] = useState(false);
   const [cambioEstado, setCambioEstado] = useState<EstadoPrescripcion | null>(null);
@@ -171,6 +241,7 @@ export function DetallePrescripcion() {
           ))
         }
       />
+      {paciente.data && <IdentidadPaciente paciente={paciente.data} />}
       {aviso && (
         <Alerta tipo="exito" alCerrar={() => setAviso(null)}>
           {aviso}
@@ -300,7 +371,23 @@ export function DetallePrescripcion() {
       <ModalConfirmacion
         abierto={confirmandoCambios}
         titulo="Guardar cambios en la prescripción"
-        mensaje="Los cambios quedan registrados con su motivo."
+        mensaje={
+          <>
+            Paciente:{' '}
+            <strong>
+              {paciente.data ? `${paciente.data.apellido}, ${paciente.data.nombre}` : '—'}
+            </strong>
+            {paciente.data?.cama && (
+              <>
+                {' · '}
+                <Box component="span" sx={{ whiteSpace: 'nowrap' }}>
+                  Cama {paciente.data.cama.numero}
+                </Box>
+              </>
+            )}
+            . Los cambios quedan registrados con su motivo.
+          </>
+        }
         textoConfirmar="Guardar"
         pedirMotivo
         etiquetaMotivo="Motivo del cambio"
@@ -308,6 +395,28 @@ export function DetallePrescripcion() {
         alConfirmar={(motivo) => modificar.mutate(motivo ?? '')}
         alCancelar={() => setConfirmandoCambios(false)}
       >
+        <Table
+          size="small"
+          aria-label="Cambios"
+          sx={{ mt: 2, '& th, & td': { px: { xs: 1, sm: 2 } } }}
+        >
+          <TableHead>
+            <TableRow>
+              <TableCell>Dato</TableCell>
+              <TableCell>Antes</TableCell>
+              <TableCell>Después</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {filasDeCambios(p, edicion).map((f) => (
+              <TableRow key={f.campo}>
+                <TableCell>{f.campo}</TableCell>
+                <TableCell>{f.antes}</TableCell>
+                <TableCell sx={{ fontWeight: 700 }}>{f.despues}</TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
         {modificar.isError && <Alerta tipo="error">{mensajeDeError(modificar.error)}</Alerta>}
       </ModalConfirmacion>
 
@@ -315,11 +424,9 @@ export function DetallePrescripcion() {
         <ModalConfirmacion
           abierto
           titulo={ACCIONES[cambioEstado as keyof typeof ACCIONES].titulo}
-          mensaje={
-            cambioEstado === 'VIGENTE'
-              ? 'La prescripción vuelve a generar tomas desde ahora.'
-              : 'Se cancelarán los recordatorios pendientes de esta prescripción.'
-          }
+          mensaje={ACCIONES[cambioEstado as keyof typeof ACCIONES].mensaje(
+            `${p.medicamento.nombre} ${resumenPrescripcion(p)} de ${nombreConCama(paciente.data)}`,
+          )}
           textoConfirmar={ACCIONES[cambioEstado as keyof typeof ACCIONES].boton}
           peligroso={cambioEstado !== 'VIGENTE'}
           pedirMotivo

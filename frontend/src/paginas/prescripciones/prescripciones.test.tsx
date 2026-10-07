@@ -141,6 +141,15 @@ describe('carga de prescripción (T304 · CU17)', () => {
     });
   });
 
+  it('identifica al paciente para el que se carga la prescripción', async () => {
+    renderizarApp('/pacientes/7/prescripciones/nueva', MEDICO);
+
+    const ficha = await screen.findByRole('region', { name: 'Paciente' });
+    expect(ficha).toHaveTextContent('Benítez, Rosa');
+    expect(ficha).toHaveTextContent('DNI 30111222');
+    expect(ficha).toHaveTextContent('Cama A-01');
+  });
+
   it('valida en línea la dosis y los datos obligatorios', async () => {
     renderizarApp('/pacientes/7/prescripciones/nueva', MEDICO);
 
@@ -220,6 +229,51 @@ describe('modificación de prescripción (T306 · CU19)', () => {
 
     expect(await screen.findByRole('status')).toHaveTextContent(/guardaron/);
     expect(enviado).toMatchObject({ dosis: 1000, motivo: 'Dolor persistente' });
+  });
+
+  it('muestra de qué paciente es la prescripción', async () => {
+    servidor.use(
+      http.get('*/api/prescripciones/40', () => HttpResponse.json({ data: prescripcion() })),
+    );
+    renderizarApp('/prescripciones/40', MEDICO);
+
+    const ficha = await screen.findByRole('region', { name: 'Paciente' });
+    expect(ficha).toHaveTextContent('Benítez, Rosa');
+    expect(ficha).toHaveTextContent('DNI 30111222');
+    expect(ficha).toHaveTextContent('Cama A-01');
+  });
+
+  it('al guardar muestra el paciente y qué cambia, antes y después', async () => {
+    servidor.use(
+      http.get('*/api/prescripciones/40', () => HttpResponse.json({ data: prescripcion() })),
+    );
+    renderizarApp('/prescripciones/40', MEDICO);
+
+    const dosis = await screen.findByLabelText(/^Dosis/);
+    await waitFor(() => expect(dosis).toHaveValue(500));
+    await userEvent.clear(dosis);
+    await userEvent.type(dosis, '1000');
+    await userEvent.selectOptions(screen.getByLabelText('Frecuencia'), 'Cada 12 horas');
+    await userEvent.click(screen.getByRole('button', { name: 'Guardar cambios' }));
+
+    const dialogo = screen.getByRole('dialog', { name: /Guardar cambios/ });
+    expect(dialogo).toHaveTextContent(/Benítez, Rosa.*Cama A-01/);
+    const tabla = within(dialogo).getByRole('table', { name: 'Cambios' });
+    const filas = within(tabla).getAllByRole('row');
+    expect(filas).toHaveLength(3);
+    expect(filas[1]).toHaveTextContent(/Dosis\s*500 mg\s*1000 mg/);
+    expect(filas[2]).toHaveTextContent(/Frecuencia\s*cada 8 h\s*cada 12 h/);
+  });
+
+  it('al suspender nombra el medicamento y el paciente', async () => {
+    servidor.use(
+      http.get('*/api/prescripciones/40', () => HttpResponse.json({ data: prescripcion() })),
+    );
+    renderizarApp('/prescripciones/40', MEDICO);
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Suspender' }));
+    const dialogo = screen.getByRole('dialog', { name: /Suspender/ });
+    expect(dialogo).toHaveTextContent(/Paracetamol 500 mg cada 8 h de Benítez, Rosa \(cama A-01\)/);
   });
 
   it('suspende la prescripción con motivo', async () => {
