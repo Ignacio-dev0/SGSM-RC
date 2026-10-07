@@ -4,6 +4,10 @@
 > [diseno-e5.md](diseno-e5.md). Este documento es el **contrato** entre el backend y el frontend:
 > forma de las respuestas, mensajes del tiempo real, códigos de cierre y errores. Los recordatorios
 > de **estudios** (T504, T509–T513) se suman en la fase 3 con la misma forma.
+>
+> Código: [`modulos/recordatorios/`](../backend/src/modulos/recordatorios/) (prioridad, generación,
+> ciclo, temporizador, API y atención) y [`modulos/tiempo-real/`](../backend/src/modulos/tiempo-real/)
+> (bus y WebSocket); arranque en [`servidor.ts`](../backend/src/servidor.ts).
 
 ## Cómo funciona
 
@@ -23,7 +27,9 @@
 - **Vencimiento** (T503 · T508 · S11): a los `RECORDATORIO_VENCIMIENTO_MIN` (60) de generado sin
   atenderse pasa a `VENCIDO` (unos 30 min después de la toma), guarda `vencidoEn` y avisa a cada
   administrador activo con una notificación. Sigue en el panel `RECORDATORIO_VENCIDOS_VISIBLES_HORAS`
-  (12 h) y se puede atender tarde.
+  (12 h) y se puede atender tarde. La notificación (`tipo: RECORDATORIO_VENCIDO`) dice qué, a qué
+  hora de Argentina, el paciente y la cama; `datos` trae `recordatorioId`, `pacienteId` y
+  `fechaHoraObjetivo`. Hay una por recordatorio y por administrador.
 - **Atender** (T507 · S12): registrar la administración de esa toma (el recordatorio pasa a
   `ATENDIDO` con `suministroId` dentro de la misma transacción del suministro) o indicar **"No se
   administró"** con el motivo. No se pide el rostro para el motivo: queda auditado con el usuario.
@@ -164,6 +170,8 @@ perdido durante un corte se recupera igual.
 3. Al quedar abierta, el servidor manda `{ "tipo": "conectado", "momento": "…" }`. El cliente
    vuelve a pedir la lista (resincroniza) cada vez que lo recibe.
 
+Mientras el servidor se apaga, un pedido de conexión nuevo recibe HTTP 503.
+
 ### Mensajes del servidor
 
 Texto JSON. El cliente no manda nada (lo que mande se ignora).
@@ -188,8 +196,10 @@ con `nuevos: 0` y `vencidos: 0`. Lo reciben todas las conexiones de usuarios con
 
 ### Latido y cierre
 
-Cada `TIEMPO_REAL_LATIDO_SEG` (30 s) el servidor manda un _ping_ (el navegador contesta solo) y
-vuelve a leer al usuario de la base:
+Cada `TIEMPO_REAL_LATIDO_SEG` (30 s) el servidor revisa cada conexión: primero vuelve a validar
+el token de la conexión y a leer al usuario de la base (4001 o 4003 si no corresponde seguir);
+después, si la conexión no contestó el _ping_ anterior la termina, y si contestó le manda otro (el
+navegador contesta solo).
 
 | Código | Quién          | Cuándo                                                                                                        | Qué hace el cliente                                                                                                                                 |
 | ------ | -------------- | ------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -199,19 +209,51 @@ vuelve a leer al usuario de la base:
 | 4001   | servidor       | La sesión de la conexión venció (inactividad o 12 h), el usuario se dio de baja o no había sesión al conectar | Reconecta una vez: la cookie pudo haberse renovado con otros pedidos. Si la nueva conexión también cierra con 4001, la sesión terminó (como un 401) |
 | 4003   | servidor       | El usuario no tiene (o perdió) `recordatorios.ver`                                                            | No reconecta; vuelve a pedir la sesión (`GET /api/auth/sesion`) para actualizar los permisos                                                        |
 
-**La conexión no renueva la sesión** (D14): la sesión se mantiene viva solo con pedidos HTTP (y
-el cierre por inactividad de la tablet sigue igual, riesgo R1). Por eso el token de la conexión
-vence a los 15 min de abierta aunque la persona siga usando la tablet: el servidor cierra con 4001
-y el cliente reconecta con la cookie renovada.
+### Qué hace el cliente ante un 4001
 
-## Decisiones del contrato (fase 0)
+**La conexión no renueva la sesión** (D14): la sesión se mantiene viva solo con pedidos HTTP, y el
+cierre por inactividad de la tablet sigue igual (riesgo R1). El token de la conexión es el de la
+cookie en el momento de conectar, así que vence a los 15 min de abierta **aunque la persona siga
+usando la tablet**, y el latido la cierra con 4001. Por eso:
 
-Tomadas al bajar el diseño al código; complementan D9–D14 de [diseno-e5.md](diseno-e5.md).
+1. Si la conexión ya había recibido `conectado` y se cierra con 4001, el cliente **reconecta
+   enseguida, una sola vez**: el navegador manda la cookie que renovaron los últimos pedidos.
+2. Si esa nueva conexión se cierra con 4001 **sin haber recibido `conectado`**, la sesión terminó:
+   el cliente hace lo mismo que con un 401 (por ejemplo, vuelve a pedir `GET /api/auth/sesion` y,
+   si responde 401, va al ingreso). No sigue reconectando.
+3. Si la nueva conexión recibe `conectado`, vuelve a pedir la lista y sigue normal.
 
-| #   | Decisión                                                                                                                       | Por qué                                                                                                                      |
-| --- | ------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------- |
-| D15 | Atendido = `atendidoEn` + **exactamente una** resolución en una toma (administración o motivo); ninguna en un estudio (CHECK). | El recordatorio dice cómo se resolvió sin ambigüedad; la confirmación del estudio vive en `estudios`.                        |
-| D16 | Sin sesión o sin permiso, el WebSocket se abre y se cierra con 4001/4003; un origen ajeno se rechaza con HTTP 403.             | El navegador no ve el estado HTTP de un WebSocket rechazado; el código de cierre le dice si reconectar o no.                 |
-| D17 | Origen aceptado: el mismo `Host` del pedido o la lista `TIEMPO_REAL_ORIGENES`.                                                 | Funciona detrás de Vite sin configurar nada; detrás de un proxy que cambia el `Host` (nginx) se agrega el origen a la lista. |
-| D18 | Los mensajes llevan cantidades (`nuevos`, `vencidos`) y la hora del servidor, nunca datos del paciente.                        | Alcanza para decidir el tono, la vibración y si recargar notificaciones; la hora corrige el reloj de la tablet (R6).         |
-| D19 | El panel muestra solo pacientes internados; un vencido de un paciente egresado deja de verse.                                  | El egreso cancela los pendientes pero no los vencidos (diagrama de estados); no tiene sentido atenderlos tras el alta.       |
+### Proxys
+
+El navegador abre el WebSocket contra el mismo origen de la interfaz; el proxy tiene que dejar
+pasar el _upgrade_ (riesgo R4):
+
+- **Vite** (`frontend/vite.config.ts`): `proxy: { '/api': { target: 'http://localhost:3000', ws: true } }`.
+  Vite conserva el `Host` (`localhost:5173`), que coincide con el `Origin`: no hace falta
+  `TIEMPO_REAL_ORIGENES`.
+- **nginx** (`frontend/nginx.conf`), en `location /api/`: `proxy_http_version 1.1;`,
+  `proxy_set_header Upgrade $http_upgrade;` y `proxy_set_header Connection $connection_upgrade;`
+  (con `map $http_upgrade $connection_upgrade { default upgrade; '' close; }` fuera del bloque
+  `server`). Además, `proxy_set_header Host $http_host;` en lugar de `$host` para conservar el
+  puerto (`localhost:8080`) y que coincida con el `Origin`; si no, hay que poner
+  `TIEMPO_REAL_ORIGENES=http://localhost:8080` en el servicio `backend` de `docker-compose.yml`.
+  El latido manda tráfico cada 30 s, así que alcanza el `proxy_read_timeout` por defecto (60 s).
+
+## Decisiones
+
+Tomadas al bajar el diseño al código; complementan D9–D14 de [diseno-e5.md](diseno-e5.md). D15–D19
+son del contrato (fase 0); D20–D25, de la implementación del backend (fase 1).
+
+| #   | Decisión                                                                                                                                                                                                                                              | Por qué                                                                                                                                                                               |
+| --- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| D15 | Atendido = `atendidoEn` + **exactamente una** resolución en una toma (administración o motivo); ninguna en un estudio (CHECK).                                                                                                                        | El recordatorio dice cómo se resolvió sin ambigüedad; la confirmación del estudio vive en `estudios`.                                                                                 |
+| D16 | Sin sesión o sin permiso, el WebSocket se abre y se cierra con 4001/4003; un origen ajeno se rechaza con HTTP 403.                                                                                                                                    | El navegador no ve el estado HTTP de un WebSocket rechazado; el código de cierre le dice si reconectar o no.                                                                          |
+| D17 | Origen aceptado: el mismo `Host` del pedido o la lista `TIEMPO_REAL_ORIGENES`.                                                                                                                                                                        | Funciona detrás de Vite sin configurar nada; detrás de un proxy que cambia el `Host` (nginx) se agrega el origen a la lista.                                                          |
+| D18 | Los mensajes llevan cantidades (`nuevos`, `vencidos`) y la hora del servidor, nunca datos del paciente.                                                                                                                                               | Alcanza para decidir el tono, la vibración y si recargar notificaciones; la hora corrige el reloj de la tablet (R6).                                                                  |
+| D19 | El panel muestra solo pacientes internados; un vencido de un paciente egresado deja de verse.                                                                                                                                                         | El egreso cancela los pendientes pero no los vencidos (diagrama de estados); no tiene sentido atenderlos tras el alta.                                                                |
+| D20 | Un pedido de conexión sin `Origin` se acepta.                                                                                                                                                                                                         | Los navegadores siempre lo mandan (el control de origen protege de páginas ajenas abiertas en el navegador); un cliente que no es navegador igual necesita una cookie válida.         |
+| D21 | El latido revisa primero la sesión y el permiso, y después si la conexión contestó el _ping_.                                                                                                                                                         | El cliente recibe el código que le dice qué hacer (4001/4003) en lugar de un corte (1006).                                                                                            |
+| D22 | `GENERAR` y `VENCER` se auditan uno por recordatorio, sin usuario y con el paciente; la notificación de vencido es una por recordatorio y por administrador activo.                                                                                   | La auditoría por paciente queda completa (RN06) y el aviso dice exactamente qué toma se perdió; el volumen es el riesgo R8.                                                           |
+| D23 | La atención por administración toma como `atendidoEn` la hora del suministro y solo atiende el pendiente o vencido de su toma más cercana; uno ya atendido con motivo no cambia. Toda actualización de estado lleva el estado esperado en el `WHERE`. | Misma regla que el historial (`tomaMasCercana`). Una atención, un vencimiento y un "No se administró" simultáneos no se pisan: el segundo no encuentra la fila en el estado esperado. |
+| D24 | "No se administró" se puede registrar antes de la hora de la toma.                                                                                                                                                                                    | Enfermería puede saber de antemano que una toma no se va a dar (ayuno, estudio, rechazo).                                                                                             |
+| D25 | El temporizador y el tiempo real los arranca `levantarServidor()` en `servidor.ts`; `server.ts` solo la llama y apaga ordenado con SIGTERM o SIGINT (las conexiones cierran con 1001).                                                                | `crearApp()` sigue sin efectos: las pruebas de la API no corren el temporizador.                                                                                                      |

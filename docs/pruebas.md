@@ -30,7 +30,15 @@ Solo un lado: `npm test -w backend` o `npm test -w frontend`.
 - El tiempo se controla con `jest.spyOn(reloj, 'ahora')` ([`src/comun/reloj.ts`](../backend/src/comun/reloj.ts)):
   así se prueban la inactividad, los bloqueos, el plazo de 24 h y los horarios de toma sin esperar.
 - Ayudantes: [`tests/soporte/`](../backend/tests/soporte/) (`crearUsuario`, `agenteConRol`,
-  fábricas de pacientes, camas e insumos).
+  fábricas de pacientes, camas, insumos, `internarPaciente` y `crearPrescripcionBasica`).
+- **Recordatorios (E5, T514)**: el ciclo del temporizador se prueba contra la base con el reloj
+  simulado (`ejecutarCiclo()` a horas elegidas), incluida la concurrencia (varios ciclos a la vez
+  con `Promise.all` no duplican nada). El temporizador se prueba con `jest.useFakeTimers()` y un
+  ciclo simulado. **Las pruebas nunca arrancan el temporizador real**: lo arranca `servidor.ts`,
+  no `crearApp()`.
+- **Tiempo real**: [`tiempo-real.test.ts`](../backend/src/modulos/tiempo-real/tiempo-real.test.ts)
+  levanta un servidor HTTP en un puerto libre y se conecta con el cliente de `ws` (cookie, origen,
+  códigos de cierre); el latido se dispara a mano.
 
 ## Frontend (Vitest + Testing Library + MSW)
 

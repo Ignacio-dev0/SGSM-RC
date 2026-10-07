@@ -8,11 +8,17 @@ flowchart LR
   end
   subgraph Servidor
     API["API REST Express<br/>backend/"]
+    WS["Tiempo real<br/>WebSocket /api/tiempo-real"]
+    TMP["Temporizador de<br/>recordatorios (cada minuto)"]
     DB[("PostgreSQL")]
   end
   UI -- "HTTP JSON + cookie de sesión" --> API
+  WS -- "avisos sin datos clínicos" --> UI
   CAM -- "vector de 128 valores" --> UI
   API -- Prisma --> DB
+  TMP -- Prisma --> DB
+  API -. "bus en memoria" .-> WS
+  TMP -. "bus en memoria" .-> WS
 ```
 
 ## Backend (`backend/`)
@@ -42,6 +48,14 @@ cookie → autenticar (valida token, relee el usuario, renueva la sesión)
 
 Express 5 propaga solo los errores de los handlers asíncronos al middleware de errores, que los
 traduce al formato de la API.
+
+**Arranque** ([`servidor.ts`](../backend/src/servidor.ts) · `levantarServidor()`): un solo proceso
+atiende la API, el **tiempo real** por WebSocket en `/api/tiempo-real` (mismo puerto, sesión por la
+cookie) y el **temporizador de recordatorios** (E5). `crearApp()` solo arma Express, sin
+temporizador ni WebSocket: es lo que usan las pruebas. Los servicios que cambian recordatorios
+publican en un **bus en memoria** _después_ de confirmar su transacción, y el tiempo real reenvía
+el aviso a las tablets conectadas, que vuelven a pedir la lista. Detalle en
+[recordatorios.md](recordatorios.md).
 
 ## Frontend (`frontend/`)
 

@@ -162,5 +162,7 @@ Atender por administración no cambia el contrato de `POST /api/suministros/medi
 registro marca `ATENDIDO` el recordatorio de la toma más cercana dentro de su transacción.
 
 Errores: `409 RECORDATORIO_NO_PENDIENTE` (`detalles.estado`), `422 NO_ES_TOMA`. Acciones de
-auditoría: `GENERAR`, `VENCER`, `ATENDER`, `NO_ADMINISTRAR`, `CANCELAR` (Recordatorio).
+auditoría: `GENERAR`, `VENCER`, `ATENDER`, `NO_ADMINISTRAR`, `CANCELAR` (Recordatorio). Un
+recordatorio que vence genera una notificación `RECORDATORIO_VENCIDO` para cada administrador
+activo (`GET /api/notificaciones`, T508).
 Los endpoints de estudios (T509–T513) se suman en la fase 3 ([diseno-e5.md](diseno-e5.md)).
