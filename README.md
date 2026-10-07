@@ -10,14 +10,16 @@ sobre las prescripciones que carga el equipo médico.
 
 ## Estado del prototipo
 
-| Etapa | Contenido                                                      | Estado                                      |
-| ----- | -------------------------------------------------------------- | ------------------------------------------- |
-| E0    | Entorno de trabajo, convenciones, componentes base             | ✅ (despliegue en la nube fuera de alcance) |
-| E1    | Base de datos, inicio de sesión, permisos, auditoría, usuarios | ✅                                          |
-| E2    | Pacientes y camas                                              | ✅                                          |
-| E3    | Prescripciones y catálogo                                      | ✅                                          |
-| E4    | Biometría y registro de suministros                            | ✅ (falta la prueba en la tablet real)      |
-| E5–E8 | Recordatorios, reportes, integración, despliegue               | fuera del prototipo                         |
+| Etapa | Contenido                                                       | Estado                                           |
+| ----- | --------------------------------------------------------------- | ------------------------------------------------ |
+| E0    | Entorno de trabajo, convenciones, componentes base              | ✅ (despliegue en la nube fuera de alcance)      |
+| E1    | Base de datos, inicio de sesión, permisos, auditoría, usuarios  | ✅                                               |
+| E2    | Pacientes y camas                                               | ✅                                               |
+| E3    | Prescripciones y catálogo                                       | ✅                                               |
+| E4    | Biometría y registro de suministros                             | ✅ (falta la prueba en la tablet real)           |
+| E5    | Recordatorios de tomas en tiempo real y estudios (mínimo)       | 🔧 servidor listo; interfaz en curso             |
+| E6    | Reportes, estadísticas, exportación y auditoría                 | diseño listo ([diseno-e6.md](docs/diseno-e6.md)) |
+| E7–E8 | Integración, rendimiento, seguridad, despliegue local, manuales | pendiente                                        |
 
 El detalle de qué tarea del plan cubre cada parte está en [docs/trazabilidad.md](docs/trazabilidad.md).
 
@@ -109,6 +111,7 @@ El mapa archivo por archivo está en [INDEX.md](INDEX.md).
 | [docs/biometria.md](docs/biometria.md)             | Reconocimiento facial                |
 | [docs/suministros.md](docs/suministros.md)         | Registro y corrección de suministros |
 | [docs/recordatorios.md](docs/recordatorios.md)     | Recordatorios y tiempo real (E5)     |
+| [docs/estudios.md](docs/estudios.md)               | Estudios programados (E5)            |
 | [docs/diseno-e6.md](docs/diseno-e6.md)             | Diseño de reportes y auditoría (E6)  |
 | [docs/despliegue.md](docs/despliegue.md)           | Entornos y despliegue                |
 | [docs/trazabilidad.md](docs/trazabilidad.md)       | Tareas del plan → código → pruebas   |

@@ -64,7 +64,7 @@ erDiagram
 | `detalles_suministro` | Insumos y cantidades de cada suministro                                                                | T408, T409       |
 | `datos_biometricos`   | Patrón facial (128 valores) y foto de referencia por usuario                                           | T403             |
 | `tipos_estudio`       | Catálogo de tipos de estudio                                                                           | T103 (E5)        |
-| `estudios`            | Estudios programados por paciente                                                                      | E5               |
+| `estudios`            | Estudios por paciente: tipo, hora, preparación, observaciones, estado y quién confirmó que se realizó  | E5 (T509–T513)   |
 | `recordatorios`       | Recordatorios de tomas y estudios: prioridad, estado, atención (administración o motivo) y vencimiento | E5               |
 | `auditoria`           | Quién, cuándo, qué acción, sobre qué entidad, valor anterior y nuevo                                   | T104             |
 | `notificaciones`      | Avisos al administrador (bloqueos, validaciones faciales fallidas)                                     | T112, T407       |
@@ -94,10 +94,15 @@ pendientes. La lógica que las usa corresponde a la etapa E5.
 | Datos coherentes                                             | `CHECK` de dosis y cantidades positivas, frecuencia entre 1 y 168 h, egreso con fecha y motivo, patrón facial de 128 valores                                                                                            |
 | T502 — una toma tiene un solo recordatorio activo (E5 · D13) | Índices únicos parciales `recordatorios(prescripcion_id, fecha_hora_objetivo)` y `recordatorios(estudio_id, fecha_hora_objetivo)` `WHERE estado <> 'CANCELADO'`: una toma cancelada se puede volver a recordar          |
 | Recordatorios coherentes (E5)                                | `CHECK`: el origen coincide con el tipo (toma → prescripción, estudio → estudio); `ATENDIDO` con `atendido_en` y una sola resolución (la administración o el motivo; ninguna en un estudio); `VENCIDO` con `vencido_en` |
+| Estudios coherentes (E5 · T512 · T513)                       | `CHECK`: `REALIZADO` con `realizado_en` y `confirmado_por_id` (quién lo confirmó con su rostro); `CANCELADO` con `motivo_cancelacion`                                                                                   |
 
 Las restricciones de recordatorios están en la migración
 [`recordatorios_e5`](../backend/prisma/migrations/20261007162336_recordatorios_e5/migration.sql);
-las reglas que las usan, en [recordatorios.md](recordatorios.md). Prisma no conoce los índices
+las reglas que las usan, en [recordatorios.md](recordatorios.md). Las de estudios, junto con sus
+columnas `observaciones` (de quien programa) y `observaciones_realizacion` (de quien confirma),
+están en [`estudios_e5`](../backend/prisma/migrations/20261007172032_estudios_e5/migration.sql);
+sus reglas, en [estudios.md](estudios.md). En `estudios`, `realizado_en` es el momento de la
+confirmación con el rostro (D29). Prisma no conoce los índices
 parciales ni los `CHECK`: al crear una migración con `--create-only` hay que revisar que no los
 borre.
 

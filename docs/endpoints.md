@@ -164,5 +164,28 @@ registro marca `ATENDIDO` el recordatorio de la toma más cercana dentro de su t
 Errores: `409 RECORDATORIO_NO_PENDIENTE` (`detalles.estado`), `422 NO_ES_TOMA`. Acciones de
 auditoría: `GENERAR`, `VENCER`, `ATENDER`, `NO_ADMINISTRAR`, `CANCELAR` (Recordatorio). Un
 recordatorio que vence genera una notificación `RECORDATORIO_VENCIDO` para cada administrador
-activo (`GET /api/notificaciones`, T508).
-Los endpoints de estudios (T509–T513) se suman en la fase 3 ([diseno-e5.md](diseno-e5.md)).
+activo (`GET /api/notificaciones`, T508). Los recordatorios de estudios se atienden confirmando
+el estudio (`POST /api/estudios/:id/confirmar`).
+
+## Estudios — T504, T509–T513 · CU29–CU31
+
+Contrato completo (forma de un estudio, estados, efectos sobre los recordatorios y decisiones
+D26–D35) en [estudios.md](estudios.md). El médico programa, enfermería confirma con su rostro
+(S15).
+
+| Método | Ruta                                 | Permiso              | Descripción                                                                                                          |
+| ------ | ------------------------------------ | -------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| GET    | `/api/tipos-estudio`                 | `estudios.ver`       | Tipos activos por nombre, con `preparacionPorDefecto`                                                                |
+| GET    | `/api/pacientes/:id/estudios?estado` | `estudios.ver`       | Estudios del paciente: programados primero (el más próximo arriba), después el resto (el más reciente arriba)        |
+| POST   | `/api/pacientes/:id/estudios`        | `estudios.gestionar` | Programar a un internado: `{ tipoEstudioId, fechaHora, nombre?, preparacion?, observaciones? }`                      |
+| GET    | `/api/estudios/:id`                  | `estudios.ver`       | Detalle                                                                                                              |
+| PATCH  | `/api/estudios/:id`                  | `estudios.gestionar` | Reprogramar un `PROGRAMADO`: `{ fechaHora }`; cancela sus recordatorios sin atender                                  |
+| POST   | `/api/estudios/:id/cancelar`         | `estudios.gestionar` | `{ motivo }`: `PROGRAMADO` → `CANCELADO`; cancela sus recordatorios sin atender                                      |
+| POST   | `/api/estudios/:id/confirmar`        | `estudios.confirmar` | `{ validacionToken, observaciones? }`: `PROGRAMADO` → `REALIZADO` y su recordatorio a `ATENDIDO` (misma transacción) |
+
+Errores: `409 PACIENTE_NO_INTERNADO`, `409 ESTUDIO_NO_PROGRAMADO` (`detalles.estado`),
+`422 TIPO_ESTUDIO_NO_DISPONIBLE`, `422 FECHA_ESTUDIO_INVALIDA` (más de 5 min en el pasado o más de
+90 días adelante), `422 SIN_CAMBIOS`, `403 VALIDACION_FACIAL_REQUERIDA`. Acciones de auditoría:
+`PROGRAMAR`, `REPROGRAMAR`, `CANCELAR`, `CONFIRMAR` (Estudio); `CANCELAR`, `ATENDER`
+(Recordatorio). Reprogramar, cancelar y confirmar avisan al tiempo real si cambiaron
+recordatorios.
