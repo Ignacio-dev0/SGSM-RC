@@ -1,5 +1,6 @@
 // Semilla de la base de desarrollo: `npm run db:sembrar -w backend` (T103).
 import { PrismaClient } from '@prisma/client';
+import { sembrarRostrosSimulados } from '../src/semillas/biometria-simulada';
 import { sembrarCatalogoBase } from '../src/semillas/catalogo-base';
 import { sembrarUsuariosDePrueba } from '../src/semillas/usuarios-prueba';
 
@@ -11,6 +12,7 @@ async function main() {
   }
   await sembrarCatalogoBase(prisma);
   await sembrarUsuariosDePrueba(prisma);
+  await sembrarRostrosSimulados(prisma);
   console.info(
     'Semilla cargada: roles, permisos, camas, catálogo, tipos de estudio y usuarios de prueba',
   );
