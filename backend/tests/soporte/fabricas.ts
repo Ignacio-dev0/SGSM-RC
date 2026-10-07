@@ -65,3 +65,44 @@ export async function crearInsumo(datos: Partial<Prisma.InsumoUncheckedCreateInp
     },
   });
 }
+
+/** Paciente internado en una cama nueva de la sala indicada (asignación activa). */
+export async function internarPaciente(
+  creadoPorId: number,
+  { sala = 'Sala A', cama }: { sala?: string; cama?: string } = {},
+) {
+  const nueva = await crearCama(sala, cama);
+  const paciente = await crearPacienteBasico(creadoPorId);
+  await prisma.asignacionCama.create({
+    data: {
+      pacienteId: paciente.id,
+      camaId: nueva.id,
+      motivo: 'INGRESO',
+      fechaDesde: paciente.fechaIngreso,
+      asignadoPorId: creadoPorId,
+    },
+  });
+  return { paciente, cama: nueva };
+}
+
+/** Prescripción vigente cada 8 h de un medicamento nuevo, salvo lo que se indique. */
+export async function crearPrescripcionBasica(
+  pacienteId: number,
+  prescriptorId: number,
+  datos: Partial<Prisma.PrescripcionUncheckedCreateInput> = {},
+) {
+  const insumoId = datos.insumoId ?? (await crearInsumo()).id;
+  return prisma.prescripcion.create({
+    data: {
+      pacienteId,
+      insumoId,
+      dosis: 500,
+      unidadDosis: 'mg',
+      frecuenciaHoras: 8,
+      via: 'ORAL',
+      fechaInicio: new Date(),
+      prescriptorId,
+      ...datos,
+    },
+  });
+}
