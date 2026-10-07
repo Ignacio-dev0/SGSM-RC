@@ -11,6 +11,7 @@ coverage/
 .env
 .env.*
 !.env.example
+!.env.ejemplo
 !.env.test
 
 # Modelos de reconocimiento facial copiados desde node_modules
@@ -39,3 +40,7 @@ playwright-report/
 
 # Informes locales de UX-Pilot
 ux-pilot/
+
+# Respaldos de la base (datos de pacientes: nunca al repositorio). Ver docs/despliegue.md.
+respaldos/
+*.dump
