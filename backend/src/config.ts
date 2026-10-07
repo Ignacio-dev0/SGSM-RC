@@ -10,6 +10,21 @@ function numero(nombre: string, porDefecto: number): number {
   return n;
 }
 
+/** Interruptor `true`/`false`; sin valor usa el de por defecto. */
+export function booleano(nombre: string, porDefecto: boolean): boolean {
+  const v = process.env[nombre];
+  if (v === undefined || v === '') return porDefecto;
+  if (v !== 'true' && v !== 'false') throw new Error(`La variable ${nombre} debe ser true o false`);
+  return v === 'true';
+}
+
+/** Lista separada por comas (sin espacios ni elementos vacíos); sin valor, vacía. */
+export const lista = (nombre: string): string[] =>
+  (process.env[nombre] ?? '')
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
+
 const entorno = process.env.NODE_ENV ?? 'development';
 const produccion = entorno === 'production';
 
@@ -43,6 +58,30 @@ export const config = {
   suministros: {
     /** Horas durante las que se puede corregir un suministro (CU23). */
     plazoCorreccionHoras: numero('SUMINISTRO_PLAZO_CORRECCION_HORAS', 24),
+  },
+  /** Recordatorios de tomas (E5 · docs/diseno-e5.md, supuestos S9–S11). */
+  recordatorios: {
+    /** El servidor arranca el temporizador (T501). Las pruebas nunca lo arrancan. */
+    temporizador: booleano('RECORDATORIOS_TEMPORIZADOR', true),
+    /** Segundos entre dos ciclos del temporizador. */
+    intervaloSegundos: numero('RECORDATORIOS_INTERVALO_SEG', 60),
+    /** Minutos antes de la toma en que aparece su recordatorio (T502 · S9). */
+    anticipacionMinutos: numero('RECORDATORIO_ANTICIPACION_MIN', 30),
+    /** Minutos desde que se generó tras los que vence sin atender (T503 · S11). */
+    vencimientoMinutos: numero('RECORDATORIO_VENCIMIENTO_MIN', 60),
+    /** ALTA con esta cantidad de minutos o menos hasta la toma, o si está atrasada (S10). */
+    prioridadAltaMinutos: numero('RECORDATORIO_PRIORIDAD_ALTA_MIN', 5),
+    /** MEDIA hasta esta cantidad de minutos; con más falta, BAJA (S10). */
+    prioridadMediaMinutos: numero('RECORDATORIO_PRIORIDAD_MEDIA_MIN', 15),
+    /** Horas que un vencido sigue en el panel para atenderlo tarde (S11). */
+    vencidosVisiblesHoras: numero('RECORDATORIO_VENCIDOS_VISIBLES_HORAS', 12),
+  },
+  /** Avisos por WebSocket en /api/tiempo-real (T505 · docs/recordatorios.md). */
+  tiempoReal: {
+    /** Segundos entre latidos: cada uno revisa la sesión y el permiso de la conexión. */
+    latidoSegundos: numero('TIEMPO_REAL_LATIDO_SEG', 30),
+    /** Orígenes aceptados además del propio (el del encabezado Host), separados por comas. */
+    origenes: lista('TIEMPO_REAL_ORIGENES'),
   },
   sesion: {
     secreto: secreto('JWT_SECRETO', 'solo-para-desarrollo-cambiar-en-produccion'),
