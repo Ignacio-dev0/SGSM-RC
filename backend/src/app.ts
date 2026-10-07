@@ -2,7 +2,10 @@ import express from 'express';
 import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
 import { manejarErrores, rutaNoEncontrada } from './comun/middleware-errores';
+import { autenticar } from './modulos/auth/auth.middleware';
 import { rutasAuth } from './modulos/auth/auth.rutas';
+import { rutasPermisos, rutasRoles } from './modulos/seguridad/seguridad.rutas';
+import { rutasUsuarios } from './modulos/usuarios/usuarios.rutas';
 
 /** Crea la aplicación Express. No escucha ningún puerto: eso lo hace server.ts. */
 export function crearApp() {
@@ -17,6 +20,10 @@ export function crearApp() {
   });
 
   app.use('/api/auth', rutasAuth);
+  // Todo lo que sigue exige sesión; cada ruta pide además su permiso.
+  app.use('/api/usuarios', autenticar, rutasUsuarios);
+  app.use('/api/roles', autenticar, rutasRoles);
+  app.use('/api/permisos', autenticar, rutasPermisos);
 
   app.use(rutaNoEncontrada);
   app.use(manejarErrores);
