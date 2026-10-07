@@ -392,19 +392,24 @@ model Estudio {
 }
 
 model Recordatorio {
-  id                Int                   @id @default(autoincrement())
-  tipo              TipoRecordatorio
-  pacienteId        Int                   @map("paciente_id")
-  prescripcionId    Int?                  @map("prescripcion_id")
-  estudioId         Int?                  @map("estudio_id")
+  id                   Int                   @id @default(autoincrement())
+  tipo                 TipoRecordatorio
+  pacienteId           Int                   @map("paciente_id")
+  prescripcionId       Int?                  @map("prescripcion_id")
+  estudioId            Int?                  @map("estudio_id")
   /// Hora de la toma o del estudio que se recuerda.
-  fechaHoraObjetivo DateTime              @map("fecha_hora_objetivo") @db.Timestamptz(3)
-  generadoEn        DateTime              @default(now()) @map("generado_en") @db.Timestamptz(3)
-  prioridad         PrioridadRecordatorio
-  estado            EstadoRecordatorio    @default(PENDIENTE)
-  atendidoPorId     Int?                  @map("atendido_por_id")
-  atendidoEn        DateTime?             @map("atendido_en") @db.Timestamptz(3)
-  suministroId      Int?                  @unique @map("suministro_id")
+  fechaHoraObjetivo    DateTime              @map("fecha_hora_objetivo") @db.Timestamptz(3)
+  generadoEn           DateTime              @default(now()) @map("generado_en") @db.Timestamptz(3)
+  prioridad            PrioridadRecordatorio
+  estado               EstadoRecordatorio    @default(PENDIENTE)
+  atendidoPorId        Int?                  @map("atendido_por_id")
+  atendidoEn           DateTime?             @map("atendido_en") @db.Timestamptz(3)
+  /// Administración que atendió la toma (atención automática al registrarla).
+  suministroId         Int?                  @unique @map("suministro_id")
+  /// Por qué no se dio la toma ("No se administró"); alternativa a suministroId.
+  motivoNoAdministrado String?               @map("motivo_no_administrado") @db.VarChar(255)
+  /// Cuándo venció sin atenderse; se conserva si después se atiende tarde.
+  vencidoEn            DateTime?             @map("vencido_en") @db.Timestamptz(3)
 
   paciente     Paciente      @relation(fields: [pacienteId], references: [id])
   prescripcion Prescripcion? @relation(fields: [prescripcionId], references: [id])
@@ -412,8 +417,10 @@ model Recordatorio {
   atendidoPor  Usuario?      @relation(fields: [atendidoPorId], references: [id])
   suministro   Suministro?   @relation(fields: [suministroId], references: [id])
 
-  @@unique([prescripcionId, fechaHoraObjetivo])
-  @@unique([estudioId, fechaHoraObjetivo])
+  // La unicidad de la toma o del estudio la dan índices únicos PARCIALES (sin los CANCELADO),
+  // creados en SQL en la migración recordatorios_e5: Prisma no los puede expresar (D13).
+  @@index([prescripcionId, fechaHoraObjetivo])
+  @@index([estudioId, fechaHoraObjetivo])
   @@index([estado, fechaHoraObjetivo])
   @@map("recordatorios")
 }

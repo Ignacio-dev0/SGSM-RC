@@ -1,3 +1,4 @@
+import type { Prisma } from '@prisma/client';
 import { prisma } from '../../src/db';
 import { limpiarBase } from '../soporte/base';
 import {
@@ -117,5 +118,119 @@ describe('restricciones de negocio en la base (T102)', () => {
         },
       }),
     ).rejects.toThrow(/datos_biometricos_patron_128/);
+  });
+
+  describe('recordatorios (E5 · D13)', () => {
+    const toma = new Date('2026-10-07T08:00:00Z');
+    let pacienteId: number;
+    let prescripcionId: number;
+
+    beforeEach(async () => {
+      pacienteId = (await crearPacienteBasico(usuarioId)).id;
+      const insumo = await crearInsumo();
+      prescripcionId = (
+        await prisma.prescripcion.create({
+          data: {
+            pacienteId,
+            insumoId: insumo.id,
+            dosis: 500,
+            unidadDosis: 'mg',
+            frecuenciaHoras: 8,
+            via: 'ORAL',
+            fechaInicio: toma,
+            prescriptorId: usuarioId,
+          },
+        })
+      ).id;
+    });
+
+    const recordar = (datos: Partial<Prisma.RecordatorioUncheckedCreateInput> = {}) =>
+      prisma.recordatorio.create({
+        data: {
+          tipo: 'MEDICAMENTO',
+          pacienteId,
+          prescripcionId,
+          fechaHoraObjetivo: toma,
+          prioridad: 'MEDIA',
+          ...datos,
+        },
+      });
+
+    const estudioProgramado = async () => {
+      const tipo = await prisma.tipoEstudio.create({ data: { nombre: 'Radiografía' } });
+      return prisma.estudio.create({
+        data: {
+          pacienteId,
+          tipoEstudioId: tipo.id,
+          nombre: 'Rx de tórax',
+          fechaHora: toma,
+          creadoPorId: usuarioId,
+        },
+      });
+    };
+
+    it('una toma tiene un solo recordatorio que no esté cancelado', async () => {
+      await recordar();
+      await expect(recordar()).rejects.toThrow(/Unique constraint/);
+      await expect(recordar({ estado: 'VENCIDO', vencidoEn: toma })).rejects.toThrow(
+        /Unique constraint/,
+      );
+    });
+
+    it('una toma cancelada se vuelve a recordar (al reanudar o modificar la prescripción)', async () => {
+      await recordar({ estado: 'CANCELADO' });
+      await expect(recordar()).resolves.toMatchObject({ estado: 'PENDIENTE' });
+    });
+
+    it('un estudio tiene un solo recordatorio activo por horario', async () => {
+      const estudio = await estudioProgramado();
+      const delEstudio = { tipo: 'ESTUDIO', prescripcionId: null, estudioId: estudio.id } as const;
+      await recordar({ ...delEstudio, estado: 'CANCELADO' });
+      await recordar(delEstudio);
+      await expect(recordar(delEstudio)).rejects.toThrow(/Unique constraint/);
+    });
+
+    it('un recordatorio atendido dice cuándo y cómo se resolvió', async () => {
+      const atender = (datos: Partial<Prisma.RecordatorioUncheckedCreateInput>) =>
+        recordar({ estado: 'ATENDIDO', atendidoPorId: usuarioId, ...datos });
+      const suministro = await prisma.suministro.create({
+        data: { pacienteId, usuarioId, tipo: 'MEDICAMENTO', prescripcionId, fechaHora: toma },
+      });
+
+      await expect(atender({ motivoNoAdministrado: 'Paciente en ayunas' })).rejects.toThrow(
+        /recordatorios_atendido_completo/,
+      );
+      await expect(atender({ atendidoEn: toma })).rejects.toThrow(
+        /recordatorios_atendido_completo/,
+      );
+      await expect(
+        atender({ atendidoEn: toma, suministroId: suministro.id, motivoNoAdministrado: 'Ambos' }),
+      ).rejects.toThrow(/recordatorios_atendido_completo/);
+      await expect(
+        atender({ atendidoEn: toma, suministroId: suministro.id }),
+      ).resolves.toMatchObject({ estado: 'ATENDIDO' });
+    });
+
+    it('un recordatorio vencido guarda cuándo venció', async () => {
+      await expect(recordar({ estado: 'VENCIDO' })).rejects.toThrow(
+        /recordatorios_vencido_con_fecha/,
+      );
+      await expect(recordar({ estado: 'VENCIDO', vencidoEn: toma })).resolves.toMatchObject({
+        estado: 'VENCIDO',
+      });
+    });
+
+    it('una toma recuerda una prescripción y un estudio recuerda un estudio', async () => {
+      const estudio = await estudioProgramado();
+      await expect(recordar({ prescripcionId: null })).rejects.toThrow(
+        /recordatorios_origen_segun_tipo/,
+      );
+      await expect(recordar({ tipo: 'ESTUDIO' })).rejects.toThrow(
+        /recordatorios_origen_segun_tipo/,
+      );
+      await expect(recordar({ estudioId: estudio.id })).rejects.toThrow(
+        /recordatorios_origen_segun_tipo/,
+      );
+    });
   });
 });

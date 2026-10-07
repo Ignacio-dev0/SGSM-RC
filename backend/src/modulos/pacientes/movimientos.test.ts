@@ -185,7 +185,11 @@ describe('traslado y egreso de pacientes (CU14 · CU15 · T210)', () => {
           prescripcionId: vigente.id,
           fechaHoraObjetivo: new Date('2026-10-07T08:00:00Z'),
           prioridad: 'MEDIA',
+          // Atendido = cuándo y cómo (CHECK recordatorios_atendido_completo).
           estado: 'ATENDIDO',
+          atendidoPorId: medicoId,
+          atendidoEn: new Date('2026-10-07T08:10:00Z'),
+          motivoNoAdministrado: 'El paciente estaba en ayunas para un estudio',
         },
       });
 
