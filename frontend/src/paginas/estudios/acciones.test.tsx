@@ -15,18 +15,13 @@ import {
 } from '../../pruebas/datosEstudios';
 import { renderizarApp } from '../../pruebas/renderizar';
 import { servidor } from '../../pruebas/servidor';
+import { campoFechaHora, isoDeCampoFechaHora } from '../../utilidades/campoFechaHora';
 
 beforeEach(prepararEstudios);
 afterEach(restaurarEstudios);
 
 const RUTA = '/pacientes/7?pestana=estudios';
 const RX = 'Rx de tórax frente y perfil';
-
-/** "AAAA-MM-DDTHH:mm" en hora local de un ISO (lo que muestra el campo datetime-local). */
-const local = (iso: string) => {
-  const d = new Date(iso);
-  return new Date(d.getTime() - d.getTimezoneOffset() * 60_000).toISOString().slice(0, 16);
-};
 
 /** Registra los cuerpos que llegan a `ruta` y responde con `respuesta`. */
 function capturar(
@@ -54,7 +49,7 @@ describe('reprogramar un estudio (T512)', () => {
   it('el campo trae la hora actual, no deja confirmar sin cambiarla y manda la nueva', async () => {
     const nueva = localEnHoras(30);
     const enviados = capturar('patch', '*/api/estudios/60', () =>
-      HttpResponse.json({ data: estudio({ fechaHora: new Date(nueva).toISOString() }) }),
+      HttpResponse.json({ data: estudio({ fechaHora: isoDeCampoFechaHora(nueva) }) }),
     );
     const pedidos = conEstudios(...ESTUDIOS);
     const d = await abrirReprogramar();
@@ -64,7 +59,7 @@ describe('reprogramar un estudio (T512)', () => {
     expect(d).toHaveTextContent('DNI 30111222');
     expect(d).toHaveTextContent(/08\/10\/2026\s10:00/);
     const campo = within(d).getByLabelText(/^Nueva fecha y hora/);
-    expect(campo).toHaveValue(local('2026-10-08T13:00:00.000Z'));
+    expect(campo).toHaveValue(campoFechaHora('2026-10-08T13:00:00.000Z'));
     const confirmar = within(d).getByRole('button', { name: 'Reprogramar' });
     expect(confirmar).toBeDisabled();
 
@@ -74,7 +69,7 @@ describe('reprogramar un estudio (T512)', () => {
     await userEvent.click(confirmar);
 
     expect(await screen.findByText(new RegExp(`Se reprogramó ${RX} para el`))).toBeVisible();
-    expect(enviados).toEqual([{ fechaHora: new Date(nueva).toISOString() }]);
+    expect(enviados).toEqual([{ fechaHora: isoDeCampoFechaHora(nueva) }]);
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
     await waitFor(() => expect(pedidos.lista).toBeGreaterThan(antes));
   });
@@ -139,8 +134,11 @@ describe('cancelar un estudio (T512)', () => {
     );
     await userEvent.click(confirmar);
 
-    expect(await screen.findByText(new RegExp(`Se canceló ${RX}`))).toBeVisible();
+    const exito = await screen.findByText(new RegExp(`Se canceló ${RX}`));
+    expect(exito).toBeVisible();
     expect(enviados).toEqual([{ motivo: 'Se suspendió el turno' }]);
+    // Como en el panel: el botón que abrió el diálogo ya no está; el aviso toma el foco (E5-09).
+    await waitFor(() => expect(exito.closest('.MuiAlert-root')).toHaveFocus());
   });
 
   it('Volver cierra sin cancelar nada', async () => {
@@ -165,7 +163,8 @@ describe('cancelar un estudio (T512)', () => {
     await userEvent.click(within(d).getByRole('button', { name: 'Cancelar estudio' }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent(
-      'Este estudio ya fue confirmado o cancelado por otra persona',
+      // Puede haber sido la misma persona desde otra tablet (E5-14).
+      'Este estudio ya estaba confirmado o cancelado (por usted o por otra persona). Revise el historial.',
     );
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
     await waitFor(() => expect(pedidos.lista).toBeGreaterThan(antes));
@@ -260,9 +259,12 @@ describe('confirmar con el rostro que el estudio se realizó (T513 · S15)', () 
     await confirmarConRostro(d);
     await simularRostro();
 
-    expect(await within(d).findByRole('alert')).toHaveTextContent(
+    const aviso = await within(d).findByRole('alert');
+    expect(aviso).toHaveTextContent(
       'La validación del rostro venció o no corresponde; vuelva a validarla',
     );
+    // Se lleva a la vista y toma el foco: está arriba, lejos del botón tocado (E5-10).
+    await waitFor(() => expect(aviso).toHaveFocus());
     expect(within(d).getByRole('button', { name: 'Confirmar con mi rostro' })).toBeEnabled();
   });
 
@@ -290,8 +292,42 @@ describe('confirmar con el rostro que el estudio se realizó (T513 · S15)', () 
 
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
     expect(await screen.findByRole('alert')).toHaveTextContent(
-      'Este estudio ya fue confirmado o cancelado por otra persona',
+      // Puede haber sido la misma persona desde otra tablet (E5-14).
+      'Este estudio ya estaba confirmado o cancelado (por usted o por otra persona). Revise el historial.',
     );
     await waitFor(() => expect(pedidos.lista).toBeGreaterThan(antes));
+  });
+});
+
+describe('reprogramar: la fecha y hora es siempre la de Argentina (E5-16)', () => {
+  // La zona del sistema, para dejarla como estaba: borrar TZ deja UTC, no la del sistema.
+  const zonaOriginal = process.env.TZ;
+  const zonaDelSistema = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-10-07T15:00:00.000Z'));
+    process.env.TZ = 'Asia/Tokyo';
+  });
+  afterEach(() => {
+    process.env.TZ = zonaOriginal ?? zonaDelSistema;
+    vi.useRealTimers();
+  });
+
+  it('con la tablet en otra zona, el campo trae la hora de Argentina y dice cómo quedará antes de confirmar', async () => {
+    const enviados = capturar('patch', '*/api/estudios/60', () =>
+      HttpResponse.json({ data: estudio({ fechaHora: '2026-10-09T11:30:00.000Z' }) }),
+    );
+    renderizarApp(RUTA, MEDICO);
+    await userEvent.click(await screen.findByRole('button', { name: `Reprogramar ${RX}` }));
+    const d = await screen.findByRole('dialog', { name: 'Reprogramar estudio' });
+
+    const campo = within(d).getByLabelText(/^Nueva fecha y hora/);
+    // 13:00 UTC = 10:00 en Argentina (en Tokio serían las 22:00).
+    expect(campo).toHaveValue('2026-10-08T10:00');
+    fireEvent.change(campo, { target: { value: '2026-10-09T08:30' } });
+    expect(campo).toHaveAccessibleDescription(/^Quedará para el 09\/10\/2026\s08:30$/);
+    await userEvent.click(within(d).getByRole('button', { name: 'Reprogramar' }));
+
+    await waitFor(() => expect(enviados).toEqual([{ fechaHora: '2026-10-09T11:30:00.000Z' }]));
   });
 });

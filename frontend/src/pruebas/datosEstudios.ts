@@ -1,6 +1,7 @@
 // Datos de ejemplo de los estudios (E5 · fase 3) para las pruebas de pantallas.
 import { http, HttpResponse } from 'msw';
 import type { Estudio, TipoEstudio } from '../api/estudios';
+import { campoFechaHora } from '../utilidades/campoFechaHora';
 import { paciente } from './datosPacientes';
 import { servidor } from './servidor';
 
@@ -130,9 +131,6 @@ export function restaurarEstudios() {
   vi.unstubAllEnvs();
 }
 
-/** "AAAA-MM-DDTHH:mm" en hora local, `horas` después de ahora (para el campo datetime-local). */
-export function localEnHoras(horas: number) {
-  const d = new Date(Date.now() + horas * 3_600_000);
-  d.setSeconds(0, 0);
-  return new Date(d.getTime() - d.getTimezoneOffset() * 60_000).toISOString().slice(0, 16);
-}
+/** "AAAA-MM-DDTHH:mm" en hora de Argentina, `horas` después de ahora (para el campo datetime-local). */
+export const localEnHoras = (horas: number) =>
+  campoFechaHora(new Date(Date.now() + horas * 3_600_000));

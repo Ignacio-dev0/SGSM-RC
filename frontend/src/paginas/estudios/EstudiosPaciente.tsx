@@ -80,8 +80,9 @@ export function EstudiosPaciente({ paciente }: { paciente: Paciente }) {
       {aviso && (
         <Alerta
           tipo={aviso.tipo}
-          // Que otra persona ya lo cerró pide atención: se lleva a la vista (UX-12).
-          enfocar={aviso.tipo !== 'exito'}
+          // Como en el panel (E5-09): el botón que abrió el diálogo suele desaparecer (el estudio
+          // cambia de sección) y el foco caería en la página; el aviso se lleva a la vista y lo toma.
+          enfocar
           alCerrar={() => setAviso(null)}
         >
           {aviso.texto}

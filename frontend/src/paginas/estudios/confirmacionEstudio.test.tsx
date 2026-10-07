@@ -132,7 +132,7 @@ describe('confirmar un estudio desde otra pantalla (useConfirmacionEstudio)', ()
     const d = await dialogo();
 
     expect(await within(d).findByRole('alert')).toHaveTextContent(
-      'Este estudio ya fue confirmado o cancelado por otra persona',
+      'Este estudio ya estaba confirmado o cancelado (por usted o por otra persona)',
     );
     expect(
       within(d).queryByRole('button', { name: 'Confirmar con mi rostro' }),

@@ -13,10 +13,10 @@ export interface ResultadoEstudio {
   estudio?: Estudio;
 }
 
-/** 409 ESTUDIO_NO_PROGRAMADO: no se reintenta; se avisa y se recarga. */
+/** 409 ESTUDIO_NO_PROGRAMADO: no se reintenta; se avisa, se recarga y se remite al historial. */
 export const RESULTADO_NO_PROGRAMADO: ResultadoEstudio = {
   tipo: 'advertencia',
-  texto: `${MENSAJE_NO_PROGRAMADO}. La lista se actualizó.`,
+  texto: `${MENSAJE_NO_PROGRAMADO}. Revise el historial.`,
 };
 
 /**

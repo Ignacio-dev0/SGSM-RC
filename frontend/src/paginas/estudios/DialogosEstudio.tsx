@@ -6,9 +6,9 @@ import { estudiosApi, type Estudio } from '../../api/estudios';
 import { Alerta } from '../../componentes/Alerta';
 import { CampoTexto } from '../../componentes/CampoTexto';
 import { ModalConfirmacion } from '../../componentes/ModalConfirmacion';
-import { sinCortes } from '../../utilidades/formato';
+import { campoFechaHora, isoDeCampoFechaHora } from '../../utilidades/campoFechaHora';
 import {
-  aLocal,
+  ayudaDeFecha,
   errorDeFecha,
   errorDelServidor,
   esNoProgramado,
@@ -32,7 +32,7 @@ interface Props {
 /** Reprogramar (T512): solo cambia la fecha y hora de un estudio programado. */
 export function DialogoReprogramarEstudio({ estudio: e, paciente, alCerrar, alTerminar }: Props) {
   const refrescar = useRefrescarEstudios();
-  const actual = aLocal(e.fechaHora);
+  const actual = campoFechaHora(e.fechaHora);
   const [fecha, setFecha] = useState(actual);
   const [errorServidor, setErrorServidor] = useState<ReturnType<typeof errorDelServidor> | null>(
     null,
@@ -41,7 +41,7 @@ export function DialogoReprogramarEstudio({ estudio: e, paciente, alCerrar, alTe
   const errorFecha = sinCambio ? undefined : errorDeFecha(fecha);
 
   const reprogramar = useMutation({
-    mutationFn: () => estudiosApi.reprogramar(e.id, new Date(fecha).toISOString()),
+    mutationFn: () => estudiosApi.reprogramar(e.id, isoDeCampoFechaHora(fecha)),
     onSuccess: (nuevo) => {
       refrescar(nuevo);
       alTerminar({
@@ -98,11 +98,7 @@ export function DialogoReprogramarEstudio({ estudio: e, paciente, alCerrar, alTe
             setErrorServidor(null);
           }}
           error={errorFecha ?? (errorServidor?.campo ? errorServidor.texto : undefined)}
-          ayuda={
-            sinCambio
-              ? 'Elija una fecha y hora distinta de la actual'
-              : sinCortes('Entre 5 min atrás y 90 días adelante')
-          }
+          ayuda={sinCambio ? 'Elija una fecha y hora distinta de la actual' : ayudaDeFecha(fecha)}
           required
           fullWidth
           type="datetime-local"

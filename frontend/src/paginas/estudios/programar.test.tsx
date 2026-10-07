@@ -15,6 +15,7 @@ import {
 } from '../../pruebas/datosEstudios';
 import { renderizarApp } from '../../pruebas/renderizar';
 import { servidor } from '../../pruebas/servidor';
+import { isoDeCampoFechaHora } from '../../utilidades/campoFechaHora';
 
 beforeEach(prepararEstudios);
 afterEach(restaurarEstudios);
@@ -60,11 +61,13 @@ describe('programar un estudio (T511 · S15)', () => {
     await userEvent.selectOptions(tipo(d), 'Radiografía');
     expect(nombre(d)).toHaveValue('Radiografía');
     expect(preparacion(d)).toHaveValue('Retirar alhajas y objetos metálicos');
+    // Pegado en lugar de tecleado: tecla por tecla, con la suite completa, superaba el tiempo.
     await userEvent.clear(nombre(d));
-    await userEvent.type(nombre(d), 'Rx de tórax frente y perfil');
+    await userEvent.paste('Rx de tórax frente y perfil');
     const cuando = localEnHoras(20);
     fireEvent.change(fecha(d), { target: { value: cuando } });
-    await userEvent.type(campo(d, /^Observaciones/), 'Trasladar en silla de ruedas');
+    await userEvent.click(campo(d, /^Observaciones/));
+    await userEvent.paste('Trasladar en silla de ruedas');
     await waitFor(() => expect(recordatorios.total).toBeGreaterThan(0));
     const antes = { lista: pedidos.lista, recordatorios: recordatorios.total };
     await programar(d);
@@ -73,7 +76,7 @@ describe('programar un estudio (T511 · S15)', () => {
     expect(enviados).toEqual([
       {
         tipoEstudioId: 2,
-        fechaHora: new Date(cuando).toISOString(),
+        fechaHora: isoDeCampoFechaHora(cuando),
         nombre: 'Rx de tórax frente y perfil',
         preparacion: 'Retirar alhajas y objetos metálicos',
         observaciones: 'Trasladar en silla de ruedas',
@@ -126,6 +129,8 @@ describe('programar un estudio (T511 · S15)', () => {
     expect(fecha(d)).toHaveAccessibleDescription('Indique la fecha y hora del estudio');
     await waitFor(() => expect(tipo(d)).toHaveFocus());
     expect(enviados).toHaveLength(0);
+    // La lista de tipos cargó: no hay nada que reintentar (E5-07).
+    expect(within(d).queryByRole('button', { name: 'Reintentar' })).not.toBeInTheDocument();
   });
 
   it.each([
@@ -187,9 +192,10 @@ describe('programar: los errores del servidor se dicen en palabras', () => {
     const d = await abrirProgramar();
     await programarValido(d);
 
-    expect(await within(d).findByRole('alert')).toHaveTextContent(
-      /ya no está internado: no se le pueden programar estudios/,
-    );
+    const aviso = await within(d).findByRole('alert');
+    expect(aviso).toHaveTextContent(/ya no está internado: no se le pueden programar estudios/);
+    // Se lleva a la vista y toma el foco: está arriba, lejos del botón tocado (E5-10).
+    await waitFor(() => expect(aviso).toHaveFocus());
   });
 
   it('tipo de estudio dado de baja: lo dice en el campo y vuelve a pedir la lista', async () => {
@@ -246,5 +252,40 @@ describe('programar: los errores del servidor se dicen en palabras', () => {
     await waitFor(() =>
       expect(nombre(d)).toHaveAccessibleDescription('El nombre puede tener hasta 120 caracteres'),
     );
+  });
+});
+
+describe('la fecha y hora es siempre la de Argentina (E5-16)', () => {
+  // La zona del sistema, para dejarla como estaba: borrar TZ deja UTC, no la del sistema.
+  const zonaOriginal = process.env.TZ;
+  const zonaDelSistema = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-10-07T15:00:00.000Z'));
+    // La tablet quedó con otra zona: el campo igual habla en hora de Argentina.
+    process.env.TZ = 'Asia/Tokyo';
+  });
+  afterEach(() => {
+    process.env.TZ = zonaOriginal ?? zonaDelSistema;
+    vi.useRealTimers();
+  });
+
+  it('debajo del campo dice cómo quedará, con el formato de la app, y manda esa hora de Argentina', async () => {
+    const enviados = capturarProgramacion();
+    const d = await abrirProgramar();
+
+    await userEvent.selectOptions(tipo(d), 'Radiografía');
+    fireEvent.change(fecha(d), { target: { value: '2026-10-08T10:00' } });
+
+    expect(fecha(d)).toHaveAccessibleDescription(/^Quedará para el 08\/10\/2026\s10:00$/);
+    await programar(d);
+    await waitFor(() => expect(enviados).toHaveLength(1));
+    expect(enviados[0]).toMatchObject({ fechaHora: '2026-10-08T13:00:00.000Z' });
+  });
+
+  it('sin fecha elegida, la ayuda dice el rango permitido', async () => {
+    const d = await abrirProgramar();
+
+    expect(fecha(d)).toHaveAccessibleDescription(/^Entre 5\smin atrás y 90\sdías adelante$/);
   });
 });

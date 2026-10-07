@@ -9,9 +9,10 @@ import { Boton } from '../../componentes/Boton';
 import { CampoTexto } from '../../componentes/CampoTexto';
 import { cerrarSinTocarAfuera } from '../../componentes/dialogos';
 import { Selector } from '../../componentes/Selector';
-import { sinCortes } from '../../utilidades/formato';
+import { isoDeCampoFechaHora } from '../../utilidades/campoFechaHora';
 import { useFocoEnPrimerError } from '../../utilidades/useFocoEnPrimerError';
 import {
+  ayudaDeFecha,
   errorDeFecha,
   errorDelServidor,
   fechaYHora,
@@ -46,8 +47,6 @@ function validar(f: Formulario): Errores {
     ...(fecha ? { fecha } : {}),
   };
 }
-
-const AYUDA_FECHA = sinCortes('Entre 5 min atrás y 90 días adelante');
 
 /**
  * Programar un estudio (T511 · S15): tipo del catálogo, fecha y hora, y nombre y preparación que
@@ -101,7 +100,7 @@ export function DialogoProgramarEstudio({
     mutationFn: () =>
       estudiosApi.programar(paciente.id, {
         tipoEstudioId: Number(f.tipoId),
-        fechaHora: new Date(f.fecha).toISOString(),
+        fechaHora: isoDeCampoFechaHora(f.fecha),
         // Vacío: el del tipo. Preparación vacía: sin preparación (D27).
         nombre: f.nombre.trim() || undefined,
         preparacion: f.preparacion.trim() || null,
@@ -166,7 +165,12 @@ export function DialogoProgramarEstudio({
           <Typography sx={{ fontWeight: 700, mb: 2 }}>
             {identidad(pacienteDelEstudio(paciente))}
           </Typography>
-          {errorGeneral && <Alerta tipo="error">{errorGeneral}</Alerta>}
+          {errorGeneral && (
+            // Arriba, lejos del botón tocado: se lleva a la vista y toma el foco (E5-10).
+            <Alerta tipo="error" enfocar>
+              {errorGeneral}
+            </Alerta>
+          )}
           <Box
             sx={{
               display: 'grid',
@@ -186,6 +190,7 @@ export function DialogoProgramarEstudio({
                   : undefined)
               }
               alReintentar={() => void tipos.refetch()}
+              errorDeCarga={tipos.isError}
               reintentando={tipos.isFetching}
               required
               textoVacio={tipos.isLoading ? 'Cargando tipos de estudio…' : 'Elegir…'}
@@ -199,7 +204,7 @@ export function DialogoProgramarEstudio({
               valor={f.fecha}
               alCambiar={cambiar('fecha')}
               error={errores.fecha}
-              ayuda={AYUDA_FECHA}
+              ayuda={ayudaDeFecha(f.fecha)}
               required
               type="datetime-local"
               slotProps={{ inputLabel: { shrink: true } }}

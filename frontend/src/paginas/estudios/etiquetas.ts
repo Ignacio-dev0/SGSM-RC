@@ -2,6 +2,7 @@
 import { ErrorApi, mensajeDeError } from '../../api/cliente';
 import type { EstadoEstudio } from '../../api/estudios';
 import type { Paciente } from '../../api/tipos';
+import { isoDeCampoFechaHora, msDeCampoFechaHora } from '../../utilidades/campoFechaHora';
 import { formatearFechaHora, sinCortes } from '../../utilidades/formato';
 import { formatearCama } from '../pacientes/etiquetas';
 
@@ -31,9 +32,9 @@ export const RANGO_FECHA = sinCortes('entre 5 min atrás y 90 días adelante');
 const TOLERANCIA_PASADO_MS = 5 * 60_000;
 const MAXIMO_ADELANTE_MS = 90 * 24 * 3_600_000;
 
-/** Error del campo datetime-local de la fecha del estudio, con las reglas del servidor. */
+/** Error del campo datetime-local de la fecha del estudio (hora de Argentina), con las reglas del servidor. */
 export function errorDeFecha(valorLocal: string, ahora = Date.now()): string | undefined {
-  const momento = valorLocal ? new Date(valorLocal).getTime() : Number.NaN;
+  const momento = msDeCampoFechaHora(valorLocal);
   if (Number.isNaN(momento)) return 'Indique la fecha y hora del estudio';
   if (momento < ahora - TOLERANCIA_PASADO_MS) return `Esa hora ya pasó: elija una ${RANGO_FECHA}.`;
   if (momento > ahora + MAXIMO_ADELANTE_MS) {
@@ -42,14 +43,20 @@ export function errorDeFecha(valorLocal: string, ahora = Date.now()): string | u
   return undefined;
 }
 
-/** "AAAA-MM-DDTHH:mm" en hora local de un ISO, para el campo datetime-local. */
-export function aLocal(iso: string) {
-  const d = new Date(iso);
-  d.setSeconds(0, 0);
-  return new Date(d.getTime() - d.getTimezoneOffset() * 60_000).toISOString().slice(0, 16);
+/**
+ * Ayuda del campo de la fecha: con una fecha válida, cómo quedará con el formato de la app (el
+ * campo nativo puede mostrarla con otro formato, por ejemplo con a. m./p. m.); si no, el rango.
+ */
+export function ayudaDeFecha(valorLocal: string) {
+  const iso = isoDeCampoFechaHora(valorLocal);
+  return iso
+    ? `Quedará para el ${fechaYHora(iso)}`
+    : sinCortes('Entre 5 min atrás y 90 días adelante');
 }
 
-export const MENSAJE_NO_PROGRAMADO = 'Este estudio ya fue confirmado o cancelado por otra persona';
+/** 409: lo cerró otra persona o la misma desde otra tablet (E5-14); el historial dice quién. */
+export const MENSAJE_NO_PROGRAMADO =
+  'Este estudio ya estaba confirmado o cancelado (por usted o por otra persona)';
 
 /** 409: otra persona ya lo confirmó o canceló; no tiene sentido reintentar. */
 export const esNoProgramado = (e: unknown) =>

@@ -90,9 +90,11 @@ export function DialogoConfirmarEstudio({
       }),
     onSuccess: (hecho) => {
       refrescar(hecho);
+      // Nombra al paciente: desde el panel, la tarjeta que lo decía ya no está (E5-14).
+      const a = paciente ? ` a ${paciente.apellido}, ${paciente.nombre}` : '';
       alTerminar({
         tipo: 'exito',
-        texto: `Se confirmó que se realizó ${hecho.nombre} (${fechaYHora(hecho.realizadoEn)}).`,
+        texto: `Se confirmó que se realizó ${hecho.nombre}${a} (${fechaYHora(hecho.realizadoEn)}).`,
         estudio: hecho,
       });
     },
@@ -145,7 +147,12 @@ export function DialogoConfirmarEstudio({
           <Alerta tipo="advertencia">{MENSAJE_NO_PROGRAMADO}.</Alerta>
         ) : (
           <>
-            {error && <Alerta tipo="error">{error}</Alerta>}
+            {error && (
+              // Arriba, lejos del botón tocado: se lleva a la vista y toma el foco (E5-10).
+              <Alerta tipo="error" enfocar>
+                {error}
+              </Alerta>
+            )}
             <Box
               component="section"
               aria-label="Revise antes de confirmar"
