@@ -6,6 +6,11 @@ import { autenticar } from './modulos/auth/auth.middleware';
 import { rutasAuth } from './modulos/auth/auth.rutas';
 import { rutasBiometria } from './modulos/biometria/biometria.rutas';
 import { rutasCamas, rutasSalas } from './modulos/camas/camas.rutas';
+import {
+  rutasEstudios,
+  rutasEstudiosDePaciente,
+  rutasTiposEstudio,
+} from './modulos/estudios/estudios.rutas';
 import { rutasPacientes } from './modulos/pacientes/pacientes.rutas';
 import {
   rutasPrescripciones,
@@ -39,12 +44,15 @@ export function crearApp() {
   app.use('/api/camas', autenticar, rutasCamas);
   app.use('/api/salas', autenticar, rutasSalas);
   app.use('/api/pacientes/:id/prescripciones', autenticar, rutasPrescripcionesDePaciente);
+  app.use('/api/pacientes/:id/estudios', autenticar, rutasEstudiosDePaciente);
   app.use('/api/pacientes', autenticar, rutasPacientes);
   app.use('/api/prescripciones', autenticar, rutasPrescripciones);
   app.use('/api/insumos', autenticar, rutasInsumos);
   app.use('/api/biometria', autenticar, rutasBiometria);
   app.use('/api/suministros', autenticar, rutasSuministros);
   app.use('/api/recordatorios', autenticar, rutasRecordatorios);
+  app.use('/api/tipos-estudio', autenticar, rutasTiposEstudio);
+  app.use('/api/estudios', autenticar, rutasEstudios);
 
   app.use(rutaNoEncontrada);
   app.use(manejarErrores);

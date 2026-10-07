@@ -11,6 +11,12 @@ import {
   esquemaValidacion,
 } from '../../../backend/src/modulos/biometria/biometria.esquemas';
 import {
+  esquemaCancelarEstudio,
+  esquemaConfirmarEstudio,
+  esquemaProgramarEstudio,
+  esquemaReprogramarEstudio,
+} from '../../../backend/src/modulos/estudios/estudios.esquemas';
+import {
   esquemaAltaInsumo,
   esquemaModificacionInsumo,
 } from '../../../backend/src/modulos/insumos/insumos.esquemas';
@@ -67,6 +73,10 @@ const REGLAS = [
   regla('PUT', '/api/biometria/usuarios/:id', esquemaRegistroBiometrico),
   regla('POST', '/api/biometria/validar', esquemaValidacion),
   regla('POST', '/api/recordatorios/:id/no-administrar', esquemaNoAdministrado),
+  regla('POST', '/api/pacientes/:id/estudios', esquemaProgramarEstudio),
+  regla('PATCH', '/api/estudios/:id', esquemaReprogramarEstudio),
+  regla('POST', '/api/estudios/:id/cancelar', esquemaCancelarEstudio),
+  regla('POST', '/api/estudios/:id/confirmar', esquemaConfirmarEstudio),
 ];
 
 /** null si el cuerpo cumple el esquema del servidor (o la ruta no tiene cuerpo que validar). */
