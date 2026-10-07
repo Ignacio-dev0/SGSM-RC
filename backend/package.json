@@ -16,6 +16,7 @@
     "db:sembrar": "prisma db seed",
     "db:reiniciar": "prisma migrate reset --force",
     "biometria:cifrar": "tsx src/scripts/cifrar-biometria.ts",
+    "instalar": "tsx src/scripts/instalar.ts",
     "volumen:sembrar": "tsx src/scripts/volumen.ts",
     "volumen:medir": "tsx src/scripts/medir-rendimiento.ts"
   },

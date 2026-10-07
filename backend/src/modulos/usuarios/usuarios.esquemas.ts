@@ -18,7 +18,8 @@ export const esquemaDni = z
   .trim()
   .regex(/^\d{7,8}$/, 'El DNI debe tener 7 u 8 dígitos, sin puntos');
 
-const esquemaContrasena = z
+/** Reglas de la contraseña: las usan el alta, la modificación y el instalador (T803). */
+export const esquemaContrasena = z
   .string()
   .min(8, 'La contraseña debe tener al menos 8 caracteres')
   .max(72, 'La contraseña puede tener hasta 72 caracteres')

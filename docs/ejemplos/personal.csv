@@ -1,0 +1,5 @@
+usuario,nombre,apellido,dni,rol,email
+aejemplo,Ana,Ejemplo,10000001,Médico,ana.ejemplo@ejemplo.test
+bficticio,Beto,Ficticio,10000002,Enfermero,
+cprueba,Carla,Prueba,10000003,Enfermera,carla.prueba@ejemplo.test
+dinventado,Diego,Inventado,10000004,Administrador,

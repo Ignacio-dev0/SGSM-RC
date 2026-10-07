@@ -14,6 +14,10 @@ coverage/
 !.env.ejemplo
 !.env.test
 
+# Datos reales del hospital para el instalador y las contraseñas temporales (T803 · docs/despliegue.md)
+/instalacion/
+credenciales-iniciales*.csv
+
 # Modelos de reconocimiento facial copiados desde node_modules
 frontend/public/models/
 
