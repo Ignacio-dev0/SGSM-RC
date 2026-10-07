@@ -16,9 +16,24 @@ const PANTALLAS: Record<Rol, string[]> = {
     '/suministros',
     '/suministros/medicamento?pacienteId=1',
     '/suministros/insumos?pacienteId=1',
+    '/recordatorios',
+    '/pacientes/1?pestana=estudios',
   ],
-  medico: ['/prescripciones/1', '/pacientes/nuevo', '/pacientes/1/prescripciones/nueva'],
-  admin: ['/usuarios', '/usuarios/nuevo', '/catalogo', '/biometria'],
+  medico: [
+    '/prescripciones/1',
+    '/pacientes/nuevo',
+    '/pacientes/1/prescripciones/nueva',
+    '/reportes?periodo=30',
+    '/reportes?pestana=estadisticas&periodo=30',
+  ],
+  admin: [
+    '/usuarios',
+    '/usuarios/nuevo',
+    '/catalogo',
+    '/biometria',
+    '/reportes?periodo=30&agruparPor=insumo',
+    '/auditoria',
+  ],
 };
 
 test('control: el medidor detecta un desborde y un botón chico', async ({ page }) => {
