@@ -13,4 +13,6 @@ function entero(nombre: string, porDefecto: number): number {
 export const config = {
   entorno: process.env.NODE_ENV ?? 'development',
   puerto: entero('PORT', 3000),
+  /** Costo de bcrypt: 10 en desarrollo/producción; las pruebas usan 4 para ir rápido. */
+  bcryptCosto: entero('BCRYPT_COSTO', 10),
 };
