@@ -388,3 +388,147 @@ Continúan las de [reportes.md](reportes.md) (D40–D49, D63–D68) y [seguridad
 - [`esquema.test.ts`](../backend/tests/integracion/esquema.test.ts): los índices de D71 a D73.
 - Las pruebas que ya había de auditoría, reportes, estadísticas y exportación siguen pasando sin
   cambios.
+
+## Frontend: carga inicial
+
+> E7 · T702 · RNF03: "las operaciones comunes en menos de 2 s en tablets de gama media por el
+> Wi‑Fi del hospital". Código: [`RutasApp.tsx`](../frontend/src/RutasApp.tsx) (qué se difiere),
+> [`componentes/cargaDiferida.ts`](../frontend/src/componentes/cargaDiferida.ts),
+> [`componentes/LimiteDeCarga.tsx`](../frontend/src/componentes/LimiteDeCarga.tsx),
+> [`navegacion/precarga.ts`](../frontend/src/navegacion/precarga.ts) y
+> [`vite.config.ts`](../frontend/vite.config.ts) (`manualChunks`).
+
+### Resumen
+
+- Antes, todo el código de la interfaz iba en **un solo archivo de 1.283 kB (403 kB con gzip)**
+  que la tablet tenía que bajar y compilar antes de mostrar el Ingreso, incluidos los gráficos de
+  Reportes (`@mui/x-charts` + d3, ~300 kB), la Auditoría y las pantallas de gestión.
+- Ahora el arranque baja **901 kB (282 kB con gzip): un 30 % menos**, en dos archivos que se
+  piden en paralelo: `vendor` (React, router, MUI, Emotion, TanStack) e `index` (la app).
+  Reportes, Auditoría y la gestión (usuarios, biometría, catálogo) se descargan recién al abrirlas
+  o al apuntar a su enlace.
+- Tras publicar una versión que solo cambia la app, la tablet vuelve a bajar `index` (**168 kB /
+  55 kB con gzip**) y conserva `vendor` en la caché, en lugar de los 1.283 kB de antes.
+- `face-api` (1,3 MB) ya iba aparte y sigue igual: se pide solo al encender la cámara para validar
+  o registrar un rostro. Una prueba verifica que el Inicio no lo descarga ni pide la cámara.
+- A modo de referencia (estimación, no medido en tablet): 121 kB menos con gzip son ~0,1 s menos
+  a 10 Mbit/s y ~0,5 s menos a 2 Mbit/s, más el tiempo de compilar 382 kB menos de JavaScript.
+
+### Tamaños antes y después
+
+Medidos con `npx vite build` desde `frontend/` (lo mismo que construye la imagen de Docker; el
+`npm run build` agrega `tsc -b` antes). Crudo = minificado; gzip = el que informa Vite. En kB
+(1.000 bytes).
+
+| Archivo                       | Antes: crudo | Antes: gzip | Después: crudo | Después: gzip | Cuándo se baja                         |
+| ----------------------------- | -----------: | ----------: | -------------: | ------------: | -------------------------------------- |
+| `index` (app)                 |     1.283,02 |      402,99 |         167,98 |         55,46 | Al abrir el sistema                    |
+| `vendor` (librerías estables) |            — |           — |         733,13 |        226,66 | Al abrir el sistema (en paralelo)      |
+| **Arranque (JS)**             | **1.283,02** |  **402,99** |     **901,11** |    **282,12** |                                        |
+| `Reportes` (con los gráficos) |   (en index) |             |         340,34 |        109,09 | Al abrir Reportes o apuntar al enlace  |
+| `Auditoria`                   |   (en index) |             |          18,40 |          7,43 | Al abrir Auditoría o apuntar al enlace |
+| `FormularioUsuario`           |   (en index) |             |           6,15 |          2,71 | Gestión de usuarios                    |
+| `CatalogoInsumos`             |   (en index) |             |           6,11 |          2,73 | Catálogo                               |
+| `RostroUsuario`               |   (en index) |             |           3,63 |          1,63 | Biometría                              |
+| `PruebaReconocimiento`        |   (en index) |             |           3,15 |          1,61 | Biometría                              |
+| `ListaUsuarios`               |   (en index) |             |           3,06 |          1,55 | Gestión de usuarios                    |
+| `PermisosUsuario`             |   (en index) |             |           2,85 |          1,43 | Gestión de usuarios                    |
+| `GestionBiometria`            |   (en index) |             |           1,53 |          0,90 | Biometría                              |
+| `usuarios`, `biometria` (API) |   (en index) |             |     0,62; 0,35 |    0,33; 0,21 | Compartidos por la gestión             |
+| `face-api.esm`                |     1.327,95 |      340,43 |       1.327,95 |        340,43 | Al encender la cámara (sin cambios)    |
+| `index.css` (fuentes aparte)  |         1,80 |        0,44 |           1,80 |          0,44 | Al abrir el sistema                    |
+
+Con `npx vite build --mode development` los números son casi iguales: antes `index` 1.280,70 kB
+(402,43 gzip); después `index` 166,94 (54,99) + `vendor` 733,13 (226,66) = 900,07 (281,65).
+
+Verificado en el navegador con `vite preview` del build nuevo: en `/ingresar` se piden solo
+`index`, `vendor`, el CSS y las fuentes.
+
+**Composición del archivo único de antes** (un build de medición con un archivo por paquete):
+`@mui/material` 271 kB, código de la app 223 kB, `@mui/x-charts` 220 kB (+ d3, gestos y
+utilidades de los gráficos, ~80 kB), `react-dom` 209 kB, `react-router` 95 kB, `@mui/system`
+40 kB, TanStack Query 35 kB, Popper 20 kB, Emotion ~20 kB, íconos 14 kB.
+
+> El pedido citaba ~871 kB (270 kB gzip) para el archivo principal; con el árbol actual (E6, con
+> los gráficos) el archivo único medía 1.283 kB (403 kB gzip), y esa es la línea de base de esta
+> tabla. Solo con la carga diferida, sin `vendor`, el principal quedaba en 864 kB (270 kB gzip).
+
+### Qué va en cada archivo
+
+- **`index` + `vendor` (arranque):** Ingreso, Inicio, la disposición (menú, barra, tiempo real,
+  notificaciones), "No encontrada" y **todo lo de al lado de la cama**: Recordatorios, pacientes
+  (búsqueda, ficha, registro, edición), prescripciones, suministros (Administrar medicamento,
+  insumos, historial) y estudios.
+- **Diferido, uno por pantalla:** Reportes (con `@mui/x-charts` y d3, que **no** están en el
+  arranque), Auditoría, Catálogo, Biometría (gestión, prueba, rostro de un usuario) y Usuarios
+  (lista, formulario, permisos). Rollup separa además lo que comparten (las API de usuarios y
+  biometría).
+- **`face-api`:** aparte desde antes (`import()` en
+  [`motorFaceApi.ts`](../frontend/src/biometria/motorFaceApi.ts)), y los modelos de `/models` se
+  piden en el mismo momento.
+
+### Mientras llega y si no llega
+
+- Cada pantalla diferida trae su propio `Suspense` con el **`Cargando` común** ("Cargando…") en
+  el lugar del contenido: el menú y la barra no se mueven. Es un límite por pantalla a propósito:
+  el router navega con transiciones de React, y con un solo `Suspense` arriba la pantalla anterior
+  quedaba quieta hasta que llegara el código, sin respuesta visible al toque. Así, al tocar una
+  opción del menú, el Cargando aparece enseguida (hay una prueba). Una vez descargada, la pantalla
+  abre sin Cargando de código; el de sus datos es el de siempre.
+- Si la descarga falla (red cortada, o una versión nueva publicada y el archivo viejo ya no
+  está), `pantallaDiferida` marca el error como `ErrorDeCargaDePantalla` y
+  [`LimiteDeCarga`](../frontend/src/componentes/LimiteDeCarga.tsx) muestra "No se pudo abrir esta
+  pantalla" con **Reintentar**, que recarga la página (así también trae la versión nueva). El menú
+  queda a mano y al ir a otra ruta el aviso se va. Cualquier otro error sigue de largo: no se
+  disfraza de falla de la red.
+
+### Precarga al apuntar
+
+[`usePrecargaAlApuntar`](../frontend/src/navegacion/precarga.ts) escucha `pointerover` y `focusin`
+en el documento: al pasar el puntero o llegar con el teclado a un enlace interno (menú, tareas del
+Inicio, cualquier lista) a una sección diferida, descarga sus pantallas una sola vez. No toca cada
+enlace ni el menú. En la PC con mouse se adelanta lo que tarda en decidir el clic; en una tablet
+el `pointerover` llega justo antes del toque, así que la ventaja es chica.
+
+### Decisiones
+
+Numeradas DF1–DF5 (decisiones del frontend) para no chocar con D70–D76 de arriba ni D80–D96 de
+[despliegue.md](despliegue.md).
+
+| #   | Decisión                                                                                             | Por qué                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| --- | ---------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| DF1 | Lo clínico de al lado de la cama queda en el arranque; se difieren Reportes, Auditoría y la gestión. | Medido: diferir también lo clínico ahorraba 156 kB (45 kB gzip) más al inicio, pero partía la app en ~40 archivos chicos (las pantallas clínicas se importan entre sí) y hacía que abrir la ficha o Administrar medicamento dependiera de la red: con el Wi‑Fi cortado un momento, o tras publicar una versión a mitad del turno, aparecería "No se pudo abrir esta pantalla" en la tarea más frecuente. Así, esas pantallas abren sin descarga y sin Cargando.                                                                                                                                         |
+| DF2 | `manualChunks` con un solo grupo, `vendor` (lista en `vite.config.ts`).                              | React, React DOM, React Router, `@mui/material` y su base (`system`, `utils`, `styled-engine`), Emotion, TanStack, Popper y `react-transition-group` cambian solo al actualizar dependencias, no en cada versión de la app: tras una publicación la tablet baja 168 kB en lugar de 901 kB. Costo medido en la primera carga: +37 kB (+12 kB gzip), porque `vendor` lleva todo lo de MUI que usa cualquier pantalla (también lo que solo usan Auditoría o Reportes: Auditoría pasó de 44 a 18 kB). Con HTTP/2 (nginx) el archivo extra no agrega una ida y vuelta: `index.html` lo precarga en paralelo. |
+| DF3 | Sin un segundo grupo manual para los gráficos (`@mui/x-charts`, d3).                                 | Rollup mete en un grupo manual también las dependencias de lo que se nombra. Con dos grupos, una dependencia compartida (por ejemplo `clsx` o `@babel/runtime`) podía caer en el de gráficos y `vendor` terminaría importándolo, cargando los gráficos al inicio. Los gráficos quedan dentro de `Reportes`, que solo usan el administrador y el médico.                                                                                                                                                                                                                                                 |
+| DF4 | No se subió `chunkSizeWarningLimit`.                                                                 | El aviso de Vite (>500 kB) sigue por `vendor` (733 kB) y `face-api` (1,3 MB). Son esperados, pero callar el aviso escondería que algo nuevo creció.                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| DF5 | "Reintentar" recarga la página en vez de reintentar el `import()`.                                   | `React.lazy` recuerda el error, y si el motivo fue una versión nueva, el archivo viejo ya no existe: recargar trae el `index.html` nuevo (que nginx sirve sin caché) con los nombres nuevos. En la pantalla que falló no había nada escrito que se pierda.                                                                                                                                                                                                                                                                                                                                              |
+
+### Pruebas
+
+- [`componentes/LimiteDeCarga.test.tsx`](../frontend/src/componentes/LimiteDeCarga.test.tsx): el
+  aviso con Reintentar, que otros errores siguen de largo y que se va al cambiar de ruta.
+- [`cargaDiferida.test.tsx`](../frontend/src/cargaDiferida.test.tsx), con la app completa: el
+  Cargando de siempre mientras llega el código (con el menú a mano), que aparece enseguida al tocar
+  una opción del menú (no queda la pantalla anterior) y, con un `import()` que falla
+  (`vi.mock` que lanza el error de red del navegador), el aviso con Reintentar y que desde el menú
+  se sigue trabajando.
+- [`navegacion/precarga.test.tsx`](../frontend/src/navegacion/precarga.test.tsx): el Inicio no
+  descarga Reportes, Auditoría ni `face-api` ni pide la cámara; pasar el puntero por "Reportes" en
+  el menú descarga esa pantalla (y no otra) y llegar con el teclado a "Ver quién cambió algo"
+  descarga la Auditoría.
+- Ajustadas: las pruebas de Reportes (`reportes`, `estadisticas`, `descargas`) y la de "Ver
+  reportes" del Inicio cargan `Reportes` en un `beforeAll`, como si ya estuviera en la caché. Antes
+  los gráficos se cargaban al importar el archivo de prueba; ahora, dentro de la primera búsqueda,
+  y con la suite completa en paralelo superaban los 5 s de espera. Ninguna aserción cambió.
+
+### Cómo volver a medir
+
+```bash
+cd frontend
+npx vite build                      # tabla de archivos con crudo y gzip
+npx vite build --mode development
+```
+
+Para ver la composición, sin instalar nada: un build con
+`build.rollupOptions.output.manualChunks` que devuelva un nombre por paquete de `node_modules`
+(en una configuración aparte, no en `vite.config.ts`).

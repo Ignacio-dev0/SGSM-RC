@@ -78,7 +78,12 @@ donde sigue el mapa de pantallas. El router de datos hace falta para `useBlocker
 [`useCambiosSinGuardar`](../frontend/src/utilidades/useCambiosSinGuardar.tsx) para preguntar antes
 de salir de un formulario sin guardar. `QueryClientProvider` y el tema quedan fuera del router. En
 las pruebas, `renderizarApp` arma lo mismo con `createMemoryRouter`: una pantalla con formulario
-se prueba con `renderizarApp`, no con `MemoryRouter`.
+se prueba con `renderizarApp`, no con `MemoryRouter`. **Carga diferida** (T702): Reportes,
+Auditoría y la gestión (usuarios, biometría, catálogo) se descargan al abrirlas o al apuntar a su
+enlace (`pantallaDiferida` + `usePrecargaAlApuntar`), con el `Cargando` común mientras llegan y
+`LimiteDeCarga` con "Reintentar" si fallan; lo de al lado de la cama va en el arranque. Por eso
+una pantalla diferida aparece de forma asíncrona en las pruebas (`findBy…`). Tamaños y decisiones
+en [rendimiento.md](rendimiento.md#frontend-carga-inicial).
 
 **Tiempo real.** `ProveedorTiempoReal` se monta en `Disposicion` (solo con sesión y
 `recordatorios.ver`): abre `/api/tiempo-real`, y cada aviso vuelve a pedir
