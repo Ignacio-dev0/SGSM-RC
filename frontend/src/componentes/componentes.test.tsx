@@ -133,12 +133,49 @@ describe('ModalConfirmacion', () => {
       />,
     );
     const motivo = screen.getByLabelText(/Motivo/);
-    expect(motivo).toHaveAccessibleDescription('Por ejemplo: error de carga');
+    // El mínimo se dice desde el principio, junto al ejemplo (F52): no recién al fallar.
+    expect(motivo).toHaveAccessibleDescription('Por ejemplo: error de carga (mínimo 3 letras)');
     await userEvent.type(motivo, 'ab');
     expect(motivo).toHaveAccessibleDescription('Escriba al menos 3 letras');
     expect(screen.getByRole('button', { name: 'Confirmar' })).toBeDisabled();
     await userEvent.type(motivo, 'c');
     expect(screen.getByRole('button', { name: 'Confirmar' })).toBeEnabled();
+  });
+
+  it('sin ejemplo propio, el requisito del motivo igual está visible antes de escribir (F52)', () => {
+    render(
+      <ModalConfirmacion
+        abierto
+        titulo="Corregir"
+        mensaje="Indique el motivo"
+        textoConfirmar="Confirmar"
+        pedirMotivo
+        alConfirmar={() => {}}
+        alCancelar={() => {}}
+      />,
+    );
+    expect(screen.getByLabelText(/Motivo/)).toHaveAccessibleDescription(
+      'Escriba el motivo (mínimo 3 letras)',
+    );
+  });
+
+  it('el texto del botón que descarta se puede cambiar (por ejemplo, "Seguir editando")', async () => {
+    const alCancelar = vi.fn();
+    render(
+      <ModalConfirmacion
+        abierto
+        titulo="¿Descartar lo cargado?"
+        mensaje="Hay datos sin guardar."
+        textoCancelar="Seguir editando"
+        textoConfirmar="Descartar"
+        peligroso
+        alConfirmar={() => {}}
+        alCancelar={alCancelar}
+      />,
+    );
+    expect(screen.queryByRole('button', { name: 'Cancelar' })).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Seguir editando' }));
+    expect(alCancelar).toHaveBeenCalled();
   });
 
   it('no se cierra tocando afuera: hay que elegir Cancelar (o Escape)', async () => {

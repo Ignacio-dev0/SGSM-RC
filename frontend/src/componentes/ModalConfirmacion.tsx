@@ -8,12 +8,14 @@ interface Props {
   titulo: string;
   mensaje: ReactNode;
   textoConfirmar: string;
+  /** Texto del botón que no confirma; por defecto "Cancelar". */
+  textoCancelar?: string;
   /** Pinta el botón de confirmar en rojo relleno (bajas, cancelaciones): aquí sí es lo principal. */
   peligroso?: boolean;
   /** Pide un motivo obligatorio antes de confirmar. */
   pedirMotivo?: boolean;
   etiquetaMotivo?: string;
-  /** Ejemplo o aclaración debajo del motivo. */
+  /** Ejemplo o aclaración debajo del motivo; el modal le agrega el mínimo de letras. */
   ayudaMotivo?: string;
   /** Impide confirmar mientras falte algo del contenido adicional (una fecha, una cama…). */
   confirmarDeshabilitado?: boolean;
@@ -27,6 +29,9 @@ interface Props {
 /** Largo mínimo del motivo: el mismo que exige el servidor. */
 const MINIMO_MOTIVO = 3;
 
+/** Qué se exige, dicho desde el principio y no recién cuando falla (F52). */
+const REQUISITO_MOTIVO = `mínimo ${MINIMO_MOTIVO} letras`;
+
 /**
  * Modal de confirmación estándar (T010) para acciones que modifican o eliminan datos. No se
  * cierra tocando afuera (se perdería el motivo escrito por un toque accidental): se sale con
@@ -37,6 +42,7 @@ export function ModalConfirmacion({
   titulo,
   mensaje,
   textoConfirmar,
+  textoCancelar = 'Cancelar',
   peligroso = false,
   pedirMotivo = false,
   etiquetaMotivo = 'Motivo',
@@ -82,7 +88,11 @@ export function ModalConfirmacion({
                 ? `Escriba al menos ${MINIMO_MOTIVO} letras`
                 : undefined
             }
-            {...(ayudaMotivo ? { ayuda: ayudaMotivo } : {})}
+            ayuda={
+              ayudaMotivo
+                ? `${ayudaMotivo} (${REQUISITO_MOTIVO})`
+                : `Escriba el motivo (${REQUISITO_MOTIVO})`
+            }
             required
             multiline
             minRows={2}
@@ -90,9 +100,18 @@ export function ModalConfirmacion({
           />
         )}
       </DialogContent>
-      <DialogActions sx={{ px: 3, pb: 3, gap: 1 }}>
+      {/* Si no entran en una fila (teléfono), el botón pasa abajo entero: nunca con el texto partido. */}
+      <DialogActions
+        sx={{
+          px: 3,
+          pb: 3,
+          gap: 1,
+          flexWrap: 'wrap',
+          '& .MuiButton-root': { whiteSpace: 'nowrap' },
+        }}
+      >
         <Boton variante="texto" onClick={alCancelar} disabled={cargando}>
-          Cancelar
+          {textoCancelar}
         </Boton>
         <Boton
           variante={peligroso ? 'peligroConfirmar' : 'principal'}
