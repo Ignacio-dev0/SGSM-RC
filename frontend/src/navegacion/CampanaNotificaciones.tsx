@@ -86,11 +86,12 @@ export function CampanaNotificaciones() {
                       </Boton>
                     )
                   }
-                  sx={{ opacity: n.leida ? 0.6 : 1, pr: 18 }}
+                  // Lo leído se distingue por el peso y la etiqueta, nunca bajando el contraste.
+                  sx={{ pr: n.leida ? 2 : 18 }}
                 >
                   <ListItemText
                     primary={n.mensaje}
-                    secondary={formatearFechaHora(n.creadaEn)}
+                    secondary={`${formatearFechaHora(n.creadaEn)}${n.leida ? ' · Leída' : ''}`}
                     slotProps={{ primary: { sx: { fontWeight: n.leida ? 400 : 700 } } }}
                   />
                 </ListItem>

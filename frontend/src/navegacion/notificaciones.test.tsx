@@ -38,6 +38,34 @@ describe('notificaciones (T112 · T407)', () => {
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
   });
 
+  it('las leídas se distinguen con una etiqueta, sin bajar el contraste', async () => {
+    renderizarApp('/', ADMIN);
+    servidor.use(
+      http.get('*/api/notificaciones', () =>
+        HttpResponse.json({
+          data: [
+            {
+              id: 2,
+              tipo: 'CUENTA_BLOQUEADA',
+              mensaje: 'Se bloqueó la cuenta de jperez',
+              leida: true,
+              creadaEn: '2026-10-07T10:00:00.000Z',
+            },
+          ],
+          meta: { noLeidas: 0 },
+        }),
+      ),
+    );
+
+    await userEvent.click(await screen.findByRole('button', { name: /^Notificaciones/ }));
+    const dialogo = screen.getByRole('dialog', { name: 'Notificaciones' });
+    const item = (await within(dialogo).findByText('Se bloqueó la cuenta de jperez')).closest(
+      'li',
+    )!;
+    expect(item).toHaveTextContent('Leída');
+    expect(getComputedStyle(item).opacity).not.toBe('0.6');
+  });
+
   it('si no se pueden cargar, lo dice en vez de "No hay notificaciones"', async () => {
     renderizarApp('/', ADMIN);
     servidor.use(
