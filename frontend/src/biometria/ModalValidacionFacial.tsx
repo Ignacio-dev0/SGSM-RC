@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import {
   Box,
   CircularProgress,
@@ -20,16 +20,24 @@ type Respuesta =
 
 interface Props {
   operacion: string;
+  /** Lo que se está confirmando (paciente, medicamento…), visible junto a la cámara. */
+  detalle?: ReactNode;
   alValidar: (validacionToken: string) => void;
   alCancelar: () => void;
 }
+
+/** Largo máximo de la descripción de la operación que acepta el servidor (queda en la auditoría). */
+const LARGO_OPERACION = 80;
+
+const recortar = (texto: string) =>
+  texto.length <= LARGO_OPERACION ? texto : `${texto.slice(0, LARGO_OPERACION - 1)}…`;
 
 /**
  * Validación facial reutilizable (T405 · CU10): pide el rostro del usuario de la sesión, lo
  * valida en el backend y devuelve el comprobante que exige la operación. Tres fallos cancelan
  * la operación (T407). Se usa en suministros y, más adelante, en estudios.
  */
-export function ModalValidacionFacial({ operacion, alValidar, alCancelar }: Props) {
+export function ModalValidacionFacial({ operacion, detalle, alValidar, alCancelar }: Props) {
   const usuario = useUsuario();
   const [intento, setIntento] = useState(0);
   const [enviando, setEnviando] = useState(false);
@@ -46,7 +54,7 @@ export function ModalValidacionFacial({ operacion, alValidar, alCancelar }: Prop
     try {
       const r = await api.post<Respuesta>('/api/biometria/validar', {
         patron: descriptor,
-        operacion,
+        operacion: recortar(operacion),
       });
       if (r.valido) {
         alValidar(r.validacionToken);
@@ -86,6 +94,20 @@ export function ModalValidacionFacial({ operacion, alValidar, alCancelar }: Prop
         <Typography color="text.secondary">{operacion}</Typography>
       </DialogTitle>
       <DialogContent>
+        {detalle && (
+          <Box
+            sx={{
+              mb: 2,
+              p: 2,
+              borderRadius: 2,
+              border: 1,
+              borderColor: 'divider',
+              bgcolor: 'background.default',
+            }}
+          >
+            {detalle}
+          </Box>
+        )}
         {final ? (
           <Alerta tipo="error">{final}</Alerta>
         ) : (

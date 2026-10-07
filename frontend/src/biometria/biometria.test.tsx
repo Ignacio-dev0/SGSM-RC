@@ -115,14 +115,20 @@ describe('validación facial reutilizable (T405 · CU10)', () => {
   afterEach(() => vi.unstubAllEnvs());
 
   /** Componente de prueba: una operación que pide la validación facial. */
-  function Operacion() {
+  function Operacion({
+    operacion = 'Administración de medicamento',
+    detalle,
+  }: {
+    operacion?: string;
+    detalle?: ReactNode;
+  }) {
     const { pedirValidacion, modalValidacion } = useValidacionFacial();
     const [resultado, setResultado] = useState('sin pedir');
     return (
       <>
         <button
           onClick={async () =>
-            setResultado((await pedirValidacion('Administración de medicamento')) ?? 'cancelada')
+            setResultado((await pedirValidacion(operacion, detalle)) ?? 'cancelada')
           }
         >
           Confirmar
@@ -161,6 +167,24 @@ describe('validación facial reutilizable (T405 · CU10)', () => {
       operacion: 'Administración de medicamento',
     });
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+  });
+
+  it('muestra lo que se confirma y recorta la descripción al largo que admite el servidor', async () => {
+    const enviados = responder({ valido: true, validacionToken: 'tok-1', similitud: 0.9 });
+    const larga =
+      'Administración de Amoxicilina + ácido clavulánico a Fernández de la Fuente, María Guadalupe';
+    conProveedores(<Operacion operacion={larga} detalle={<p>Cama A-01</p>} />);
+
+    await userEvent.click(screen.getByRole('button', { name: 'Confirmar' }));
+    expect(screen.getByRole('dialog', { name: /Confirmar con su rostro/ })).toHaveTextContent(
+      'Cama A-01',
+    );
+    await userEvent.click(screen.getByRole('button', { name: /Simular el rostro de enfermero/ }));
+
+    expect(await screen.findByText('Resultado: tok-1')).toBeInTheDocument();
+    const enviada = (enviados[0] as { operacion: string }).operacion;
+    expect(enviada.length).toBeLessThanOrEqual(80);
+    expect(enviada).toMatch(/^Administración de Amoxicilina/);
   });
 
   it('si no coincide informa los intentos restantes y deja reintentar', async () => {
