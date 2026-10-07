@@ -36,10 +36,3 @@ export const formatearFrecuencia = (horas: number) => `cada ${horas}${NBSP}h`;
 export const resumenPrescripcion = (
   p: Pick<Prescripcion, 'dosis' | 'unidadDosis' | 'frecuenciaHoras'>,
 ) => `${formatearDosis(p.dosis, p.unidadDosis)} ${formatearFrecuencia(p.frecuenciaHoras)}`;
-
-/** "AAAA-MM-DDTHH:mm" en hora local para los campos datetime-local. */
-export function aLocal(fecha: Date | string) {
-  const d = new Date(fecha);
-  d.setSeconds(0, 0);
-  return new Date(d.getTime() - d.getTimezoneOffset() * 60_000).toISOString().slice(0, 16);
-}

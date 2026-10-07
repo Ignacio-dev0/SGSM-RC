@@ -3,7 +3,8 @@
  * 24 ("19:00", no "07:00 p. m."): en una dosis, a. m./p. m. es una fuente de errores.
  */
 
-const ZONA = 'America/Argentina/Buenos_Aires';
+/** La zona de todas las horas que muestra la app (y de los campos de fecha y hora). */
+export const ZONA = 'America/Argentina/Buenos_Aires';
 
 export const formatearFecha = (iso: string | null | undefined) =>
   iso

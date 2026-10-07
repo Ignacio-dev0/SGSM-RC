@@ -5,7 +5,8 @@
 import type { CambiosPrescripcion } from '../../api/prescripciones';
 import type { Paciente, Prescripcion, Via } from '../../api/tipos';
 import { formatearFechaHora } from '../../utilidades/formato';
-import { aLocal, etiquetaVia, formatearDosis, formatearFrecuencia } from './etiquetas';
+import { campoFechaHora, isoDeCampoFechaHora } from '../../utilidades/campoFechaHora';
+import { etiquetaVia, formatearDosis, formatearFrecuencia } from './etiquetas';
 
 export interface Edicion {
   dosis: string;
@@ -21,7 +22,7 @@ export const desde = (p: Prescripcion): Edicion => ({
   unidadDosis: p.unidadDosis,
   frecuenciaHoras: String(p.frecuenciaHoras),
   via: p.via,
-  fin: p.fechaFin ? aLocal(p.fechaFin) : '',
+  fin: p.fechaFin ? campoFechaHora(p.fechaFin) : '',
   observaciones: p.observaciones ?? '',
 });
 
@@ -33,7 +34,7 @@ export function cambiosDe(p: Prescripcion, e: Edicion): Omit<CambiosPrescripcion
   if (e.unidadDosis !== original.unidadDosis) c.unidadDosis = e.unidadDosis.trim();
   if (e.frecuenciaHoras !== original.frecuenciaHoras) c.frecuenciaHoras = Number(e.frecuenciaHoras);
   if (e.via !== original.via) c.via = e.via as Via;
-  if (e.fin !== original.fin) c.fechaFin = e.fin ? new Date(e.fin).toISOString() : null;
+  if (e.fin !== original.fin) c.fechaFin = e.fin ? isoDeCampoFechaHora(e.fin) : null;
   if (e.observaciones !== original.observaciones) c.observaciones = e.observaciones;
   return c;
 }
