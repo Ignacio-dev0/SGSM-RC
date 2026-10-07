@@ -8,7 +8,7 @@ interface Props {
   titulo: string;
   mensaje: ReactNode;
   textoConfirmar: string;
-  /** Pinta el botón de confirmar en rojo (bajas, cancelaciones). */
+  /** Pinta el botón de confirmar en rojo relleno (bajas, cancelaciones): aquí sí es lo principal. */
   peligroso?: boolean;
   /** Pide un motivo obligatorio antes de confirmar. */
   pedirMotivo?: boolean;
@@ -95,7 +95,7 @@ export function ModalConfirmacion({
           Cancelar
         </Boton>
         <Boton
-          variante={peligroso ? 'peligro' : 'principal'}
+          variante={peligroso ? 'peligroConfirmar' : 'principal'}
           cargando={cargando}
           disabled={faltaMotivo || confirmarDeshabilitado}
           onClick={() => alConfirmar(pedirMotivo ? motivo.trim() : undefined)}

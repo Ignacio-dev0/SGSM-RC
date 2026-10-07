@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { useEffect, useRef, type ReactNode } from 'react';
 import { Alert, AlertTitle, type AlertColor } from '@mui/material';
 
 export type TipoAlerta = 'error' | 'advertencia' | 'exito' | 'info';
@@ -17,6 +17,11 @@ interface Props {
   alCerrar?: () => void;
   /** Acción extra a la derecha (por ejemplo, "Continuar igual"). */
   accion?: ReactNode;
+  /**
+   * Para avisos que piden una decisión (reingreso, prescripción duplicada): al aparecer se lleva
+   * a la vista y toma el foco, porque suele mostrarse lejos del botón que se acaba de tocar.
+   */
+  enfocar?: boolean;
 }
 
 /**
@@ -24,10 +29,21 @@ interface Props {
  * pantalla (`role="alert"`); los mensajes de éxito e información se anuncian sin interrumpir
  * (`role="status"`).
  */
-export function Alerta({ tipo, titulo, children, alCerrar, accion }: Props) {
+export function Alerta({ tipo, titulo, children, alCerrar, accion, enfocar = false }: Props) {
   const urgente = tipo === 'error' || tipo === 'advertencia';
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!enfocar) return;
+    // El `?.` cubre entornos sin scrollIntoView (jsdom). El foco no vuelve a desplazar la página.
+    ref.current?.scrollIntoView?.({ block: 'center' });
+    ref.current?.focus({ preventScroll: true });
+  }, [enfocar]);
+
   return (
     <Alert
+      ref={ref}
+      {...(enfocar ? { tabIndex: -1 } : {})}
       severity={severidad[tipo]}
       role={urgente ? 'alert' : 'status'}
       onClose={alCerrar}
