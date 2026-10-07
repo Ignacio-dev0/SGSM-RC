@@ -3,7 +3,7 @@ import { Box, Chip, InputAdornment } from '@mui/material';
 import PersonAddAlt1OutlinedIcon from '@mui/icons-material/PersonAddAlt1Outlined';
 import SearchIcon from '@mui/icons-material/Search';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { pacientesApi, useSalas } from '../../api/pacientes';
 import type { Paciente } from '../../api/tipos';
 import { useSesion } from '../../auth/useSesion';
@@ -75,6 +75,7 @@ function mensajeSinPacientes(
  */
 export function BusquedaPacientes() {
   const navegar = useNavigate();
+  const ubicacion = useLocation();
   const { tienePermiso } = useSesion();
   const puedeInternar = tienePermiso('pacientes.gestionar');
   const salas = useSalas();
@@ -178,7 +179,12 @@ export function BusquedaPacientes() {
           claveFila={(p) => p.id}
           cargando={consulta.isFetching}
           mensajeVacio={mensajeSinPacientes(aplicados, conFiltros, nombreSala)}
-          alTocarFila={(p) => navegar(`/pacientes/${p.id}`)}
+          // La ficha vuelve a esta búsqueda, con sus filtros, con la flecha Volver.
+          alTocarFila={(p) =>
+            navegar(`/pacientes/${p.id}`, {
+              state: { volverA: ubicacion.pathname + ubicacion.search },
+            })
+          }
           {...(consulta.data && {
             paginacion: { ...consulta.data.meta, alCambiarPagina: filtros.irAPagina },
           })}

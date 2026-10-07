@@ -116,7 +116,7 @@ export function FichaPaciente() {
     <>
       <EncabezadoPagina
         titulo={`${p.apellido}, ${p.nombre}`}
-        volverA="/pacientes"
+        volverA={(ubicacion.state as { volverA?: string } | null)?.volverA ?? '/pacientes'}
         subtitulo={
           <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap', mt: 0.5 }}>
             <span>DNI {p.dni}</span>
@@ -185,7 +185,10 @@ export function FichaPaciente() {
 
       <Tabs
         value={pestana}
-        onChange={(_e, v: Pestana) => setParametros({ pestana: v }, { replace: true })}
+        // Cambiar de pestaña conserva el estado (a qué búsqueda vuelve la flecha).
+        onChange={(_e, v: Pestana) =>
+          setParametros({ pestana: v }, { replace: true, state: ubicacion.state })
+        }
         sx={{ mb: 2, borderBottom: 1, borderColor: 'divider' }}
       >
         <Tab value="datos" label="Datos" />

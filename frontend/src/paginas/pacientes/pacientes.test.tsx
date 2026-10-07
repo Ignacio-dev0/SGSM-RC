@@ -622,9 +622,32 @@ describe('la búsqueda de pacientes queda en la URL (abrir una ficha y volver no
     expect(pedidos[0]?.has('estado')).toBe(false);
   });
 
-  it.todo(
-    'la flecha "Volver" de la ficha vuelve a la búsqueda con sus filtros (hoy es un enlace fijo a /pacientes)',
-  );
+  it('la flecha "Volver" de la ficha vuelve a la búsqueda con sus filtros', async () => {
+    servidor.use(
+      http.get('*/api/pacientes', () => listaDePacientes([paciente()])),
+      http.get('*/api/pacientes/7', () => HttpResponse.json({ data: paciente() })),
+    );
+    renderizarApp('/pacientes', ENFERMERO);
+
+    await userEvent.type(await screen.findByLabelText(/Buscar/), 'a-01');
+    const tabla = await screen.findByRole('table', { name: 'Pacientes' });
+    await userEvent.click(await within(tabla).findByText('Benítez, Rosa'));
+    await screen.findByRole('heading', { name: 'Benítez, Rosa' });
+    await userEvent.click(screen.getByRole('link', { name: 'Volver' }));
+
+    expect(await screen.findByLabelText(/Buscar/)).toHaveValue('a-01');
+  });
+
+  it('si se entra a la ficha sin pasar por la búsqueda, "Volver" lleva a Pacientes', async () => {
+    servidor.use(
+      http.get('*/api/pacientes', () => listaDePacientes([paciente()])),
+      http.get('*/api/pacientes/7', () => HttpResponse.json({ data: paciente() })),
+    );
+    renderizarApp('/pacientes/7', ENFERMERO);
+
+    await userEvent.click(await screen.findByRole('link', { name: 'Volver' }));
+    expect(await screen.findByLabelText(/Buscar/)).toHaveValue('');
+  });
 });
 
 describe('pacientes: cuando no hay nada que mostrar', () => {
