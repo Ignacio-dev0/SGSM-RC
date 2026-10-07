@@ -7,7 +7,7 @@ import { CampoTexto } from '../../componentes/CampoTexto';
 import { Selector } from '../../componentes/Selector';
 import { TAMANO_TACTIL_MINIMO } from '../../tema';
 import { AGRUPACIONES, OPCIONES_TIPO } from './etiquetas';
-import { ATAJOS, type Atajo } from './periodo';
+import { ATAJOS, enPalabrasDeLaPersona, type Atajo, type CampoFecha } from './periodo';
 import type { ParametrosReporte } from './useParametrosReporte';
 
 interface Props {
@@ -27,6 +27,30 @@ export function FiltrosReporte({ parametros, conAgrupacion, erroresServidor = {}
   const idPeriodo = useId();
   const salas = useSalas();
   const { efectivo, errores, valores } = parametros;
+  const opcionesSala = (salas.data ?? []).map((s) => ({ valor: String(s.id), etiqueta: s.nombre }));
+  // E6-16: la sala de un enlace viejo se ve aunque ya no exista (así se entiende el 404).
+  if (valores.salaId && !opcionesSala.some((o) => o.valor === valores.salaId)) {
+    opcionesSala.push({
+      valor: valores.salaId,
+      etiqueta: `Sala n.º ${valores.salaId}${salas.isSuccess ? ' (no existe)' : ''}`,
+    });
+  }
+
+  /** Una fecha: se escribe sin pedir nada y se confirma al salir del campo o con Enter (E6-13). */
+  const campoFecha = (campo: CampoFecha, etiqueta: string) => (
+    <CampoTexto
+      etiqueta={etiqueta}
+      type="date"
+      valor={parametros.valorDeFecha(campo)}
+      alCambiar={(v) => parametros.escribirFecha(campo, v)}
+      onBlur={() => parametros.confirmarFecha(campo)}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') parametros.confirmarFecha(campo);
+      }}
+      error={errores[campo] ?? enPalabrasDeLaPersona(erroresServidor[campo])}
+      slotProps={{ inputLabel: { shrink: true }, htmlInput: { max: parametros.hoy } }}
+    />
+  );
 
   return (
     <Box role="search" aria-label="Filtros" sx={{ mb: 2 }}>
@@ -68,28 +92,14 @@ export function FiltrosReporte({ parametros, conAgrupacion, erroresServidor = {}
           },
         }}
       >
-        <CampoTexto
-          etiqueta="Desde"
-          type="date"
-          valor={efectivo.desde}
-          alCambiar={(v) => parametros.cambiarFecha('desde', v)}
-          error={errores.desde ?? erroresServidor.desde}
-          slotProps={{ inputLabel: { shrink: true }, htmlInput: { max: parametros.hoy } }}
-        />
-        <CampoTexto
-          etiqueta="Hasta"
-          type="date"
-          valor={efectivo.hasta}
-          alCambiar={(v) => parametros.cambiarFecha('hasta', v)}
-          error={errores.hasta ?? erroresServidor.hasta}
-          slotProps={{ inputLabel: { shrink: true }, htmlInput: { max: parametros.hoy } }}
-        />
+        {campoFecha('desde', 'Desde')}
+        {campoFecha('hasta', 'Hasta')}
         <Selector
           etiqueta="Sala"
           valor={valores.salaId}
           alCambiar={(v) => parametros.fijar({ salaId: v })}
           textoVacio={salas.isLoading ? 'Cargando salas…' : 'Todas'}
-          opciones={(salas.data ?? []).map((s) => ({ valor: String(s.id), etiqueta: s.nombre }))}
+          opciones={opcionesSala}
           error={
             salas.isError
               ? `No se pudo cargar la lista de salas. ${mensajeDeError(salas.error)}`

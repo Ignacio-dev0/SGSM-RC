@@ -7,7 +7,7 @@ import { Tabla, type Columna } from '../../componentes/Tabla';
 interface Props<T> {
   titulo: string;
   /** Qué mide y en qué unidad, debajo del título. */
-  descripcion?: ReactNode;
+  descripcion: ReactNode;
   /** El gráfico, que toma el ancho del contenedor (sin ancho fijo: no hay scroll horizontal). */
   children: ReactNode;
   /** Los mismos datos del gráfico, para la tabla. */
@@ -16,12 +16,15 @@ interface Props<T> {
   claveFila: (fila: T) => string | number;
   /** Nivel del título en la página: h2 bajo el título de pantalla. */
   nivel?: 'h2' | 'h3';
+  /** La tabla empieza abierta (por ejemplo en el teléfono, donde el gráfico no alcanza). */
+  tablaAbierta?: boolean;
 }
 
 /**
  * Un gráfico con su título, su descripción y "Ver como tabla": un botón de mostrar y ocultar
  * (con `aria-expanded`) que despliega los mismos datos en una `Tabla` (tarjetas en teléfono),
- * para quien no ve el gráfico, usa lector de pantalla o necesita el número exacto.
+ * para quien no ve el gráfico, usa lector de pantalla o necesita el número exacto. La sección se
+ * describe con su texto, que termina diciendo dónde están los números (E6-18).
  */
 export function GraficoConTabla<T>({
   titulo,
@@ -31,25 +34,25 @@ export function GraficoConTabla<T>({
   filas,
   claveFila,
   nivel = 'h2',
+  tablaAbierta = false,
 }: Props<T>) {
   const id = useId();
-  const [conTabla, setConTabla] = useState(false);
+  const [conTabla, setConTabla] = useState(tablaAbierta);
 
   return (
     <Paper
       component="section"
       variant="outlined"
       aria-labelledby={`${id}-titulo`}
+      aria-describedby={`${id}-descripcion`}
       sx={{ p: { xs: 2, sm: 3 }, minWidth: 0 }}
     >
       <Typography id={`${id}-titulo`} variant="h6" component={nivel}>
         {titulo}
       </Typography>
-      {descripcion && (
-        <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-          {descripcion}
-        </Typography>
-      )}
+      <Typography id={`${id}-descripcion`} variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+        {descripcion} Los mismos números están en Ver como tabla.
+      </Typography>
       <Box sx={{ width: '100%', minWidth: 0, mt: 2 }}>{children}</Box>
       <Boton
         variante="texto"

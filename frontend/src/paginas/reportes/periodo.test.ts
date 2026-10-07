@@ -1,6 +1,7 @@
 import { esquemaReporteSuministros } from '../../../../backend/src/modulos/reportes/reportes.esquemas';
 import {
   diasEntre,
+  erroresDelCampoCambiado,
   hoyEnArgentina,
   periodoEfectivo,
   sumarDias,
@@ -80,9 +81,34 @@ describe('validación del período con los mismos mensajes que el servidor', () 
     ['"hasta" antes que "desde"', '2026-10-07', '2026-10-01'],
     ['más de 366 días', '2025-01-01', '2026-01-02'],
     ['366 días justos', '2025-01-01', '2026-01-01'],
-    ['una fecha mal escrita', '2026-13-45', '2026-10-07'],
   ])('%s', (_caso, desde, hasta) => {
     expect(validarPeriodo(desde, hasta)).toEqual(delServidor(desde, hasta));
+  });
+
+  // E6-13: quien usa el selector de fechas no escribe "AAAA-MM-DD": se le pide una fecha válida.
+  it('una fecha mal escrita falla en el mismo campo que en el servidor, con palabras de la persona', () => {
+    const errores = validarPeriodo('2026-13-45', '2026-10-07');
+    expect(Object.keys(errores)).toEqual(Object.keys(delServidor('2026-13-45', '2026-10-07')));
+    expect(errores).toEqual({ desde: 'Elija una fecha válida' });
+  });
+});
+
+describe('el error del rango, bajo el campo que se cambió (E6-13)', () => {
+  it('"desde" después de "hasta": si se cambió "desde", se dice desde ese campo', () => {
+    const errores = validarPeriodo('2026-10-10', '2026-10-07');
+    expect(erroresDelCampoCambiado(errores, 'desde')).toEqual({
+      desde: 'La fecha "desde" no puede ser posterior a "hasta"',
+    });
+    expect(erroresDelCampoCambiado(errores, 'hasta')).toEqual(errores);
+    expect(erroresDelCampoCambiado(errores, null)).toEqual(errores);
+  });
+
+  it('más de 366 días: bajo "Hasta" si fue la que se cambió', () => {
+    const errores = validarPeriodo('2025-01-01', '2026-01-05');
+    expect(erroresDelCampoCambiado(errores, 'hasta')).toEqual({
+      hasta: 'El período puede tener hasta 366 días',
+    });
+    expect(erroresDelCampoCambiado(errores, 'desde')).toEqual(errores);
   });
 });
 

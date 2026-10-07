@@ -99,17 +99,26 @@ export const reportesApi = {
   suministros: (p: PedidoPeriodo & { agruparPor: Agrupacion }) =>
     conMeta<ReporteSuministros>('/api/reportes/suministros', { ...p }),
   estadisticas: (p: PedidoPeriodo) => conMeta<Estadisticas>('/api/reportes/estadisticas', { ...p }),
-  /** El archivo con el nombre que le da el servidor ("reporte-suministros-20261007.pdf"). */
-  exportarSuministros: (formato: Formato, p: PedidoPeriodo & { agruparPor: Agrupacion }) =>
+  /**
+   * El archivo con el nombre que le da el servidor (con el período: ESC4). Con `senal` se puede
+   * cancelar mientras se arma.
+   */
+  exportarSuministros: (
+    formato: Formato,
+    p: PedidoPeriodo & { agruparPor: Agrupacion },
+    senal?: AbortSignal,
+  ) =>
     descargar(
       '/api/reportes/suministros/exportar',
       { formato, ...p },
       `reporte-suministros.${EXTENSION[formato]}`,
+      senal,
     ),
-  exportarEstadisticas: (formato: Formato, p: PedidoPeriodo) =>
+  exportarEstadisticas: (formato: Formato, p: PedidoPeriodo, senal?: AbortSignal) =>
     descargar(
       '/api/reportes/estadisticas/exportar',
       { formato, ...p },
       `estadisticas.${EXTENSION[formato]}`,
+      senal,
     ),
 };

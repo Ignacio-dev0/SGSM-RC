@@ -65,21 +65,49 @@ const esFecha = (f: string) =>
   !Number.isNaN(Date.parse(`${f}T00:00:00Z`)) &&
   new Date(`${f}T00:00:00Z`).toISOString().startsWith(f);
 
+export type CampoFecha = 'desde' | 'hasta';
+export type ErroresPeriodo = Partial<Record<CampoFecha, string>>;
+
+/** Quien usa el selector de fechas no escribe "AAAA-MM-DD": se le pide una fecha (E6-13). */
+export const FECHA_INVALIDA = 'Elija una fecha válida';
+const HASTA_ANTES = 'La fecha "hasta" no puede ser anterior a "desde"';
+const DESDE_DESPUES = 'La fecha "desde" no puede ser posterior a "hasta"';
+const MUY_LARGO = `El período puede tener hasta ${DIAS_MAXIMOS} días`;
+
+/** Un campo que quedó vacío: no se repone solo, se pide (E6-13). */
+export const fechaVacia = (campo: CampoFecha) => `Elija la fecha "${campo}"`;
+
 /**
- * Errores del período por campo, con los mensajes del servidor: así lo que se ve en el campo es
- * lo mismo que diría el 400 si el pedido llegara.
+ * Errores del período por campo, en el mismo campo que el servidor y con sus mensajes (salvo el
+ * de una fecha mal escrita, que se dice en palabras de la persona): lo que se ve es lo que diría
+ * el 400 si el pedido llegara.
  */
-export function validarPeriodo(desde: string, hasta: string): { desde?: string; hasta?: string } {
-  const errores: { desde?: string; hasta?: string } = {};
-  if (!esFecha(desde)) errores.desde = 'Indique la fecha "desde" como AAAA-MM-DD';
-  if (!esFecha(hasta)) errores.hasta = 'Indique la fecha "hasta" como AAAA-MM-DD';
+export function validarPeriodo(desde: string, hasta: string): ErroresPeriodo {
+  const errores: ErroresPeriodo = {};
+  if (!esFecha(desde)) errores.desde = FECHA_INVALIDA;
+  if (!esFecha(hasta)) errores.hasta = FECHA_INVALIDA;
   if (errores.desde || errores.hasta) return errores;
-  if (desde > hasta) return { hasta: 'La fecha "hasta" no puede ser anterior a "desde"' };
-  if (diasEntre(desde, hasta) > DIAS_MAXIMOS) {
-    return { desde: `El período puede tener hasta ${DIAS_MAXIMOS} días` };
-  }
+  if (desde > hasta) return { hasta: HASTA_ANTES };
+  if (diasEntre(desde, hasta) > DIAS_MAXIMOS) return { desde: MUY_LARGO };
   return {};
 }
+
+/**
+ * Un error del rango (el orden o el largo) es de los dos campos: se muestra bajo el que se acaba
+ * de cambiar, dicho desde ese campo. Sin saber cuál, queda donde lo pone el servidor.
+ */
+export function erroresDelCampoCambiado(
+  errores: ErroresPeriodo,
+  cambiado: CampoFecha | null,
+): ErroresPeriodo {
+  if (cambiado === 'desde' && errores.hasta === HASTA_ANTES) return { desde: DESDE_DESPUES };
+  if (cambiado === 'hasta' && errores.desde === MUY_LARGO) return { hasta: MUY_LARGO };
+  return errores;
+}
+
+/** Un error de fecha del servidor (un 400 que igual llegó), en las mismas palabras. */
+export const enPalabrasDeLaPersona = (mensaje: string | undefined) =>
+  mensaje && /AAAA-MM-DD/.test(mensaje) ? FECHA_INVALIDA : mensaje;
 
 /** "Del 01/10/2026 al 07/10/2026 (7 días)"; un solo día: "El 07/10/2026 (1 día)". */
 export function textoDelPeriodo(desde: string, hasta: string) {

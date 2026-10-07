@@ -1,22 +1,8 @@
 // Datos de ejemplo de E6 (reportes, estadísticas y descargas) para las pruebas de pantallas.
 import { http, HttpResponse } from 'msw';
 import type { Estadisticas, FilaReporte, ReporteSuministros } from '../api/reportes';
-import type { Sala, UsuarioSesion } from '../api/tipos';
-import { ADMIN, MEDICO } from './datos';
+import type { Sala } from '../api/tipos';
 import { servidor } from './servidor';
-
-/**
- * Los usuarios de datos.ts con los permisos que la semilla da en E6 (docs/reportes.md, S17):
- * el administrador ve, exporta y consulta la auditoría; el médico solo ve los reportes.
- */
-export const ADMIN_E6: UsuarioSesion = {
-  ...ADMIN,
-  permisos: [...ADMIN.permisos, 'auditoria.ver', 'reportes.exportar', 'reportes.ver'],
-};
-export const MEDICO_E6: UsuarioSesion = {
-  ...MEDICO,
-  permisos: [...MEDICO.permisos, 'reportes.ver'],
-};
 
 /** "Ahora" de las pruebas de reportes: el 07/10/2026 a las 12:00 de Argentina. */
 export const AHORA_REPORTES = '2026-10-07T15:00:00.000Z';
@@ -248,6 +234,25 @@ export function simularDescargas() {
 }
 
 const matchMediaOriginal = window.matchMedia;
+const getComputedStyleOriginal = window.getComputedStyle;
+
+/**
+ * jsdom no mide: @mui/x-charts lee el ancho de su contenedor con getComputedStyle y ahí recibe
+ * "100%" (100 px). Con esto los gráficos se dibujan como si tuvieran `ancho` píxeles.
+ */
+export function simularAnchoDeGraficos(ancho = 800) {
+  window.getComputedStyle = ((elemento: Element, pseudo?: string | null) => {
+    const estilo = getComputedStyleOriginal.call(window, elemento, pseudo);
+    if (!elemento.classList.contains('MuiChartsSurface-root')) return estilo;
+    return new Proxy(estilo, {
+      get: (objetivo, clave) => {
+        if (clave === 'width') return `${ancho}px`;
+        const valor: unknown = Reflect.get(objetivo, clave);
+        return typeof valor === 'function' ? (valor as () => unknown).bind(objetivo) : valor;
+      },
+    });
+  }) as typeof window.getComputedStyle;
+}
 
 /** jsdom no evalúa media queries: simula un teléfono (< 600 px) y/o el movimiento reducido. */
 export function simularPantalla({ telefono = false, movimientoReducido = false }) {
@@ -265,8 +270,9 @@ export function simularPantalla({ telefono = false, movimientoReducido = false }
   })) as typeof window.matchMedia;
 }
 
-/** Deshace fijarHoy y simularPantalla. */
+/** Deshace fijarHoy, simularPantalla y simularAnchoDeGraficos. */
 export function restaurarReportes() {
   vi.useRealTimers();
   window.matchMedia = matchMediaOriginal;
+  window.getComputedStyle = getComputedStyleOriginal;
 }

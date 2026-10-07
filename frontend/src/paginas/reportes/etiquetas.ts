@@ -1,10 +1,13 @@
 import type { Agrupacion, Formato, TipoInsumo } from '../../api/reportes';
 import type { Sala } from '../../api/tipos';
 
-/** Agrupaciones del reporte con las palabras de la pantalla ("usuario" es quien registró). */
+/**
+ * Agrupaciones del reporte con las palabras de la pantalla ("usuario" es quien registró). La de
+ * "insumo" junta medicamentos e insumos: "Insumo" solo, en el glosario, es lo no medicinal (E6-04).
+ */
 export const AGRUPACIONES: { valor: Agrupacion; etiqueta: string }[] = [
   { valor: 'paciente', etiqueta: 'Paciente' },
-  { valor: 'insumo', etiqueta: 'Insumo' },
+  { valor: 'insumo', etiqueta: 'Medicamento o insumo' },
   { valor: 'usuario', etiqueta: 'Personal' },
   { valor: 'dia', etiqueta: 'Día' },
 ];

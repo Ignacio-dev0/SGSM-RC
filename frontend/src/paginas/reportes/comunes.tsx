@@ -4,22 +4,27 @@ import { ErrorApi, erroresPorCampo } from '../../api/cliente';
 import { Alerta } from '../../componentes/Alerta';
 import { Boton } from '../../componentes/Boton';
 import { ErrorDeCarga } from '../../componentes/EstadoDeCarga';
+import type { useDescarga } from './Descargas';
 
 const conPunto = (texto: string) => (/[.!?]$/.test(texto) ? texto : `${texto}.`);
 
 /**
  * Por qué no hay reporte. Un 400 o un 404 dicen qué corregir (la sala no existe, el período es
- * largo): sin Reintentar, que daría lo mismo. Lo demás (el servidor, la red) se puede reintentar.
+ * largo): sin Reintentar, que daría lo mismo, pero con "Quitar filtros" si hay filtros (E6-16).
+ * Lo demás (el servidor, la red) se puede reintentar.
  */
 export function ErrorDelReporte({
   que,
   error,
   alReintentar,
+  alQuitarFiltros,
 }: {
   /** Qué no se pudo armar, con artículo: "el reporte de suministros". */
   que: string;
   error: unknown;
   alReintentar: () => void;
+  /** Solo si hay filtros que quitar. */
+  alQuitarFiltros?: (() => void) | undefined;
 }) {
   if (error instanceof ErrorApi && (error.estado === 400 || error.estado === 404)) {
     const { desde, hasta, ...otros } = erroresPorCampo(error);
@@ -28,7 +33,18 @@ export function ErrorDelReporte({
     if (mensajes.length > 0) texto = mensajes.map(conPunto).join(' ');
     else if (desde || hasta) texto = 'Revise las fechas del período.';
     const verbo = /^(los|las) /.test(que) ? 'pudieron' : 'pudo';
-    return <Alerta tipo="error">{`No se ${verbo} armar ${que}. ${conPunto(texto)}`}</Alerta>;
+    return (
+      <Alerta
+        tipo="error"
+        accion={
+          alQuitarFiltros && (
+            <Boton variante="texto" onClick={alQuitarFiltros}>
+              Quitar filtros
+            </Boton>
+          )
+        }
+      >{`No se ${verbo} armar ${que}. ${conPunto(texto)}`}</Alerta>
+    );
   }
   return <ErrorDeCarga que={que} error={error} alReintentar={alReintentar} />;
 }
@@ -82,3 +98,31 @@ export const PeriodoACorregir = ({ que }: { que: string }) => (
     Corrija el período para ver {que}.
   </Typography>
 );
+
+/**
+ * Lo que va donde se descarga (E6-15): los botones si hay algo para bajar (o si una descarga sigue
+ * en curso, aunque hayan cambiado los filtros); si no hay datos, lo dice; y a quien no descarga
+ * (el médico, decisión del lead) le dice a quién pedírselo.
+ */
+export function AccionesDeDescarga({
+  puedeExportar,
+  hayDatos,
+  actualizando,
+  descarga,
+}: {
+  puedeExportar: boolean;
+  hayDatos: boolean;
+  /** Lo que se ve es el resultado anterior mientras llega el nuevo. */
+  actualizando: boolean;
+  descarga: ReturnType<typeof useDescarga>;
+}) {
+  const nota = (texto: string) => (
+    <Typography variant="body2" color="text.secondary">
+      {texto}
+    </Typography>
+  );
+  if (!puedeExportar) return nota('Para descargar el archivo, pídaselo a un administrador.');
+  if (descarga.enCurso || (hayDatos && !actualizando)) return descarga.botones;
+  if (!hayDatos && !actualizando) return nota('No hay datos para descargar en este período');
+  return null;
+}

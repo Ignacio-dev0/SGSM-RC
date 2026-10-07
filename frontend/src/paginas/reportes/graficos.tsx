@@ -1,239 +1,261 @@
-import { useMediaQuery, useTheme } from '@mui/material';
+import { createContext, useContext } from 'react';
+import { Box } from '@mui/material';
 import { BarChart } from '@mui/x-charts/BarChart';
-import { LineChart } from '@mui/x-charts/LineChart';
-import { PieChart } from '@mui/x-charts/PieChart';
+import { ChartsText, type ChartsTextProps } from '@mui/x-charts/ChartsText';
 import type { Estadisticas, RecordatoriosDelPeriodo, TipoInsumo } from '../../api/reportes';
 import type { Columna } from '../../componentes/Tabla';
-import { formatearFechaSinZona, sinCortes } from '../../utilidades/formato';
+import { sinCortes } from '../../utilidades/formato';
 import { ColumnaPrincipal } from '../../utilidades/listado';
 import { TIPO_EN_SINGULAR } from './etiquetas';
-import { diaYMes, numero, porcentaje } from './formato';
+import { numero, porcentaje } from './formato';
 import { GraficoConTabla } from './GraficoConTabla';
-import { useColoresGrafico, useSinAnimacion } from './usarGraficos';
+import {
+  anchoDelEje,
+  etiquetasQueEntran,
+  maximoConLugar,
+  recortar,
+  RESGUARDO_EJE,
+} from './medidas';
+import { EJE, EJE_X, LETRAS, useAncho, useComunes } from './usarGraficos';
+
+// Gráficos de barras de las estadísticas (E6-01): cada barra con su nombre en el eje y su número
+// al final, un solo color por gráfico salvo lo que pide atención, y el mismo color para lo mismo
+// en toda la pantalla (usarGraficos.ts). La evolución diaria (líneas) está en evolucion.tsx.
 
 type Datos = Estadisticas['data'];
 
-/** Lo que tienen en común todos los gráficos: textos en castellano y la animación. */
-function useComunes() {
-  const telefono = useMediaQuery(useTheme().breakpoints.down('sm'), { noSsr: true });
-  return {
-    telefono,
-    colores: useColoresGrafico(),
-    props: {
-      skipAnimation: useSinAnimacion(),
-      localeText: { loading: 'Cargando…', noData: 'No hay datos en el período' },
-    },
-  };
-}
-
-/** Letra de los ejes legible a un brazo de distancia (la de la biblioteca es de 12 px). */
-const EJE = { tickLabelStyle: { fontSize: 14 }, labelStyle: { fontSize: 15 } } as const;
-/** El eje de abajo, con lugar para esa letra y el título (si no, la biblioteca oculta las marcas). */
-const EJE_X = { ...EJE, height: 56 } as const;
-
-/** Leyendas con el tamaño del texto de apoyo, no el de la biblioteca. */
-const LEYENDA = { '& .MuiChartsLegend-label': { fontSize: '0.9375rem' } } as const;
-
 const suministros = (v: number | null) => (v === null ? '' : `${numero(v)} suministros`);
 
-const PLURAL: Record<TipoInsumo, string> = { MEDICAMENTO: 'Medicamentos', INSUMO: 'Insumos' };
+/** Alto de una barra con su nombre al lado (dos renglones en los más usados). */
+const ALTO_BARRA = { simple: 44, doble: 56 };
+/** El eje de abajo y el aire de arriba. */
+const ALTO_FIJO = 70;
+/** Separa los renglones de un rótulo del eje (ChartsText los parte ahí). */
+const SALTO = String.fromCharCode(10);
+/** Márgenes a los costados del área de las barras. */
+const MARGEN = { left: 8, right: 16 };
 
-// ─── Insumos más usados (barras horizontales) ─────────────────────────────────────────────
+/**
+ * Lo común de las barras horizontales con nombre: el eje de los nombres medido contra el ancho
+ * del gráfico (E6-03) y el máximo del eje de los valores estirado para que el número de la barra
+ * más larga entre a su derecha, porque la biblioteca recorta lo que sale del área (E6-17).
+ */
+function useBarrasConNombre(
+  renglones: string[],
+  valores: number[],
+  etiquetas: string[],
+  cortas: string[] = etiquetas,
+) {
+  const [medir, ancho] = useAncho();
+  const anchoEje = anchoDelEje(renglones, ancho);
+  const area = ancho > 0 ? ancho - anchoEje - MARGEN.left - MARGEN.right : 0;
+  const queEntran = etiquetasQueEntran(etiquetas, cortas, area);
+  const max = maximoConLugar(Math.max(0, ...valores), queEntran, area);
+  return { medir, anchoEje, etiquetas: queEntran, max: max === undefined ? {} : { max } };
+}
+
+/**
+ * Los nombres del eje en dos renglones. La biblioteca mide el texto del eje como si fuera un
+ * solo renglón y lo corta con "…": por eso el eje recibe una clave corta y este rótulo la cambia
+ * por los dos renglones, ya recortados al ancho del eje.
+ */
+const RenglonesDelEje = createContext<ReadonlyMap<string, string>>(new Map());
+
+function RotuloEnRenglones(props: ChartsTextProps) {
+  const renglones = useContext(RenglonesDelEje);
+  return <ChartsText {...props} text={renglones.get(props.text) ?? props.text} />;
+}
+
+// ─── Medicamentos e insumos más usados ────────────────────────────────────────────────────
 
 type Insumo = Datos['insumosMasUsados'][number];
-const nombreInsumo = (i: Insumo) => sinCortes(`${i.nombre} · ${i.presentacion}`);
+
+const presentacionDe = (i: Insumo) => sinCortes(i.presentacion);
+const nombreInsumo = (i: Insumo) =>
+  i.presentacion ? sinCortes(`${i.nombre} · ${i.presentacion}`) : i.nombre;
 
 const COLUMNAS_INSUMOS: Columna<Insumo>[] = [
-  { titulo: 'Insumo', valor: (i) => <ColumnaPrincipal>{nombreInsumo(i)}</ColumnaPrincipal> },
+  {
+    // E6-04: el ranking junta medicamentos e insumos ("Insumo" solo es lo no medicinal).
+    titulo: 'Medicamento o insumo',
+    valor: (i) => <ColumnaPrincipal>{nombreInsumo(i)}</ColumnaPrincipal>,
+  },
   { titulo: 'Tipo', valor: (i) => TIPO_EN_SINGULAR[i.tipo] },
   { titulo: 'Suministros', alinear: 'right', valor: (i) => numero(i.suministros) },
 ];
 
-export function GraficoInsumos({ insumos }: { insumos: Insumo[] }) {
+export function GraficoMasUsados({ insumos }: { insumos: Insumo[] }) {
   const { telefono, colores, props } = useComunes();
+  // E6-03: el nombre y la presentación en dos renglones; el eje, del ancho del más largo.
+  const etiquetas = insumos.map((i) => numero(i.suministros));
+  const { medir, anchoEje, max } = useBarrasConNombre(
+    insumos.flatMap((i) => [i.nombre, presentacionDe(i)]),
+    insumos.map((i) => i.suministros),
+    etiquetas,
+  );
+  const clave = (i: Insumo) => `insumo-${i.insumoId}`;
+  const lugar = anchoEje - RESGUARDO_EJE;
+  const renglones = new Map(
+    insumos.map((i) => [
+      clave(i),
+      [recortar(i.nombre, lugar), recortar(presentacionDe(i), lugar)].filter(Boolean).join(SALTO),
+    ]),
+  );
+  const porId = new Map(insumos.map((i) => [i.insumoId, i]));
   return (
     <GraficoConTabla
-      titulo="Insumos más usados"
-      descripcion="Los 10 que se usaron en más suministros del período, de más a menos."
+      titulo="Medicamentos e insumos más usados"
+      descripcion="Los 10 medicamentos o insumos que se usaron en más suministros del período, de más a menos."
       columnas={COLUMNAS_INSUMOS}
       filas={insumos}
       claveFila={(i) => i.insumoId}
+      // En el teléfono el eje no alcanza para los nombres largos: los números, en la tabla.
+      tablaAbierta={telefono}
     >
-      <BarChart
-        {...props}
-        height={Math.max(160, insumos.length * 44 + 70)}
-        layout="horizontal"
-        yAxis={[
-          {
-            ...EJE,
-            scaleType: 'band',
-            data: insumos.map(nombreInsumo),
-            width: telefono ? 130 : 240,
-          },
-        ]}
-        xAxis={[{ ...EJE_X, label: 'Suministros (cantidad)', tickMinStep: 1 }]}
-        series={[
-          {
-            data: insumos.map((i) => i.suministros),
-            label: 'Suministros',
-            color: colores.info,
-            // El número junto a cada barra, sobre el fondo (buen contraste en los dos temas).
-            barLabel: 'value',
-            barLabelPlacement: 'outside',
-            valueFormatter: suministros,
-          },
-        ]}
-        hideLegend
-        margin={{ right: 32 }}
-      />
+      <Box ref={medir}>
+        <RenglonesDelEje.Provider value={renglones}>
+          <BarChart
+            {...props}
+            height={Math.max(160, insumos.length * ALTO_BARRA.doble + ALTO_FIJO)}
+            layout="horizontal"
+            yAxis={[
+              {
+                ...EJE,
+                scaleType: 'band',
+                data: insumos.map((i) => i.insumoId),
+                width: anchoEje,
+                valueFormatter: (id: number, contexto) => {
+                  const i = porId.get(id);
+                  if (!i) return '';
+                  return contexto.location === 'tick' ? clave(i) : nombreInsumo(i);
+                },
+              },
+            ]}
+            xAxis={[{ ...EJE_X, label: 'Suministros (cantidad)', tickMinStep: 1, ...max }]}
+            series={[
+              {
+                data: insumos.map((i) => i.suministros),
+                label: 'Suministros',
+                color: colores.suministros,
+                // El número junto a cada barra, sobre el fondo (buen contraste en los dos temas).
+                barLabel: (item) => etiquetas[item.dataIndex] ?? null,
+                barLabelPlacement: 'outside',
+                valueFormatter: suministros,
+              },
+            ]}
+            hideLegend
+            // Los números del otro eje no están en el mapa y quedan como vienen.
+            slots={{ axisTickLabel: RotuloEnRenglones }}
+            sx={LETRAS}
+            margin={MARGEN}
+          />
+        </RenglonesDelEje.Provider>
+      </Box>
     </GraficoConTabla>
   );
 }
 
-// ─── Consumo por tipo (torta) ─────────────────────────────────────────────────────────────
+// ─── Consumo por tipo ─────────────────────────────────────────────────────────────────────
+
+/** Los mismos nombres que los indicadores y las líneas de la evolución. */
+const CON_TIPO: Record<TipoInsumo, string> = {
+  MEDICAMENTO: 'Con medicamentos',
+  INSUMO: 'Con insumos',
+};
 
 interface Porcion {
   tipo: TipoInsumo;
   suministros: number;
-  porcentaje: number;
+  /** Sobre el total de suministros del período (null si no hubo ninguno). */
+  porcentaje: number | null;
 }
 
-const COLUMNAS_CONSUMO: Columna<Porcion>[] = [
-  { titulo: 'Tipo', valor: (p) => <ColumnaPrincipal>{PLURAL[p.tipo]}</ColumnaPrincipal> },
-  { titulo: 'Suministros', alinear: 'right', valor: (p) => numero(p.suministros) },
-  { titulo: 'Porcentaje', alinear: 'right', valor: (p) => porcentaje(p.porcentaje) },
-];
+const conPorcentaje = (p: Porcion) =>
+  p.porcentaje === null
+    ? numero(p.suministros)
+    : `${numero(p.suministros)} (${porcentaje(p.porcentaje)})`;
 
-export function GraficoConsumo({ consumo }: { consumo: Datos['consumoPorTipo'] }) {
-  const { telefono, colores, props } = useComunes();
-  const suma = consumo.reduce((t, c) => t + c.suministros, 0) || 1;
+export function GraficoConsumo({
+  consumo,
+  total,
+}: {
+  consumo: Datos['consumoPorTipo'];
+  /** Suministros distintos del período (totales.suministros). */
+  total: number;
+}) {
+  const { colores, props } = useComunes();
+  // E6-02: sobre el total del período, no sobre la suma de los dos (que duplica a los que tienen
+  // medicamentos e insumos): por eso pueden sumar más de 100 %.
   const porciones: Porcion[] = consumo.map((c) => ({
     ...c,
-    porcentaje: Math.round((c.suministros / suma) * 1000) / 10,
+    porcentaje: total > 0 ? Math.round((c.suministros / total) * 1000) / 10 : null,
   }));
+  const nombres = porciones.map((p) => CON_TIPO[p.tipo]);
+  // En el teléfono, si "31 (64,6 %)" no entra al lado de la barra, queda "31" (el resto, en la tabla).
+  const { medir, anchoEje, max, etiquetas } = useBarrasConNombre(
+    nombres,
+    porciones.map((p) => p.suministros),
+    porciones.map(conPorcentaje),
+    porciones.map((p) => numero(p.suministros)),
+  );
+  const columnas: Columna<Porcion>[] = [
+    { titulo: 'Tipo', valor: (p) => <ColumnaPrincipal>{CON_TIPO[p.tipo]}</ColumnaPrincipal> },
+    { titulo: 'Suministros', alinear: 'right', valor: (p) => numero(p.suministros) },
+    {
+      titulo: `De los ${numero(total)} suministros del período`,
+      alinear: 'right',
+      valor: (p) => (p.porcentaje === null ? '—' : porcentaje(p.porcentaje)),
+    },
+  ];
   return (
     <GraficoConTabla
       titulo="Consumo por tipo"
-      descripcion="Suministros con medicamentos y con insumos. Uno con los dos cuenta en ambos."
-      columnas={COLUMNAS_CONSUMO}
+      descripcion={`Suministros con algún medicamento y con algún insumo. El porcentaje es sobre los ${numero(total)} suministros del período: uno con los dos cuenta en ambos, por eso pueden sumar más de ${porcentaje(100)}.`}
+      columnas={columnas}
       filas={porciones}
       claveFila={(p) => p.tipo}
     >
-      <PieChart
-        {...props}
-        height={240}
-        series={[
-          {
-            data: porciones.map((p) => ({
-              id: p.tipo,
-              value: p.suministros,
-              // La leyenda dice el número: el color solo acompaña.
-              label: `${PLURAL[p.tipo]}: ${numero(p.suministros)} (${porcentaje(p.porcentaje)})`,
-              color: p.tipo === 'MEDICAMENTO' ? colores.primario : colores.secundario,
-            })),
-            innerRadius: '45%',
-            paddingAngle: 2,
-            cornerRadius: 4,
-            valueFormatter: (v) => suministros(v.value),
-          },
-        ]}
-        sx={LEYENDA}
-        slotProps={{
-          legend: {
-            direction: telefono ? 'horizontal' : 'vertical',
-            position: telefono
-              ? { vertical: 'bottom', horizontal: 'center' }
-              : { vertical: 'middle', horizontal: 'end' },
-          },
-        }}
-      />
+      <Box ref={medir}>
+        <BarChart
+          {...props}
+          height={porciones.length * ALTO_BARRA.simple + ALTO_FIJO}
+          layout="horizontal"
+          yAxis={[
+            {
+              ...EJE,
+              scaleType: 'band',
+              data: nombres,
+              width: anchoEje,
+              // Cada barra con el color de su tipo, el mismo que su línea en la evolución.
+              colorMap: {
+                type: 'ordinal',
+                values: nombres,
+                colors: porciones.map((p) =>
+                  p.tipo === 'MEDICAMENTO' ? colores.medicamentos : colores.insumos,
+                ),
+              },
+            },
+          ]}
+          xAxis={[{ ...EJE_X, label: 'Suministros (cantidad)', tickMinStep: 1, ...max }]}
+          series={[
+            {
+              data: porciones.map((p) => p.suministros),
+              label: 'Suministros',
+              barLabel: (item) => etiquetas[item.dataIndex] ?? null,
+              barLabelPlacement: 'outside',
+              valueFormatter: suministros,
+            },
+          ]}
+          hideLegend
+          sx={LETRAS}
+          margin={MARGEN}
+        />
+      </Box>
     </GraficoConTabla>
   );
 }
 
-// ─── Evolución diaria (líneas) ────────────────────────────────────────────────────────────
-
-type Dia = Datos['evolucionDiaria'][number];
-
-const COLUMNAS_EVOLUCION: Columna<Dia>[] = [
-  {
-    titulo: 'Día',
-    valor: (d) => <ColumnaPrincipal>{formatearFechaSinZona(d.fecha)}</ColumnaPrincipal>,
-  },
-  { titulo: 'Suministros', alinear: 'right', valor: (d) => numero(d.suministros) },
-  { titulo: 'Con medicamentos', alinear: 'right', valor: (d) => numero(d.medicamentos) },
-  { titulo: 'Con insumos', alinear: 'right', valor: (d) => numero(d.insumos) },
-];
-
-export function GraficoEvolucion({ dias }: { dias: Dia[] }) {
-  const { telefono, colores, props } = useComunes();
-  // Con muchos días, los puntos taparían la línea (en el teléfono, antes).
-  const conMarcas = dias.length <= (telefono ? 14 : 31);
-  return (
-    <GraficoConTabla
-      titulo="Evolución diaria"
-      descripcion="Suministros de cada día del período, también los días sin ninguno."
-      columnas={COLUMNAS_EVOLUCION}
-      filas={dias}
-      claveFila={(d) => d.fecha}
-    >
-      <LineChart
-        {...props}
-        height={280}
-        xAxis={[
-          {
-            scaleType: 'point',
-            data: dias.map((d) => d.fecha),
-            valueFormatter: (f: string) => diaYMes(f),
-            label: 'Día',
-            ...EJE_X,
-          },
-        ]}
-        yAxis={[{ ...EJE, label: 'Suministros por día', tickMinStep: 1, min: 0 }]}
-        series={[
-          {
-            id: 'suministros',
-            data: dias.map((d) => d.suministros),
-            label: 'Suministros',
-            color: colores.info,
-            shape: 'circle',
-            curve: 'linear',
-            showMark: conMarcas,
-            valueFormatter: suministros,
-          },
-          {
-            id: 'medicamentos',
-            data: dias.map((d) => d.medicamentos),
-            label: 'Con medicamentos',
-            color: colores.primario,
-            shape: 'square',
-            curve: 'linear',
-            showMark: conMarcas,
-            valueFormatter: suministros,
-          },
-          {
-            id: 'insumos',
-            data: dias.map((d) => d.insumos),
-            label: 'Con insumos',
-            color: colores.secundario,
-            shape: 'triangle',
-            curve: 'linear',
-            showMark: conMarcas,
-            valueFormatter: suministros,
-          },
-        ]}
-        // Además del color y la forma de los puntos, cada línea tiene su trazo.
-        sx={{
-          ...LEYENDA,
-          '& .MuiLineChart-line[data-series="medicamentos"]': { strokeDasharray: '8 4' },
-          '& .MuiLineChart-line[data-series="insumos"]': { strokeDasharray: '2 4' },
-        }}
-      />
-    </GraficoConTabla>
-  );
-}
-
-// ─── Recordatorios (barra apilada) ────────────────────────────────────────────────────────
+// ─── Recordatorios del período ────────────────────────────────────────────────────────────
 
 interface Categoria {
   id: string;
@@ -254,27 +276,24 @@ export function GraficoRecordatorios({
   periodo: string;
 }) {
   const { colores, props } = useComunes();
-  const categorias = [
-    { id: 'aTiempo', etiqueta: 'A tiempo', valor: r.aTiempo, color: colores.primario },
-    { id: 'tarde', etiqueta: 'Tarde', valor: r.tarde, color: colores.info },
-    {
-      id: 'noAdministrados',
-      etiqueta: 'No administrados',
-      valor: r.noAdministrados,
-      color: colores.secundario,
-    },
-    {
-      id: 'vencidosSinAtender',
-      etiqueta: 'Vencidos sin atender',
-      valor: r.vencidosSinAtender,
-      color: colores.aviso,
-    },
+  const categorias: Categoria[] = [
+    { id: 'aTiempo', etiqueta: 'A tiempo', valor: r.aTiempo },
+    { id: 'tarde', etiqueta: 'Tarde', valor: r.tarde },
+    { id: 'noAdministrados', etiqueta: 'No administrados', valor: r.noAdministrados },
+    { id: 'vencidosSinAtender', etiqueta: 'Vencidos sin atender', valor: r.vencidosSinAtender },
   ];
+  const nombres = categorias.map((c) => c.etiqueta);
+  const etiquetas = categorias.map((c) => numero(c.valor));
+  const { medir, anchoEje, max } = useBarrasConNombre(
+    nombres,
+    categorias.map((c) => c.valor),
+    etiquetas,
+  );
   const pendientes =
     r.pendientes === 1
       ? ' 1 sigue pendiente y no cuenta.'
       : r.pendientes > 1
-        ? ` ${r.pendientes} siguen pendientes y no cuentan.`
+        ? ` ${numero(r.pendientes)} siguen pendientes y no cuentan.`
         : '';
   return (
     <GraficoConTabla
@@ -284,31 +303,43 @@ export function GraficoRecordatorios({
       filas={categorias}
       claveFila={(c) => c.id}
     >
-      <BarChart
-        {...props}
-        height={150}
-        layout="horizontal"
-        yAxis={[
-          {
-            scaleType: 'band',
-            data: ['Recordatorios'],
-            width: 0,
-            disableTicks: true,
-            disableLine: true,
-          },
-        ]}
-        xAxis={[{ ...EJE_X, label: 'Recordatorios (cantidad)', tickMinStep: 1 }]}
-        sx={LEYENDA}
-        // Sin números dentro de las barras (no tendrían contraste): la leyenda los dice.
-        series={categorias.map((c) => ({
-          id: c.id,
-          data: [c.valor],
-          label: `${c.etiqueta}: ${numero(c.valor)}`,
-          stack: 'recordatorios',
-          color: c.color,
-          valueFormatter: (v: number | null) => (v === null ? '' : `${numero(v)} recordatorios`),
-        }))}
-      />
+      <Box ref={medir}>
+        <BarChart
+          {...props}
+          height={categorias.length * ALTO_BARRA.simple + ALTO_FIJO}
+          layout="horizontal"
+          yAxis={[
+            {
+              ...EJE,
+              scaleType: 'band',
+              data: nombres,
+              width: anchoEje,
+              // Un solo color neutro; el de aviso, solo para lo que pide atención.
+              colorMap: {
+                type: 'ordinal',
+                values: nombres,
+                colors: categorias.map((c) =>
+                  c.id === 'vencidosSinAtender' ? colores.vencidos : colores.recordatorios,
+                ),
+              },
+            },
+          ]}
+          xAxis={[{ ...EJE_X, label: 'Recordatorios (cantidad)', tickMinStep: 1, ...max }]}
+          series={[
+            {
+              data: categorias.map((c) => c.valor),
+              label: 'Recordatorios',
+              barLabel: (item) => etiquetas[item.dataIndex] ?? null,
+              barLabelPlacement: 'outside',
+              valueFormatter: (v: number | null) =>
+                v === null ? '' : `${numero(v)} recordatorios`,
+            },
+          ]}
+          hideLegend
+          sx={LETRAS}
+          margin={MARGEN}
+        />
+      </Box>
     </GraficoConTabla>
   );
 }

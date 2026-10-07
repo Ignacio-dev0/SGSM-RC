@@ -1,5 +1,7 @@
-import { Typography } from '@mui/material';
+import { Box, Button, Typography } from '@mui/material';
+import CallSplitOutlinedIcon from '@mui/icons-material/CallSplitOutlined';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
+import { Link as EnlaceRouter, useSearchParams } from 'react-router-dom';
 import { useSalas } from '../../api/pacientes';
 import { reportesApi, type Agrupacion, type FilaReporte } from '../../api/reportes';
 import { useSesion } from '../../auth/useSesion';
@@ -7,7 +9,13 @@ import { Tabla, type Columna } from '../../componentes/Tabla';
 import { sinCortes } from '../../utilidades/formato';
 import { ColumnaPrincipal, Recargando } from '../../utilidades/listado';
 import { formatearDosis } from '../prescripciones/etiquetas';
-import { ErrorDelReporte, PeriodoACorregir, QuitarFiltros, ResumenYDescargas } from './comunes';
+import {
+  AccionesDeDescarga,
+  ErrorDelReporte,
+  PeriodoACorregir,
+  QuitarFiltros,
+  ResumenYDescargas,
+} from './comunes';
 import { erroresDeFecha, mensajeSinSuministros } from './mensajes';
 import { useDescarga } from './Descargas';
 import { etiquetaAgrupacion, salaDelResumen, TIPO_EN_SINGULAR, tipoDelResumen } from './etiquetas';
@@ -57,22 +65,25 @@ function columnasDe(agruparPor: Agrupacion): Columna<FilaVista>[] {
       valor: (f) => enNegrita(f, numero(f.suministros)),
     },
     {
-      titulo: 'Unidades',
+      // E6-05: fuera de la agrupación por medicamento o insumo, el número mezcla unidades.
+      titulo:
+        agruparPor === 'insumo' ? 'Unidades' : 'Volumen (suma de cantidades de distinta unidad)',
       alinear: 'right',
       valor: (f) => enNegrita(f, f.total ? f.total.unidades : unidadesDe(f)),
     },
   ];
 }
 
-/** Lo que aclara cada agrupación sobre cómo se suma (D42 · D43). */
+const VOLUMEN =
+  'Volumen: los números suman cantidades de distinta unidad (mg, comprimidos, pañales…). Sirven para comparar, no son una dosis.';
+
+/** Lo que aclara cada agrupación sobre cómo se suma (D42 · D43), arriba de la tabla. */
 const NOTAS: Record<Agrupacion, string> = {
   insumo:
-    'Una fila por insumo y unidad. Un suministro con varios insumos cuenta en cada insumo y una sola vez en el total.',
-  paciente:
-    'Las unidades suman cantidades de distinta unidad (mg, comprimidos, pañales…): sirven para comparar volumen, no como dosis. Para ver cada unidad, agrupe por insumo.',
-  usuario:
-    'Las unidades suman cantidades de distinta unidad (mg, comprimidos, pañales…): sirven para comparar volumen, no como dosis. Para ver cada unidad, agrupe por insumo.',
-  dia: 'Solo aparecen los días con suministros. Las unidades suman cantidades de distinta unidad: para ver cada unidad, agrupe por insumo.',
+    'Una fila por medicamento o insumo y unidad. Un suministro con varios cuenta en cada fila y una sola vez en el total.',
+  paciente: VOLUMEN,
+  usuario: VOLUMEN,
+  dia: `Solo aparecen los días con suministros. ${VOLUMEN}`,
 };
 
 /**
@@ -82,6 +93,10 @@ const NOTAS: Record<Agrupacion, string> = {
  */
 export function ReporteSuministros({ parametros }: { parametros: ParametrosReporte }) {
   const { tienePermiso } = useSesion();
+  const [busqueda] = useSearchParams();
+  // Los mismos filtros, agrupado por medicamento o insumo: cada unidad en su fila (E6-05).
+  const porUnidad = new URLSearchParams(busqueda);
+  porUnidad.set('agruparPor', 'insumo');
   const salas = useSalas();
   const { agruparPor } = parametros;
   const pedido = { ...parametros.pedido, agruparPor };
@@ -91,8 +106,9 @@ export function ReporteSuministros({ parametros }: { parametros: ParametrosRepor
     enabled: parametros.valido,
     placeholderData: keepPreviousData,
   });
-  const { botones, aviso } = useDescarga((formato) =>
-    reportesApi.exportarSuministros(formato, pedido),
+  const descarga = useDescarga(
+    (formato, senal) => reportesApi.exportarSuministros(formato, pedido, senal),
+    { periodo: pedido, clave: JSON.stringify(pedido) },
   );
 
   const datos = consulta.data;
@@ -123,8 +139,6 @@ export function ReporteSuministros({ parametros }: { parametros: ParametrosRepor
   const sala = salaDelResumen(p.salaId, salas.data);
   const resumen = `${textoDelPeriodo(p.desde, p.hasta)} · ${sala} · ${tipoDelResumen(p.tipo)}`;
   const sinResultados = consulta.isSuccess && !consulta.isFetching && filas.length === 0;
-  const puedeDescargar =
-    tienePermiso('reportes.exportar') && filas.length > 0 && !consulta.isPlaceholderData;
 
   return (
     <>
@@ -140,11 +154,42 @@ export function ReporteSuministros({ parametros }: { parametros: ParametrosRepor
           que="el reporte de suministros"
           error={consulta.error}
           alReintentar={() => void consulta.refetch()}
+          alQuitarFiltros={parametros.hayFiltros ? parametros.quitarFiltros : undefined}
         />
       ) : (
         <>
-          <ResumenYDescargas resumen={resumen} acciones={puedeDescargar && botones} />
-          {aviso}
+          <ResumenYDescargas
+            resumen={resumen}
+            acciones={
+              consulta.isSuccess && (
+                <AccionesDeDescarga
+                  puedeExportar={tienePermiso('reportes.exportar')}
+                  hayDatos={filas.length > 0}
+                  actualizando={consulta.isPlaceholderData}
+                  descarga={descarga}
+                />
+              )
+            }
+          />
+          {descarga.aviso}
+          {filas.length > 0 && (
+            <Box sx={{ mb: 1.5 }}>
+              <Typography variant="body2" color="text.secondary">
+                {NOTAS[agruparPor]}
+              </Typography>
+              {agruparPor !== 'insumo' && (
+                <Button
+                  component={EnlaceRouter}
+                  to={{ search: `?${porUnidad.toString()}` }}
+                  variant="text"
+                  startIcon={<CallSplitOutlinedIcon />}
+                  sx={{ mt: 0.5, ml: -1 }}
+                >
+                  Ver cada unidad por separado
+                </Button>
+              )}
+            </Box>
+          )}
           <Recargando activo={actualizando}>
             <Tabla
               titulo={`Reporte de suministros por ${etiquetaAgrupacion(agruparPor).toLowerCase()}`}
@@ -155,11 +200,6 @@ export function ReporteSuministros({ parametros }: { parametros: ParametrosRepor
               mensajeVacio={mensajeSinSuministros(pedido, sala)}
             />
           </Recargando>
-          {filas.length > 0 && (
-            <Typography variant="body2" color="text.secondary" sx={{ mt: 1.5 }}>
-              {NOTAS[agruparPor]}
-            </Typography>
-          )}
           {sinResultados && parametros.hayFiltros && (
             <QuitarFiltros alQuitar={parametros.quitarFiltros} />
           )}

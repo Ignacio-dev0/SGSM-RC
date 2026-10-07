@@ -1,13 +1,12 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
+import { ADMIN, MEDICO } from '../../pruebas/datos';
 import {
-  ADMIN_E6,
   ESTADISTICAS,
   ESTADISTICAS_VACIAS,
   errorInterno,
   fijarHoy,
-  MEDICO_E6,
   parametrosDe,
   prepararReportes,
   restaurarReportes,
@@ -43,7 +42,7 @@ async function verComoTabla(titulo: string) {
 describe('estadísticas del período (T606 · CU33)', () => {
   it('muestra los indicadores grandes arriba', async () => {
     prepararReportes();
-    renderizarApp('/reportes?pestana=estadisticas', MEDICO_E6);
+    renderizarApp('/reportes?pestana=estadisticas', MEDICO);
 
     expect(await screen.findByRole('tab', { name: 'Estadísticas' })).toHaveAttribute(
       'aria-selected',
@@ -56,16 +55,22 @@ describe('estadísticas del período (T606 · CU33)', () => {
     expect(indicador('Pacientes atendidos')).toHaveTextContent('3');
     expect(indicador('Recordatorios atendidos')).toHaveTextContent(/^80\s%/);
     expect(indicador('Recordatorios atendidos')).toHaveTextContent(/4 de 5/);
+    // ESC3: a tiempo / (total sin pendientes) = 2 / 5, con los conteos que manda el servidor.
+    expect(indicador('Atendidos a tiempo')).toHaveTextContent(/^40\s%/);
+    expect(indicador('Atendidos a tiempo')).toHaveTextContent(/2 de 5/);
+    expect(screen.getByLabelText('Indicadores del período')).toHaveAccessibleDescription(
+      /Sobre los 5 recordatorios que ya se atendieron o vencieron \(el pendiente todavía no cuenta\)/,
+    );
     expect(screen.getByText(/Del 01\/10\/2026 al 07\/10\/2026 \(7 días\)/)).toBeInTheDocument();
   });
 
   it('cada gráfico tiene título, y "Ver como tabla" muestra los mismos números', async () => {
     prepararReportes();
-    renderizarApp('/reportes?pestana=estadisticas', MEDICO_E6);
+    renderizarApp('/reportes?pestana=estadisticas', MEDICO);
     await screen.findByText('Suministros', { selector: 'dt' });
 
     for (const titulo of [
-      'Insumos más usados',
+      'Medicamentos e insumos más usados',
       'Consumo por tipo',
       'Evolución diaria',
       'Recordatorios del período',
@@ -73,14 +78,24 @@ describe('estadísticas del período (T606 · CU33)', () => {
       expect(screen.getByRole('heading', { name: titulo, level: 2 })).toBeInTheDocument();
     }
 
-    const insumos = await verComoTabla('Insumos más usados');
+    const insumos = await verComoTabla('Medicamentos e insumos más usados');
     expect(insumos).toHaveLength(ESTADISTICAS.insumosMasUsados.length);
+    expect(
+      within(grafico('Medicamentos e insumos más usados')).getByRole('columnheader', {
+        name: 'Medicamento o insumo',
+      }),
+    ).toBeInTheDocument();
     expect(insumos[0]).toHaveTextContent(/Pañal para adultos · Paquete x\s10.*Insumo.*4/);
     expect(insumos[1]).toHaveTextContent(/Paracetamol · Comprimidos 500\smg.*Medicamento.*3/);
 
     const consumo = await verComoTabla('Consumo por tipo');
-    expect(consumo[0]).toHaveTextContent(/Medicamentos.*3.*37,5\s%/);
-    expect(consumo[1]).toHaveTextContent(/Insumos.*5.*62,5\s%/);
+    expect(consumo[0]).toHaveTextContent(/Con medicamentos.*3.*37,5\s%/);
+    expect(consumo[1]).toHaveTextContent(/Con insumos.*5.*62,5\s%/);
+    expect(
+      within(grafico('Consumo por tipo')).getByRole('columnheader', {
+        name: 'De los 8 suministros del período',
+      }),
+    ).toBeInTheDocument();
 
     const evolucion = await verComoTabla('Evolución diaria');
     expect(evolucion).toHaveLength(3);
@@ -97,32 +112,28 @@ describe('estadísticas del período (T606 · CU33)', () => {
     ]);
   });
 
-  it('los gráficos dicen sus series con texto (leyenda), no solo con color', async () => {
+  it('los gráficos dicen sus series con texto (nombre en el eje o en la leyenda), no solo con color', async () => {
     prepararReportes();
-    renderizarApp('/reportes?pestana=estadisticas', MEDICO_E6);
+    renderizarApp('/reportes?pestana=estadisticas', MEDICO);
     await screen.findByText('Suministros', { selector: 'dt' });
 
-    expect(within(grafico('Consumo por tipo')).getByText(/Medicamentos: 3/)).toBeInTheDocument();
-    expect(within(grafico('Consumo por tipo')).getByText(/Insumos: 5/)).toBeInTheDocument();
+    const consumo = within(grafico('Consumo por tipo'));
+    expect(consumo.getByText('Con medicamentos')).toBeInTheDocument();
+    expect(consumo.getByText('Con insumos')).toBeInTheDocument();
     const evolucion = grafico('Evolución diaria');
     for (const serie of ['Suministros', 'Con medicamentos', 'Con insumos']) {
       expect(within(evolucion).getByText(serie)).toBeInTheDocument();
     }
-    const recordatorios = grafico('Recordatorios del período');
-    for (const serie of [
-      /A tiempo: 2/,
-      /Tarde: 1/,
-      /No administrados: 1/,
-      /Vencidos sin atender: 1/,
-    ]) {
-      expect(within(recordatorios).getByText(serie)).toBeInTheDocument();
+    const recordatorios = within(grafico('Recordatorios del período'));
+    for (const estado of ['A tiempo', 'Tarde', 'No administrados', 'Vencidos sin atender']) {
+      expect(recordatorios.getByText(estado)).toBeInTheDocument();
     }
   });
 
   it('cambiar de pestaña conserva los parámetros y pide las estadísticas con ellos', async () => {
     const pedidos = prepararReportes();
-    const app = renderizarApp('/reportes?tipo=INSUMO&salaId=2&agruparPor=insumo', ADMIN_E6);
-    await screen.findByRole('table', { name: /por insumo/ });
+    const app = renderizarApp('/reportes?tipo=INSUMO&salaId=2&agruparPor=insumo', ADMIN);
+    await screen.findByRole('table', { name: /por medicamento o insumo/ });
 
     await userEvent.click(screen.getByRole('tab', { name: 'Estadísticas' }));
 
@@ -146,14 +157,14 @@ describe('estadísticas del período (T606 · CU33)', () => {
 
   it('el médico no ve las descargas y el administrador sí', async () => {
     prepararReportes();
-    renderizarApp('/reportes?pestana=estadisticas', MEDICO_E6);
+    renderizarApp('/reportes?pestana=estadisticas', MEDICO);
     await screen.findByText('Suministros', { selector: 'dt' });
     expect(screen.queryByRole('button', { name: /Descargar/ })).not.toBeInTheDocument();
   });
 
   it('sin suministros ni recordatorios lo dice con el período, en lugar de gráficos vacíos', async () => {
     prepararReportes({ estadisticas: ESTADISTICAS_VACIAS });
-    renderizarApp('/reportes?pestana=estadisticas&periodo=hoy', ADMIN_E6);
+    renderizarApp('/reportes?pestana=estadisticas&periodo=hoy', ADMIN);
 
     await screen.findByText('Suministros', { selector: 'dt' });
     expect(indicador('Suministros')).toHaveTextContent('0');
@@ -162,7 +173,9 @@ describe('estadísticas del período (T606 · CU33)', () => {
       screen.getByText('No hay suministros el 07/10/2026. Amplíe el período.'),
     ).toBeInTheDocument();
     expect(screen.getByText(/No hubo recordatorios con hora el 07\/10\/2026/)).toBeInTheDocument();
-    expect(screen.queryByRole('region', { name: 'Insumos más usados' })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('region', { name: 'Medicamentos e insumos más usados' }),
+    ).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Descargar/ })).not.toBeInTheDocument();
   });
 
@@ -179,7 +192,7 @@ describe('estadísticas del período (T606 · CU33)', () => {
             }),
       ),
     );
-    renderizarApp('/reportes?pestana=estadisticas', ADMIN_E6);
+    renderizarApp('/reportes?pestana=estadisticas', ADMIN);
 
     expect(
       await screen.findByText(
@@ -194,15 +207,15 @@ describe('estadísticas del período (T606 · CU33)', () => {
   it('en el teléfono los gráficos ocupan el ancho de la pantalla y la tabla pasa a tarjetas', async () => {
     simularPantalla({ telefono: true });
     prepararReportes();
-    renderizarApp('/reportes?pestana=estadisticas', MEDICO_E6);
-    await screen.findByText('Suministros', { selector: 'dt' });
+    renderizarApp('/reportes?pestana=estadisticas', MEDICO);
+    await screen.findByLabelText('Indicadores del período');
 
-    const seccion = grafico('Insumos más usados');
+    const seccion = grafico('Evolución diaria');
     // Sin ancho fijo: el gráfico toma el de su contenedor (no hay scroll horizontal).
     expect(seccion.querySelector('svg[width]')).toBeNull();
     await userEvent.click(within(seccion).getByRole('button', { name: 'Ver como tabla' }));
     expect(
-      within(seccion).getByRole('list', { name: 'Insumos más usados (tabla)' }),
+      within(seccion).getByRole('list', { name: 'Evolución diaria (tabla)' }),
     ).toBeInTheDocument();
     const boton = within(seccion).getByRole('button', { name: 'Ocultar la tabla' });
     expect(parseFloat(getComputedStyle(boton).minHeight)).toBeGreaterThanOrEqual(48);
