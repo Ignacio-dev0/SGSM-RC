@@ -1,7 +1,10 @@
 // Usuarios de ejemplo para las pruebas de pantallas, con los permisos reales de cada rol.
 import type { UsuarioSesion } from '../api/tipos';
 
+// Con los de E6 (docs/reportes.md, S17): reportes.ver para el administrador y el médico;
+// reportes.exportar y auditoria.ver, solo para el administrador.
 const PERMISOS_ADMIN = [
+  'auditoria.ver',
   'biometria.gestionar',
   'catalogo.gestionar',
   'catalogo.ver',
@@ -14,6 +17,8 @@ const PERMISOS_ADMIN = [
   'prescripciones.ver',
   'recordatorios.atender',
   'recordatorios.ver',
+  'reportes.exportar',
+  'reportes.ver',
   'suministros.corregir',
   'suministros.registrar',
   'suministros.ver',
@@ -49,6 +54,7 @@ export const MEDICO: UsuarioSesion = {
     'prescripciones.gestionar',
     'prescripciones.ver',
     'recordatorios.ver',
+    'reportes.ver',
     'suministros.ver',
   ],
 };

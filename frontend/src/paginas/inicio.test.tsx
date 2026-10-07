@@ -1,10 +1,10 @@
 import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { http } from 'msw';
+import { http, HttpResponse } from 'msw';
 import { ADMIN, ENFERMERO, MEDICO } from '../pruebas/datos';
 import { listaDePacientes, paciente } from '../pruebas/datosPacientes';
 import { simularRecordatorios } from '../pruebas/datosRecordatorios';
-import { ADMIN_E6, MEDICO_E6, prepararReportes } from '../pruebas/datosReportes';
+import { prepararReportes } from '../pruebas/datosReportes';
 import { renderizarApp } from '../pruebas/renderizar';
 import { servidor } from '../pruebas/servidor';
 
@@ -84,12 +84,14 @@ describe('tareas de gestión primero para quien administra (F34)', () => {
       expect.stringMatching(/^Nuevo usuario/),
       expect.stringMatching(/^Registrar el rostro del personal/),
       expect.stringMatching(/^Agregar al catálogo/),
+      expect.stringMatching(/^Ver quién cambió algo/),
       expect.stringMatching(/^Tomas y estudios para atender/),
       expect.stringMatching(/^Administrar medicamento/),
       expect.stringMatching(/^Registrar insumos/),
       expect.stringMatching(/^Buscar paciente/),
       expect.stringMatching(/^Internar paciente/),
       expect.stringMatching(/^Ver lo que se registró/),
+      expect.stringMatching(/^Ver reportes/),
     ]);
   });
 
@@ -101,6 +103,7 @@ describe('tareas de gestión primero para quien administra (F34)', () => {
       expect.stringMatching(/^Buscar paciente/),
       expect.stringMatching(/^Internar paciente/),
       expect.stringMatching(/^Ver lo que se registró/),
+      expect.stringMatching(/^Ver reportes/),
     ]);
   });
 });
@@ -108,7 +111,7 @@ describe('tareas de gestión primero para quien administra (F34)', () => {
 describe('reportes desde el inicio (E6)', () => {
   it('quien ve reportes tiene "Ver reportes" al final de sus tareas y llega en un toque', async () => {
     prepararReportes();
-    renderizarApp('/', MEDICO_E6);
+    renderizarApp('/', MEDICO);
     await screen.findByRole('heading', { name: /Hola, Martín/ });
 
     expect(tareasDeLaPantalla()).toEqual([
@@ -128,10 +131,40 @@ describe('reportes desde el inicio (E6)', () => {
   });
 
   it('para el administrador va después de las clínicas, no entre las de gestión', async () => {
-    renderizarApp('/', ADMIN_E6);
+    renderizarApp('/', ADMIN);
     await screen.findByRole('heading', { name: /Hola, Laura/ });
     expect(tareasDeLaPantalla().at(-1)).toMatch(/^Ver reportes/);
     expect(tareasDeLaPantalla()[0]).toMatch(/^Nuevo usuario/);
+  });
+});
+
+// E6-19: la auditoría también se ofrece desde el inicio, con las palabras de quien la usa.
+describe('auditoría desde el inicio (E6)', () => {
+  it('el administrador tiene "Ver quién cambió algo" con su gestión y llega a la Auditoría en un toque', async () => {
+    servidor.use(
+      http.get('*/api/auditoria', () =>
+        HttpResponse.json({
+          data: [],
+          meta: { pagina: 1, porPagina: 50, total: 0, totalPaginas: 0 },
+        }),
+      ),
+      http.get('*/api/auditoria/opciones', () =>
+        HttpResponse.json({ data: { acciones: [], entidades: [] } }),
+      ),
+    );
+    renderizarApp('/', ADMIN);
+    await screen.findByRole('heading', { name: /Hola, Laura/ });
+
+    const gestion = tareasDeLaPantalla().slice(0, 4);
+    expect(gestion.at(-1)).toMatch(/^Ver quién cambió algo/);
+    await userEvent.click(screen.getByRole('link', { name: /Ver quién cambió algo/ }));
+    expect(await screen.findByRole('heading', { name: 'Auditoría', level: 1 })).toBeInTheDocument();
+  });
+
+  it('el médico y enfermería no la tienen', async () => {
+    renderizarApp('/', MEDICO);
+    await screen.findByRole('heading', { name: /Hola, Martín/ });
+    expect(screen.queryByRole('link', { name: /Ver quién cambió algo/ })).not.toBeInTheDocument();
   });
 });
 

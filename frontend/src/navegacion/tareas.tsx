@@ -4,6 +4,7 @@ import AssessmentOutlinedIcon from '@mui/icons-material/AssessmentOutlined';
 import FaceOutlinedIcon from '@mui/icons-material/FaceOutlined';
 import HistoryOutlinedIcon from '@mui/icons-material/HistoryOutlined';
 import Inventory2OutlinedIcon from '@mui/icons-material/Inventory2Outlined';
+import ManageSearchOutlinedIcon from '@mui/icons-material/ManageSearchOutlined';
 import MedicationOutlinedIcon from '@mui/icons-material/MedicationOutlined';
 import PersonAddAltOutlinedIcon from '@mui/icons-material/PersonAddAltOutlined';
 import PersonSearchOutlinedIcon from '@mui/icons-material/PersonSearchOutlined';
@@ -100,6 +101,15 @@ export const TAREAS: Tarea[] = [
     descripcion: 'Medicamentos e insumos que se pueden prescribir y registrar',
     icono: <PlaylistAddOutlinedIcon />,
     permiso: 'catalogo.gestionar',
+    gestion: true,
+  },
+  {
+    // E6: averiguar quién cambió algo y cuándo (PRODUCT.md, tareas núcleo).
+    ruta: '/auditoria',
+    etiqueta: 'Ver quién cambió algo',
+    descripcion: 'Quién hizo cada cambio, cuándo, y qué había antes y después',
+    icono: <ManageSearchOutlinedIcon />,
+    permiso: 'auditoria.ver',
     gestion: true,
   },
 ];
