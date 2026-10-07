@@ -13,6 +13,7 @@ import {
 } from './modulos/prescripciones/prescripciones.rutas';
 import { rutasInsumos } from './modulos/insumos/insumos.rutas';
 import { rutasNotificaciones } from './modulos/notificaciones/notificaciones.rutas';
+import { rutasRecordatorios } from './modulos/recordatorios/recordatorios.rutas';
 import { rutasSuministros } from './modulos/suministros/suministros.rutas';
 import { rutasPermisos, rutasRoles } from './modulos/seguridad/seguridad.rutas';
 import { rutasUsuarios } from './modulos/usuarios/usuarios.rutas';
@@ -43,6 +44,7 @@ export function crearApp() {
   app.use('/api/insumos', autenticar, rutasInsumos);
   app.use('/api/biometria', autenticar, rutasBiometria);
   app.use('/api/suministros', autenticar, rutasSuministros);
+  app.use('/api/recordatorios', autenticar, rutasRecordatorios);
 
   app.use(rutaNoEncontrada);
   app.use(manejarErrores);
