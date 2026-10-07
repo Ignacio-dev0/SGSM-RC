@@ -10,11 +10,11 @@ describe('cliente de la API', () => {
 
   it('envía el cuerpo como JSON', async () => {
     servidor.use(
-      http.post('*/api/pacientes', async ({ request }) =>
+      http.post('*/api/eco', async ({ request }) =>
         HttpResponse.json({ data: await request.json() }, { status: 201 }),
       ),
     );
-    await expect(api.post('/api/pacientes', { dni: '30111222' })).resolves.toEqual({
+    await expect(api.post('/api/eco', { dni: '30111222' })).resolves.toEqual({
       dni: '30111222',
     });
   });
@@ -36,14 +36,14 @@ describe('cliente de la API', () => {
 
   it('convierte las respuestas de error en ErrorApi con el mensaje del backend', async () => {
     servidor.use(
-      http.post('*/api/pacientes', () =>
+      http.post('*/api/eco', () =>
         HttpResponse.json(
           { error: { codigo: 'DNI_DUPLICADO', mensaje: 'Ya existe un paciente con ese DNI' } },
           { status: 409 },
         ),
       ),
     );
-    const error = await api.post('/api/pacientes', {}).catch((e: unknown) => e);
+    const error = await api.post('/api/eco', {}).catch((e: unknown) => e);
     expect(error).toBeInstanceOf(ErrorApi);
     expect(error).toMatchObject({
       estado: 409,

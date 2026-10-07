@@ -38,6 +38,11 @@ Solo un lado: `npm test -w backend` o `npm test -w frontend`.
   accesible, se escribe y se toca con `user-event`.
 - La API se simula con **MSW** ([`src/pruebas/servidor.ts`](../frontend/src/pruebas/servidor.ts));
   un pedido no simulado hace fallar la prueba.
+- **Contrato con el servidor** ([`src/pruebas/contrato.ts`](../frontend/src/pruebas/contrato.ts)):
+  cada cuerpo que una pantalla manda (POST, PATCH, PUT) se valida con el **mismo esquema zod
+  del backend** (`backend/src/modulos/*/*.esquemas.ts`). Si la pantalla manda algo que el
+  servidor real rechazaría, la prueba falla aunque MSW haya contestado bien. Las respuestas
+  reales las cubren las pruebas en navegador (`e2e/`), que corren contra el backend.
 - `renderizarApp(ruta, usuario)` ([`src/pruebas/renderizar.tsx`](../frontend/src/pruebas/renderizar.tsx))
   monta la aplicación completa (rutas, sesión, tema) con el usuario indicado; los usuarios de
   ejemplo por rol están en [`src/pruebas/datos.ts`](../frontend/src/pruebas/datos.ts) y los
