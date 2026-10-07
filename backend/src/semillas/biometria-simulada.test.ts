@@ -1,6 +1,6 @@
 import { prisma } from '../db';
 import { limpiarBase } from '../../tests/soporte/base';
-import { sembrarCatalogoBase } from './catalogo-base';
+import { sembrarCatalogoDeDesarrollo } from './catalogo-base';
 import { USUARIOS_DE_PRUEBA, sembrarUsuariosDePrueba } from './usuarios-prueba';
 import { descriptorSimulado, sembrarRostrosSimulados } from './biometria-simulada';
 import { descifrarPatron } from '../modulos/biometria/cifrado-biometrico';
@@ -19,7 +19,7 @@ describe('rostros simulados de los usuarios de prueba', () => {
 
   it('registra un rostro simulado para cada usuario de prueba, sin duplicar', async () => {
     await limpiarBase();
-    await sembrarCatalogoBase(prisma);
+    await sembrarCatalogoDeDesarrollo(prisma);
     await sembrarUsuariosDePrueba(prisma);
 
     await sembrarRostrosSimulados(prisma);

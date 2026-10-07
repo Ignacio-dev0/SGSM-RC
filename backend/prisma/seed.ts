@@ -1,7 +1,7 @@
 // Semilla de la base de desarrollo: `npm run db:sembrar -w backend` (T103).
 import { PrismaClient } from '@prisma/client';
 import { sembrarRostrosSimulados } from '../src/semillas/biometria-simulada';
-import { sembrarCatalogoBase } from '../src/semillas/catalogo-base';
+import { sembrarCatalogoDeDesarrollo } from '../src/semillas/catalogo-base';
 import { sembrarUsuariosDePrueba } from '../src/semillas/usuarios-prueba';
 
 const prisma = new PrismaClient();
@@ -10,7 +10,7 @@ async function main() {
   if (process.env.NODE_ENV === 'production') {
     throw new Error('La semilla de desarrollo no se ejecuta en producción');
   }
-  await sembrarCatalogoBase(prisma);
+  await sembrarCatalogoDeDesarrollo(prisma);
   await sembrarUsuariosDePrueba(prisma);
   await sembrarRostrosSimulados(prisma);
   console.info(

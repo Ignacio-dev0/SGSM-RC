@@ -1,4 +1,5 @@
-import type { PrismaClient, TipoInsumo } from '@prisma/client';
+import type { TipoInsumo } from '@prisma/client';
+import type { ClienteDb } from '../db';
 import {
   CODIGOS_PERMISO,
   PERMISOS,
@@ -7,14 +8,17 @@ import {
 } from '../modulos/seguridad/catalogo-permisos';
 
 /**
- * Datos base que necesita cualquier instalación (T103): roles, permisos, salas y camas,
- * catálogo de insumos y medicamentos y tipos de estudio. Idempotente: se puede ejecutar
- * varias veces sin duplicar nada, y solo CREA lo que falta: nunca pisa lo que una persona
- * corrigió desde la aplicación (salas, camas, catálogo, tipos de estudio).
+ * Catálogos de la base (T103 · T803 · D102), en dos partes:
+ * - **Datos base** (`sembrarDatosBase`): lo que necesita cualquier instalación y no se puede
+ *   cargar desde la aplicación: roles, permisos y tipos de estudio. Los carga el instalador.
+ * - **Demostración** (`sembrarCatalogoDeDemostracion`): salas, camas e insumos inventados, solo
+ *   para desarrollo y pruebas. En el hospital salen de los CSV del instalador.
+ * Todo es idempotente y solo CREA lo que falta: nunca pisa lo que una persona corrigió desde la
+ * aplicación (salas, camas, catálogo, tipos de estudio). Acepta una transacción.
  */
 
 /** Roles y permisos. Es lo único que necesitan la mayoría de las pruebas. */
-export async function sembrarSeguridad(prisma: PrismaClient) {
+export async function sembrarSeguridad(prisma: ClienteDb) {
   for (const codigo of CODIGOS_PERMISO) {
     const { modulo, descripcion } = PERMISOS[codigo];
     await prisma.permiso.upsert({
@@ -102,9 +106,34 @@ export const TIPOS_ESTUDIO = [
   { nombre: 'Interconsulta', preparacionPorDefecto: null },
 ];
 
-export async function sembrarCatalogoBase(prisma: PrismaClient) {
-  await sembrarSeguridad(prisma);
+/** Lo que el instalador informa de los datos base. */
+export interface ResumenDatosBase {
+  roles: number;
+  permisos: number;
+  tiposEstudio: { nuevos: number; existentes: number };
+}
 
+/** Datos base de cualquier instalación (también producción): roles, permisos, tipos de estudio. */
+export async function sembrarDatosBase(prisma: ClienteDb): Promise<ResumenDatosBase> {
+  await sembrarSeguridad(prisma);
+  const existentes = new Set(
+    (await prisma.tipoEstudio.findMany({ select: { nombre: true } })).map((t) => t.nombre),
+  );
+  let nuevos = 0;
+  for (const t of TIPOS_ESTUDIO) {
+    if (existentes.has(t.nombre)) continue;
+    await prisma.tipoEstudio.create({ data: t });
+    nuevos++;
+  }
+  return {
+    roles: Object.keys(ROLES).length,
+    permisos: CODIGOS_PERMISO.length,
+    tiposEstudio: { nuevos, existentes: TIPOS_ESTUDIO.length - nuevos },
+  };
+}
+
+/** Salas, camas e insumos INVENTADOS: solo desarrollo, demostración y pruebas. */
+export async function sembrarCatalogoDeDemostracion(prisma: ClienteDb) {
   for (const s of SALAS) {
     const sala = await prisma.sala.upsert({
       where: { nombre: s.nombre },
@@ -128,12 +157,10 @@ export async function sembrarCatalogoBase(prisma: PrismaClient) {
       create: i,
     });
   }
+}
 
-  for (const t of TIPOS_ESTUDIO) {
-    await prisma.tipoEstudio.upsert({
-      where: { nombre: t.nombre },
-      update: {},
-      create: t,
-    });
-  }
+/** Semilla de desarrollo: los datos base más el catálogo de demostración. */
+export async function sembrarCatalogoDeDesarrollo(prisma: ClienteDb) {
+  await sembrarDatosBase(prisma);
+  await sembrarCatalogoDeDemostracion(prisma);
 }

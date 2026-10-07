@@ -1,5 +1,11 @@
 import { prisma } from '../../src/db';
-import { sembrarCatalogoBase } from '../../src/semillas/catalogo-base';
+import {
+  INSUMOS,
+  SALAS,
+  sembrarCatalogoDeDesarrollo,
+  sembrarDatosBase,
+  TIPOS_ESTUDIO,
+} from '../../src/semillas/catalogo-base';
 import { sembrarUsuariosDePrueba, USUARIOS_DE_PRUEBA } from '../../src/semillas/usuarios-prueba';
 import { PERMISOS } from '../../src/modulos/seguridad/catalogo-permisos';
 import { limpiarBase } from '../soporte/base';
@@ -15,7 +21,7 @@ const permisosDelRol = async (codigo: string) =>
 describe('datos de prueba (T103)', () => {
   beforeAll(async () => {
     await limpiarBase();
-    await sembrarCatalogoBase(prisma);
+    await sembrarCatalogoDeDesarrollo(prisma);
     await sembrarUsuariosDePrueba(prisma);
   });
 
@@ -88,7 +94,7 @@ describe('datos de prueba (T103)', () => {
       insumos: await prisma.insumo.count(),
       usuarios: await prisma.usuario.count(),
     };
-    await sembrarCatalogoBase(prisma);
+    await sembrarCatalogoDeDesarrollo(prisma);
     await sembrarUsuariosDePrueba(prisma);
     expect({
       permisos: await prisma.permiso.count(),
@@ -112,7 +118,7 @@ describe('datos de prueba (T103)', () => {
       data: { preparacionPorDefecto: 'Retirar alhajas' },
     });
 
-    await sembrarCatalogoBase(prisma);
+    await sembrarCatalogoDeDesarrollo(prisma);
 
     expect(
       (await prisma.insumo.findUniqueOrThrow({ where: { id: paracetamol.id } })).unidadMedida,
@@ -122,5 +128,47 @@ describe('datos de prueba (T103)', () => {
       (await prisma.tipoEstudio.findUniqueOrThrow({ where: { id: tipo.id } }))
         .preparacionPorDefecto,
     ).toBe('Retirar alhajas');
+  });
+});
+
+/**
+ * Lo que necesita cualquier instalación (el instalador, T803) separado de lo inventado para
+ * desarrollo y demostración (D102).
+ */
+describe('datos base y catálogo de demostración (T803 · D102)', () => {
+  beforeAll(() => limpiarBase());
+  afterAll(() => prisma.$disconnect());
+
+  it('los datos base son roles, permisos y tipos de estudio: ni salas, ni insumos, ni usuarios', async () => {
+    const resumen = await sembrarDatosBase(prisma);
+
+    expect(resumen).toEqual({
+      roles: 3,
+      permisos: Object.keys(PERMISOS).length,
+      tiposEstudio: { nuevos: TIPOS_ESTUDIO.length, existentes: 0 },
+    });
+    expect(await prisma.rol.count()).toBe(3);
+    expect((await permisosDelRol('ADMINISTRADOR')).sort()).toEqual(Object.keys(PERMISOS).sort());
+    expect(await prisma.tipoEstudio.count()).toBe(TIPOS_ESTUDIO.length);
+    expect(await prisma.sala.count()).toBe(0);
+    expect(await prisma.cama.count()).toBe(0);
+    expect(await prisma.insumo.count()).toBe(0);
+    expect(await prisma.usuario.count()).toBe(0);
+  });
+
+  it('otra vez: no duplica y cuenta los tipos de estudio que ya estaban', async () => {
+    expect((await sembrarDatosBase(prisma)).tiposEstudio).toEqual({
+      nuevos: 0,
+      existentes: TIPOS_ESTUDIO.length,
+    });
+    expect(await prisma.tipoEstudio.count()).toBe(TIPOS_ESTUDIO.length);
+  });
+
+  it('la semilla de desarrollo suma las salas, camas e insumos inventados', async () => {
+    await sembrarCatalogoDeDesarrollo(prisma);
+
+    expect(await prisma.sala.count()).toBe(SALAS.length);
+    expect(await prisma.cama.count()).toBe(SALAS.reduce((n, s) => n + s.camas, 0));
+    expect(await prisma.insumo.count()).toBe(INSUMOS.length);
   });
 });
