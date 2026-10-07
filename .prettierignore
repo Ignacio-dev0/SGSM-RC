@@ -5,3 +5,7 @@ coverage
 package-lock.json
 backend/prisma/migrations
 frontend/public/models
+# Tablero local de la revisión de interfaz (lo genera el plugin, no se versiona)
+.ux-governance/STATUS.md
+.ux-governance/status.html
+.ux-governance/state.local.json
