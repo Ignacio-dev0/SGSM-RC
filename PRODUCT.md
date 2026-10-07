@@ -61,7 +61,7 @@ Un concepto, un nombre, en todas las pantallas.
 - Lo que se registra queda a nombre de quien confirmó con su rostro; se corrige solo dentro de
   las 24 horas, con motivo.
 - Las horas de las tomas se leen en formato de 24 horas (08:00, 16:00, 00:00).
-- Donde se actúa sobre un paciente se lo identifica siempre con nombre, DNI y cama: la cara
+- Donde se actúa sobre un paciente se lo identifica siempre con nombre, DNI y cama: el rostro
   identifica a quien registra, no al paciente.
 - Antes de confirmar una administración se ve un resumen (paciente, qué se da, vía, toma). Una
   dosis distinta de la prescripta o una toma adelantada **se avisan**; una toma que **ya se dio**

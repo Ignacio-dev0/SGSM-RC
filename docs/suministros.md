@@ -40,7 +40,7 @@ en la pestaña **Historial** de cada paciente.
 
 ## Pantallas pensadas para el lado de la cama
 
-- Arriba, la **tarjeta del paciente** (nombre, DNI, edad, cama y sala): la cara valida a quien
+- Arriba, la **tarjeta del paciente** (nombre, DNI, edad, cama y sala): el rostro valida a quien
   registra, no al paciente.
 - La prescripción se elige tocando una **tarjeta** grande con la próxima toma, la última
   administración y el **estado de la toma** ([`estadoToma.ts`](../frontend/src/paginas/suministros/estadoToma.ts)),

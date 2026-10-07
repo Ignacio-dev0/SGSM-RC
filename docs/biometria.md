@@ -36,7 +36,7 @@ sequenceDiagram
   con todo el personal (supuesto S6).
 - **Comprobante**: si coincide, el backend entrega un JWT firmado que vence a los
   `BIOMETRIA_VALIDEZ_SEG` (120 s), está atado al usuario y se consume **una sola vez**. Las
-  operaciones que exigen la cara (registrar y corregir suministros) lo piden.
+  operaciones que exigen el rostro (registrar y corregir suministros) lo piden.
 - **Fallos (T407)**: cada fallo queda en la auditoría (`VALIDACION_FACIAL_FALLIDA`). Al tercero
   seguido (`BIOMETRIA_MAX_INTENTOS`) se cancela la operación (`OPERACION_CANCELADA`) y se
   **notifica a los administradores**. Una validación correcta reinicia el contador.
@@ -60,7 +60,7 @@ VITE_BIOMETRIA_MODO=simulado
 En ese modo la captura muestra dos botones: **Simular el rostro de &lt;usuario&gt;** y **Simular
 otro rostro**. El patrón simulado se deriva del nombre de usuario con el mismo algoritmo en el
 frontend y en la semilla del backend, así que los usuarios de prueba ya tienen su "rostro"
-registrado. **En modo cámara** (por defecto) esos patrones no coinciden con ninguna cara: hay
+registrado. **En modo cámara** (por defecto) esos patrones no coinciden con ningún rostro: hay
 que registrar el rostro real desde Biometría.
 
 ## Prueba de concepto (T401)
@@ -77,7 +77,7 @@ dispositivo. Pasos:
    - **Con un solo rostro**: % de cuadros con exactamente un rostro (debería ser > 90 % con la
      persona de frente).
    - **Luz**: "Poca luz" por debajo de un brillo medio de 60/255.
-   - **Variación del patrón**: distancia entre patrones seguidos de la misma cara; tiene que
+   - **Variación del patrón**: distancia entre patrones seguidos del mismo rostro; tiene que
      quedar bien por debajo del umbral (≈ 0,2–0,3) para que la validación sea estable.
 4. Registrar el rostro de tres personas y validar cada una contra su propio rostro y contra el
    de las otras (ninguna debe pasar con un rostro ajeno).
