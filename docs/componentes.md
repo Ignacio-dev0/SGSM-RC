@@ -22,7 +22,7 @@ tamaño táctil, los textos y la accesibilidad sean iguales en todo el sistema.
 | `Cargando`           | Mientras llegan los datos (nunca pantalla en blanco)        | `texto`                                                                                                                                             |
 | `ErrorDeCarga`       | Los datos no llegaron: qué faltó, por qué y Reintentar      | `que` (con artículo), `error`, `alReintentar`                                                                                                       |
 | `IdentidadPaciente`  | Nombre, DNI, edad y cama del paciente sobre el que se actúa | `paciente` (en `paginas/pacientes/`)                                                                                                                |
-| `PlantillaTablet`    | Estructura de toda pantalla autenticada                     | `opciones`, `acciones`                                                                                                                              |
+| `PlantillaTablet`    | Estructura de toda pantalla autenticada                     | `opciones`, `acciones`, `aviso` (franja fija), `pieDelCajon` (al pie del menú en el teléfono: ahí va el tema, R10)                                  |
 
 ## Reglas de uso
 
