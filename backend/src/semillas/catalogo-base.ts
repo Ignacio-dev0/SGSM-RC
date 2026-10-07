@@ -9,7 +9,8 @@ import {
 /**
  * Datos base que necesita cualquier instalación (T103): roles, permisos, salas y camas,
  * catálogo de insumos y medicamentos y tipos de estudio. Idempotente: se puede ejecutar
- * varias veces sin duplicar nada.
+ * varias veces sin duplicar nada, y solo CREA lo que falta: nunca pisa lo que una persona
+ * corrigió desde la aplicación (salas, camas, catálogo, tipos de estudio).
  */
 
 /** Roles y permisos. Es lo único que necesitan la mayoría de las pruebas. */
@@ -107,7 +108,7 @@ export async function sembrarCatalogoBase(prisma: PrismaClient) {
   for (const s of SALAS) {
     const sala = await prisma.sala.upsert({
       where: { nombre: s.nombre },
-      update: { piso: s.piso },
+      update: {},
       create: { nombre: s.nombre, piso: s.piso },
     });
     for (let i = 1; i <= s.camas; i++) {
@@ -123,7 +124,7 @@ export async function sembrarCatalogoBase(prisma: PrismaClient) {
   for (const i of INSUMOS) {
     await prisma.insumo.upsert({
       where: { nombre_presentacion: { nombre: i.nombre, presentacion: i.presentacion } },
-      update: { tipo: i.tipo, unidadMedida: i.unidadMedida },
+      update: {},
       create: i,
     });
   }
@@ -131,7 +132,7 @@ export async function sembrarCatalogoBase(prisma: PrismaClient) {
   for (const t of TIPOS_ESTUDIO) {
     await prisma.tipoEstudio.upsert({
       where: { nombre: t.nombre },
-      update: { preparacionPorDefecto: t.preparacionPorDefecto },
+      update: {},
       create: t,
     });
   }

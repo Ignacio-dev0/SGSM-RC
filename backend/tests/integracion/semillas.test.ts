@@ -75,4 +75,30 @@ describe('datos de prueba (T103)', () => {
       usuarios: await prisma.usuario.count(),
     }).toEqual(antes);
   });
+
+  it('volver a correrla no pisa lo que se corrigió a mano', async () => {
+    const paracetamol = await prisma.insumo.findFirstOrThrow({ where: { nombre: 'Paracetamol' } });
+    await prisma.insumo.update({
+      where: { id: paracetamol.id },
+      data: { unidadMedida: 'comprimido' },
+    });
+    const sala = await prisma.sala.findFirstOrThrow();
+    await prisma.sala.update({ where: { id: sala.id }, data: { piso: '2' } });
+    const tipo = await prisma.tipoEstudio.findFirstOrThrow({ where: { nombre: 'Radiografía' } });
+    await prisma.tipoEstudio.update({
+      where: { id: tipo.id },
+      data: { preparacionPorDefecto: 'Retirar alhajas' },
+    });
+
+    await sembrarCatalogoBase(prisma);
+
+    expect(
+      (await prisma.insumo.findUniqueOrThrow({ where: { id: paracetamol.id } })).unidadMedida,
+    ).toBe('comprimido');
+    expect((await prisma.sala.findUniqueOrThrow({ where: { id: sala.id } })).piso).toBe('2');
+    expect(
+      (await prisma.tipoEstudio.findUniqueOrThrow({ where: { id: tipo.id } }))
+        .preparacionPorDefecto,
+    ).toBe('Retirar alhajas');
+  });
 });
