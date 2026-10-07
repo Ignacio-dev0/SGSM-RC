@@ -1,16 +1,5 @@
-import { useEffect, useId, useState, type ReactNode } from 'react';
-import {
-  Box,
-  Card,
-  CardActionArea,
-  CardContent,
-  Checkbox,
-  Chip,
-  FormControlLabel,
-  Paper,
-  Typography,
-} from '@mui/material';
-import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import { useEffect, useState } from 'react';
+import { Box, Checkbox, FormControlLabel, Paper, Typography } from '@mui/material';
 import FaceRetouchingNaturalIcon from '@mui/icons-material/FaceRetouchingNatural';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useSearchParams } from 'react-router-dom';
@@ -18,173 +7,24 @@ import { ErrorApi, mensajeDeError } from '../../api/cliente';
 import { usePaciente } from '../../api/pacientes';
 import { prescripcionesApi } from '../../api/prescripciones';
 import { suministrosApi } from '../../api/suministros';
-import type { Paciente, Prescripcion, Suministro } from '../../api/tipos';
+import type { Prescripcion, Suministro } from '../../api/tipos';
 import { useValidacionFacial } from '../../biometria/useValidacionFacial';
 import { Alerta } from '../../componentes/Alerta';
 import { Boton } from '../../componentes/Boton';
 import { CampoTexto } from '../../componentes/CampoTexto';
 import { EncabezadoPagina } from '../../componentes/EncabezadoPagina';
 import { Cargando, ErrorDeCarga } from '../../componentes/EstadoDeCarga';
-import { formatearFechaHora, formatearHora } from '../../utilidades/formato';
+import { formatearHora } from '../../utilidades/formato';
+import { useAhora } from '../../utilidades/useAhora';
 import { IdentidadPaciente } from '../pacientes/IdentidadPaciente';
-import { etiquetaVia, formatearDosis, formatearFrecuencia } from '../prescripciones/etiquetas';
+import { etiquetaVia, formatearDosis } from '../prescripciones/etiquetas';
 import { SelectorPaciente } from './comunes';
-import {
-  colorEstadoToma,
-  duracion,
-  estadoToma,
-  textoEstadoToma,
-  type EstadoToma,
-} from './estadoToma';
+import { duracion, estadoToma } from './estadoToma';
+import { ResumenAdministracion } from './ResumenAdministracion';
+import { TarjetaPrescripcion } from './TarjetaPrescripcion';
 
 /** Cierra la oración sin duplicar el punto final. */
 const conPunto = (texto: string) => (texto.endsWith('.') ? texto : `${texto}.`);
-
-/** Hora actual que se renueva sola, para que "toca ahora" o "atrasada" no queden viejos. */
-function useAhora(cadaMs = 30_000) {
-  const [ahora, setAhora] = useState(() => new Date());
-  useEffect(() => {
-    const id = setInterval(() => setAhora(new Date()), cadaMs);
-    return () => clearInterval(id);
-  }, [cadaMs]);
-  return ahora;
-}
-
-function textoToma(e: EstadoToma) {
-  switch (e.tipo) {
-    case 'dada':
-      return `Ya se dio a las ${formatearHora(e.fechaHora)} (${e.usuario})`;
-    case 'atrasada':
-      return `Toma de las ${formatearHora(e.toma)} · atrasada ${duracion(e.minutos)}`;
-    case 'ahora':
-      return `Toma de las ${formatearHora(e.toma)} · toca ahora`;
-    case 'falta':
-      return `Toma de las ${formatearHora(e.toma)} · faltan ${duracion(e.minutos)}`;
-    case 'sin-tomas':
-      return 'Sin más tomas programadas';
-  }
-}
-
-function TarjetaPrescripcion({
-  p,
-  elegida,
-  ahora,
-  alElegir,
-}: {
-  p: Prescripcion;
-  elegida: boolean;
-  ahora: Date;
-  alElegir: () => void;
-}) {
-  const ultima = p.ultimasAdministraciones[0];
-  const estado = estadoToma(p, ahora);
-  return (
-    <Card
-      variant="outlined"
-      sx={{
-        borderWidth: 2,
-        borderColor: elegida ? 'primary.main' : 'divider',
-        bgcolor: elegida ? 'action.selected' : undefined,
-      }}
-    >
-      <CardActionArea onClick={alElegir} aria-pressed={elegida} sx={{ p: 1 }}>
-        <CardContent sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-          <Box sx={{ flexGrow: 1, minWidth: 0 }}>
-            <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 1 }}>
-              <Typography variant="h6" component="p">
-                {p.medicamento.nombre} {formatearDosis(p.dosis, p.unidadDosis)}
-              </Typography>
-              <Chip
-                label={textoEstadoToma(estado)}
-                color={colorEstadoToma(estado)}
-                variant={
-                  estado.tipo === 'falta' || estado.tipo === 'sin-tomas' ? 'outlined' : 'filled'
-                }
-              />
-            </Box>
-            <Typography color="text.secondary">
-              {etiquetaVia(p.via)} · {formatearFrecuencia(p.frecuenciaHoras)}
-              {p.observaciones ? ` · ${p.observaciones}` : ''}
-            </Typography>
-            <Typography sx={{ mt: 0.5 }}>
-              Próxima toma: <strong>{p.proximaToma ? formatearHora(p.proximaToma) : '—'}</strong>
-              {ultima && ` · Última: ${formatearFechaHora(ultima.fechaHora)} (${ultima.usuario})`}
-            </Typography>
-          </Box>
-          {elegida && <CheckCircleIcon color="primary" sx={{ fontSize: 36 }} />}
-        </CardContent>
-      </CardActionArea>
-    </Card>
-  );
-}
-
-function Fila({ titulo, children }: { titulo: string; children: ReactNode }) {
-  return (
-    <>
-      <Typography component="dt" color="text.secondary">
-        {titulo}
-      </Typography>
-      <Typography component="dd" sx={{ m: 0, fontWeight: 700 }}>
-        {children}
-      </Typography>
-    </>
-  );
-}
-
-/** Lo que se va a registrar, para revisarlo de un vistazo antes de poner la cara. */
-function Resumen({
-  paciente: p,
-  prescripcion,
-  cantidad,
-  observaciones,
-  estado,
-}: {
-  paciente: Paciente;
-  prescripcion: Prescripcion;
-  cantidad: number;
-  observaciones: string;
-  estado: EstadoToma;
-}) {
-  const titulo = useId();
-  const distinta = cantidad !== prescripcion.dosis;
-  return (
-    <Box component="section" aria-labelledby={titulo}>
-      <Typography id={titulo} variant="h6" component="h3" sx={{ mb: 1 }}>
-        Revise antes de confirmar
-      </Typography>
-      <Box
-        component="dl"
-        sx={{
-          display: 'grid',
-          gridTemplateColumns: { xs: '1fr', sm: '140px 1fr' },
-          columnGap: 2,
-          rowGap: { xs: 0.25, sm: 1 },
-          m: 0,
-        }}
-      >
-        <Fila titulo="Paciente">
-          {p.apellido}, {p.nombre}
-          <Typography component="span" sx={{ display: 'block', fontWeight: 400 }}>
-            DNI {p.dni}
-            {p.cama ? ` · Cama ${p.cama.numero}` : ''}
-          </Typography>
-        </Fila>
-        <Fila titulo="Dar">
-          {prescripcion.medicamento.nombre} {formatearDosis(cantidad, prescripcion.unidadDosis)}
-          {distinta && (
-            <Typography component="span" color="warning.main" sx={{ display: 'block' }}>
-              Distinta de la prescripta (
-              {formatearDosis(prescripcion.dosis, prescripcion.unidadDosis)})
-            </Typography>
-          )}
-        </Fila>
-        <Fila titulo="Vía">{etiquetaVia(prescripcion.via)}</Fila>
-        <Fila titulo="Toma">{textoToma(estado)}</Fila>
-        <Fila titulo="Observaciones">{observaciones.trim() || 'Sin observaciones'}</Fila>
-      </Box>
-    </Box>
-  );
-}
 
 /**
  * Administración de medicamento (T413 · CU20): la pantalla más usada del sistema. Paciente →
@@ -433,7 +273,7 @@ export function AdministracionMedicamento() {
             </Box>
           )}
 
-          <Resumen
+          <ResumenAdministracion
             paciente={p}
             prescripcion={elegida}
             cantidad={cantidadNumero}
