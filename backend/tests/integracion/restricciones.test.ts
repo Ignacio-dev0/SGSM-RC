@@ -233,4 +233,64 @@ describe('restricciones de negocio en la base (T102)', () => {
       );
     });
   });
+
+  describe('estudios (E5 · T512 · T513)', () => {
+    let pacienteId: number;
+    let tipoEstudioId: number;
+
+    beforeEach(async () => {
+      pacienteId = (await crearPacienteBasico(usuarioId)).id;
+      tipoEstudioId = (await prisma.tipoEstudio.create({ data: { nombre: 'Radiografía' } })).id;
+    });
+
+    const estudio = (datos: Partial<Prisma.EstudioUncheckedCreateInput> = {}) =>
+      prisma.estudio.create({
+        data: {
+          pacienteId,
+          tipoEstudioId,
+          nombre: 'Rx de tórax',
+          fechaHora: new Date('2026-10-08T13:00:00Z'),
+          creadoPorId: usuarioId,
+          ...datos,
+        },
+      });
+
+    it('un estudio realizado dice cuándo y quién lo confirmó con su rostro', async () => {
+      const realizadoEn = new Date('2026-10-08T13:10:00Z');
+      await expect(estudio({ estado: 'REALIZADO' })).rejects.toThrow(/estudios_realizado_completo/);
+      await expect(estudio({ estado: 'REALIZADO', realizadoEn })).rejects.toThrow(
+        /estudios_realizado_completo/,
+      );
+      await expect(estudio({ estado: 'REALIZADO', confirmadoPorId: usuarioId })).rejects.toThrow(
+        /estudios_realizado_completo/,
+      );
+      await expect(
+        estudio({ estado: 'REALIZADO', realizadoEn, confirmadoPorId: usuarioId }),
+      ).resolves.toMatchObject({ estado: 'REALIZADO' });
+    });
+
+    it('un estudio cancelado dice por qué', async () => {
+      await expect(estudio({ estado: 'CANCELADO' })).rejects.toThrow(
+        /estudios_cancelado_con_motivo/,
+      );
+      await expect(
+        estudio({ estado: 'CANCELADO', motivoCancelacion: 'Se suspendió el turno' }),
+      ).resolves.toMatchObject({ estado: 'CANCELADO' });
+    });
+
+    it('guarda las observaciones de quien programa y de quien confirma', async () => {
+      const e = await estudio({
+        observaciones: 'Trasladar en silla de ruedas',
+        estado: 'REALIZADO',
+        realizadoEn: new Date('2026-10-08T13:10:00Z'),
+        confirmadoPorId: usuarioId,
+        observacionesRealizacion: 'Sin novedad',
+      });
+      expect(e).toMatchObject({
+        observaciones: 'Trasladar en silla de ruedas',
+        observacionesRealizacion: 'Sin novedad',
+      });
+      await expect(estudio({ observaciones: 'x'.repeat(501) })).rejects.toThrow(/too long/);
+    });
+  });
 });

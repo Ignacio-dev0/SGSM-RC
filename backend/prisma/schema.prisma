@@ -367,19 +367,24 @@ model TipoEstudio {
 }
 
 model Estudio {
-  id                Int           @id @default(autoincrement())
-  pacienteId        Int           @map("paciente_id")
-  tipoEstudioId     Int           @map("tipo_estudio_id")
-  nombre            String        @db.VarChar(120)
-  fechaHora         DateTime      @map("fecha_hora") @db.Timestamptz(3)
-  preparacion       String?       @db.VarChar(500)
-  estado            EstadoEstudio @default(PROGRAMADO)
-  motivoCancelacion String?       @map("motivo_cancelacion") @db.VarChar(255)
-  realizadoEn       DateTime?     @map("realizado_en") @db.Timestamptz(3)
-  confirmadoPorId   Int?          @map("confirmado_por_id")
-  creadoPorId       Int           @map("creado_por_id")
-  creadoEn          DateTime      @default(now()) @map("creado_en") @db.Timestamptz(3)
-  actualizadoEn     DateTime      @updatedAt @map("actualizado_en") @db.Timestamptz(3)
+  id                       Int           @id @default(autoincrement())
+  pacienteId               Int           @map("paciente_id")
+  tipoEstudioId            Int           @map("tipo_estudio_id")
+  nombre                   String        @db.VarChar(120)
+  fechaHora                DateTime      @map("fecha_hora") @db.Timestamptz(3)
+  preparacion              String?       @db.VarChar(500)
+  /// Indicaciones de quien lo programa (traslado, acompañante…).
+  observaciones            String?       @db.VarChar(500)
+  estado                   EstadoEstudio @default(PROGRAMADO)
+  motivoCancelacion        String?       @map("motivo_cancelacion") @db.VarChar(255)
+  /// Cuándo se confirmó que se realizó (con el rostro de quien confirma, T513).
+  realizadoEn              DateTime?     @map("realizado_en") @db.Timestamptz(3)
+  confirmadoPorId          Int?          @map("confirmado_por_id")
+  /// Observaciones de quien confirma la realización.
+  observacionesRealizacion String?       @map("observaciones_realizacion") @db.VarChar(500)
+  creadoPorId              Int           @map("creado_por_id")
+  creadoEn                 DateTime      @default(now()) @map("creado_en") @db.Timestamptz(3)
+  actualizadoEn            DateTime      @updatedAt @map("actualizado_en") @db.Timestamptz(3)
 
   paciente      Paciente       @relation(fields: [pacienteId], references: [id])
   tipoEstudio   TipoEstudio    @relation(fields: [tipoEstudioId], references: [id])

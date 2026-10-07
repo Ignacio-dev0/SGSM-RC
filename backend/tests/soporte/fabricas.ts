@@ -106,3 +106,28 @@ export async function crearPrescripcionBasica(
     },
   });
 }
+
+export async function crearTipoEstudio(
+  datos: Partial<Prisma.TipoEstudioUncheckedCreateInput> = {},
+) {
+  return prisma.tipoEstudio.create({ data: { nombre: `Estudio ${siguiente()}`, ...datos } });
+}
+
+/** Estudio PROGRAMADO de un tipo nuevo, salvo lo que se indique. */
+export async function crearEstudio(
+  pacienteId: number,
+  creadoPorId: number,
+  datos: Partial<Prisma.EstudioUncheckedCreateInput> = {},
+) {
+  const tipoEstudioId = datos.tipoEstudioId ?? (await crearTipoEstudio()).id;
+  return prisma.estudio.create({
+    data: {
+      pacienteId,
+      tipoEstudioId,
+      nombre: 'Rx de tórax',
+      fechaHora: new Date(Date.now() + 3_600_000),
+      creadoPorId,
+      ...datos,
+    },
+  });
+}

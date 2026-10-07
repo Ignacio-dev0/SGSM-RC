@@ -165,10 +165,23 @@ describe('traslado y egreso de pacientes (CU14 · CU15 · T210)', () => {
             fechaHora: new Date('2026-10-10T10:00:00Z'),
             estado,
             creadoPorId: medicoId,
+            // Realizado = cuándo y quién lo confirmó (CHECK estudios_realizado_completo).
+            ...(estado === 'REALIZADO'
+              ? { realizadoEn: new Date('2026-10-10T10:20:00Z'), confirmadoPorId: medicoId }
+              : {}),
           },
         });
       const programado = await estudio('PROGRAMADO');
       const realizado = await estudio('REALIZADO');
+      const delEstudio = await prisma.recordatorio.create({
+        data: {
+          tipo: 'ESTUDIO',
+          pacienteId,
+          estudioId: programado.id,
+          fechaHoraObjetivo: programado.fechaHora,
+          prioridad: 'MEDIA',
+        },
+      });
       const pendiente = await prisma.recordatorio.create({
         data: {
           tipo: 'MEDICAMENTO',
@@ -203,6 +216,7 @@ describe('traslado y egreso de pacientes (CU14 · CU15 · T210)', () => {
       expect(await estadoDe('estudio', programado.id)).toBe('CANCELADO');
       expect(await estadoDe('estudio', realizado.id)).toBe('REALIZADO');
       expect(await estadoDe('recordatorio', pendiente.id)).toBe('CANCELADO');
+      expect(await estadoDe('recordatorio', delEstudio.id)).toBe('CANCELADO');
       expect(await estadoDe('recordatorio', atendido.id)).toBe('ATENDIDO');
 
       const suspendida = await prisma.prescripcion.findUniqueOrThrow({ where: { id: vigente.id } });
