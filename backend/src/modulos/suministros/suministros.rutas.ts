@@ -3,10 +3,12 @@ import { idDeRuta } from '../../comun/parametros';
 import { validar } from '../../comun/validacion';
 import { usuarioActual } from '../auth/sesion';
 import { requierePermiso } from '../seguridad/permisos';
+import { corregirSuministro } from './correccion.servicio';
 import { buscarSuministros, obtenerSuministro, responsables } from './historial.servicio';
 import {
   esquemaAdministracion,
   esquemaBusquedaSuministros,
+  esquemaCorreccion,
   esquemaInsumos,
 } from './suministros.esquemas';
 import { registrarAdministracion, registrarInsumos } from './suministros.servicio';
@@ -37,4 +39,11 @@ rutasSuministros.post('/medicamentos', registrar, async (req, res) => {
 rutasSuministros.post('/insumos', registrar, async (req, res) => {
   const datos = validar(esquemaInsumos, req.body);
   res.status(201).json({ data: await registrarInsumos(datos, usuarioActual(req).id) });
+});
+
+rutasSuministros.patch('/:id', requierePermiso('suministros.corregir'), async (req, res) => {
+  const datos = validar(esquemaCorreccion, req.body);
+  res.json({
+    data: await corregirSuministro(idDeRuta(req.params.id), datos, usuarioActual(req).id),
+  });
 });

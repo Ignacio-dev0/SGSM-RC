@@ -53,7 +53,14 @@ export const esquemaCorreccion = z.object({
   cantidad: cantidad.optional(),
   /** Para un movimiento de insumos: la lista correcta completa. */
   items: items.optional(),
-  observaciones,
+  /** Si se omite, las observaciones quedan como estaban; '' o null las borra. */
+  observaciones: z
+    .string()
+    .trim()
+    .max(500)
+    .nullable()
+    .optional()
+    .transform((v) => (v === '' ? null : v)),
   validacionToken,
 });
 
