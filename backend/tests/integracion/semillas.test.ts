@@ -48,6 +48,17 @@ describe('datos de prueba (T103)', () => {
     for (const codigo of no) expect(permisos).not.toContain(codigo);
   });
 
+  // E6 (S17): ven reportes el administrador y el médico; exporta y audita solo el administrador.
+  it.each([
+    ['ADMINISTRADOR', ['reportes.ver', 'reportes.exportar', 'auditoria.ver'], []],
+    ['MEDICO', ['reportes.ver'], ['reportes.exportar', 'auditoria.ver']],
+    ['ENFERMERO', [], ['reportes.ver', 'reportes.exportar', 'auditoria.ver']],
+  ])('E6: permisos de reportes y auditoría del rol %s', async (rol, si, no) => {
+    const permisos = await permisosDelRol(rol);
+    expect(permisos).toEqual(expect.arrayContaining(si));
+    for (const codigo of no) expect(permisos).not.toContain(codigo);
+  });
+
   it('carga salas con camas, medicamentos, insumos y tipos de estudio', async () => {
     expect(await prisma.sala.count()).toBeGreaterThanOrEqual(3);
     expect(await prisma.cama.count()).toBeGreaterThanOrEqual(20);

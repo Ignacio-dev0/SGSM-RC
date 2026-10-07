@@ -74,6 +74,18 @@ export const PERMISOS = {
     modulo: 'estudios',
     descripcion: 'Confirmar con el rostro que un estudio se realizó (T513)',
   },
+  'reportes.ver': {
+    modulo: 'reportes',
+    descripcion: 'Ver el reporte de suministros y las estadísticas (CU32, CU33)',
+  },
+  'reportes.exportar': {
+    modulo: 'reportes',
+    descripcion: 'Descargar el reporte y las estadísticas en PDF o Excel (CU34)',
+  },
+  'auditoria.ver': {
+    modulo: 'auditoria',
+    descripcion: 'Consultar la auditoría con sus valores anterior y nuevo (CU35)',
+  },
 } as const;
 
 export type CodigoPermiso = keyof typeof PERMISOS;
@@ -104,6 +116,7 @@ export const ROLES: Record<
       'recordatorios.ver',
       'estudios.ver',
       'estudios.gestionar',
+      'reportes.ver',
     ],
   },
   ENFERMERO: {
