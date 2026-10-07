@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Box,
-  Chip,
   Dialog,
   DialogActions,
   DialogContent,
@@ -17,6 +16,7 @@ import type { Insumo, TipoInsumo } from '../../api/tipos';
 import { Alerta } from '../../componentes/Alerta';
 import { Boton } from '../../componentes/Boton';
 import { CampoTexto } from '../../componentes/CampoTexto';
+import { ChipEstado } from '../../componentes/ChipEstado';
 import { EncabezadoPagina } from '../../componentes/EncabezadoPagina';
 import { ErrorDeCarga } from '../../componentes/EstadoDeCarga';
 import { ModalConfirmacion } from '../../componentes/ModalConfirmacion';
@@ -35,22 +35,18 @@ const TIPOS = [
   { valor: 'INSUMO', etiqueta: 'Insumo no medicinal' },
 ];
 
-const COLUMNAS: Columna<Insumo>[] = [
+const COLUMNAS_BASE: Columna<Insumo>[] = [
   // Nombre y presentación sin cortes entre el número y su unidad ("500 mg", "10 x 10 cm").
   { titulo: 'Nombre', valor: (i) => <ColumnaPrincipal>{sinCortes(i.nombre)}</ColumnaPrincipal> },
   { titulo: 'Tipo', valor: (i) => (i.tipo === 'MEDICAMENTO' ? 'Medicamento' : 'Insumo') },
   { titulo: 'Presentación', valor: (i) => (i.presentacion ? sinCortes(i.presentacion) : '—') },
   { titulo: 'Unidad', valor: (i) => i.unidadMedida },
-  {
-    titulo: 'Estado',
-    valor: (i) =>
-      i.activo ? (
-        <Chip size="small" label="Activo" color="success" variant="outlined" />
-      ) : (
-        <Chip size="small" label="Dado de baja" />
-      ),
-  },
 ];
+
+const COLUMNA_ESTADO: Columna<Insumo> = {
+  titulo: 'Estado',
+  valor: (i) => <ChipEstado estado={i.activo ? 'ACTIVO' : 'DADO_DE_BAJA'} />,
+};
 
 const VACIO: DatosInsumo = { nombre: '', tipo: 'MEDICAMENTO', unidadMedida: '', presentacion: '' };
 
@@ -273,6 +269,12 @@ export function CatalogoInsumos() {
     () => [...(consulta.data ?? [])].sort((a, b) => a.nombre.localeCompare(b.nombre, 'es')),
     [consulta.data],
   );
+  // Con el filtro Activos todas las filas lo son y «Activo» en cada una sería ruido: el estado
+  // aparece cuando no es lo esperable (o cuando el filtro deja ver más de un estado).
+  const columnas =
+    activo === 'true' && insumos.every((i) => i.activo)
+      ? COLUMNAS_BASE
+      : [...COLUMNAS_BASE, COLUMNA_ESTADO];
 
   // Solo con la respuesta ya asentada y sin error: un fallo de carga no es "no hay insumos".
   const sinResultados = consulta.isSuccess && !consulta.isFetching && consulta.data.length === 0;
@@ -346,7 +348,7 @@ export function CatalogoInsumos() {
         <Recargando activo={consulta.isFetching && consulta.isPlaceholderData}>
           <Tabla
             titulo="Catálogo"
-            columnas={COLUMNAS}
+            columnas={columnas}
             filas={insumos}
             claveFila={(i) => i.id}
             cargando={consulta.isFetching}

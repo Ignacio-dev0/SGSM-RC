@@ -1,5 +1,5 @@
 import { useRef } from 'react';
-import { Box, Chip, InputAdornment } from '@mui/material';
+import { Box, InputAdornment } from '@mui/material';
 import PersonAddAlt1OutlinedIcon from '@mui/icons-material/PersonAddAlt1Outlined';
 import SearchIcon from '@mui/icons-material/Search';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
@@ -9,6 +9,7 @@ import type { Paciente } from '../../api/tipos';
 import { useSesion } from '../../auth/useSesion';
 import { Boton } from '../../componentes/Boton';
 import { CampoTexto } from '../../componentes/CampoTexto';
+import { ChipEstado } from '../../componentes/ChipEstado';
 import { EncabezadoPagina } from '../../componentes/EncabezadoPagina';
 import { ErrorDeCarga } from '../../componentes/EstadoDeCarga';
 import { Selector } from '../../componentes/Selector';
@@ -35,12 +36,7 @@ const COLUMNAS: Columna<Paciente>[] = [
   { titulo: 'Sala', valor: (p) => p.cama?.sala.nombre ?? '—' },
   {
     titulo: 'Estado',
-    valor: (p) =>
-      p.estado === 'INTERNADO' ? (
-        <Chip label="Internado" size="small" color="primary" variant="outlined" />
-      ) : (
-        <Chip label="Egresado" size="small" />
-      ),
+    valor: (p) => <ChipEstado estado={p.estado === 'INTERNADO' ? 'INTERNADO' : 'EGRESADO'} />,
   },
 ];
 

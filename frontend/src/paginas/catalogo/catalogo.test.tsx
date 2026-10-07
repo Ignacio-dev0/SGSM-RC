@@ -307,7 +307,8 @@ describe('el catálogo en tablet vertical (F28 · F32 · F48)', () => {
 
   it('los encabezados son cortos, para que no se partan en dos renglones', async () => {
     servidor.use(http.get('*/api/insumos', () => HttpResponse.json({ data: [insumo()] })));
-    renderizarApp('/catalogo', ADMIN);
+    // Con el filtro Activos la columna Estado no se muestra (todas las filas dirían «Activo»).
+    renderizarApp('/catalogo?activo=false', ADMIN);
 
     const tabla = await screen.findByRole('table', { name: 'Catálogo' });
     const encabezados = within(tabla)

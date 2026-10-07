@@ -1,5 +1,5 @@
 import { useId, useState, type ReactNode } from 'react';
-import { Box, Chip, Paper, Tab, Tabs, Typography } from '@mui/material';
+import { Box, Paper, Tab, Tabs, Typography } from '@mui/material';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import InventoryOutlinedIcon from '@mui/icons-material/Inventory2Outlined';
 import MedicationOutlinedIcon from '@mui/icons-material/MedicationOutlined';
@@ -11,6 +11,7 @@ import type { Paciente } from '../../api/tipos';
 import { useSesion } from '../../auth/useSesion';
 import { Alerta } from '../../componentes/Alerta';
 import { Boton } from '../../componentes/Boton';
+import { ChipEstado } from '../../componentes/ChipEstado';
 import { EncabezadoPagina } from '../../componentes/EncabezadoPagina';
 import { Cargando, ErrorDeCarga } from '../../componentes/EstadoDeCarga';
 import { edad, formatearFechaHora, formatearFechaSinZona } from '../../utilidades/formato';
@@ -143,7 +144,7 @@ export function FichaPaciente() {
                 {ubicacionCama(p.cama)}
               </Typography>
             ) : (
-              <Chip label="Egresado" />
+              <ChipEstado estado="EGRESADO" />
             )}
           </Box>
         }

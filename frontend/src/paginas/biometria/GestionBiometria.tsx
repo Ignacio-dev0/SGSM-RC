@@ -1,9 +1,9 @@
-import { Chip } from '@mui/material';
 import ScienceOutlinedIcon from '@mui/icons-material/ScienceOutlined';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { biometriaApi, type PersonalBiometria } from '../../api/biometria';
 import { Boton } from '../../componentes/Boton';
+import { ChipEstado } from '../../componentes/ChipEstado';
 import { EncabezadoPagina } from '../../componentes/EncabezadoPagina';
 import { ErrorDeCarga } from '../../componentes/EstadoDeCarga';
 import { Tabla, type Columna } from '../../componentes/Tabla';
@@ -20,12 +20,7 @@ const COLUMNAS: Columna<PersonalBiometria>[] = [
   { titulo: 'Rol', valor: (u) => u.rol },
   {
     titulo: 'Rostro',
-    valor: (u) =>
-      u.registrado ? (
-        <Chip size="small" color="success" label="Registrado" />
-      ) : (
-        <Chip size="small" color="warning" variant="outlined" label="Sin registrar" />
-      ),
+    valor: (u) => <ChipEstado estado={u.registrado ? 'REGISTRADO' : 'SIN_REGISTRAR'} />,
   },
   { titulo: 'Actualizado', valor: (u) => formatearFechaHora(u.actualizadoEn) },
 ];

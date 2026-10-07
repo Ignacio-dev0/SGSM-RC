@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Box, Chip } from '@mui/material';
+import { Box } from '@mui/material';
 import InventoryOutlinedIcon from '@mui/icons-material/Inventory2Outlined';
 import MedicationOutlinedIcon from '@mui/icons-material/MedicationOutlined';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
@@ -9,6 +9,7 @@ import type { Suministro } from '../../api/tipos';
 import { useSesion } from '../../auth/useSesion';
 import { Boton } from '../../componentes/Boton';
 import { CampoTexto } from '../../componentes/CampoTexto';
+import { ChipEstado } from '../../componentes/ChipEstado';
 import { EncabezadoPagina } from '../../componentes/EncabezadoPagina';
 import { ErrorDeCarga } from '../../componentes/EstadoDeCarga';
 import { Selector } from '../../componentes/Selector';
@@ -41,12 +42,7 @@ const COLUMNAS: Columna<Suministro>[] = [
   { titulo: 'Registró', valor: (s) => s.usuario.nombre },
   {
     titulo: 'Estado',
-    valor: (s) =>
-      s.corregido ? (
-        <Chip size="small" color="warning" label="Corregido" />
-      ) : (
-        <Chip size="small" color="success" variant="outlined" label="Validado" />
-      ),
+    valor: (s) => <ChipEstado estado={s.corregido ? 'CORREGIDO' : 'VALIDADO'} />,
   },
 ];
 

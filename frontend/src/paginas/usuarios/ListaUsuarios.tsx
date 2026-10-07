@@ -1,5 +1,5 @@
 import { useRef } from 'react';
-import { Box, Chip, InputAdornment } from '@mui/material';
+import { Box, InputAdornment } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import SearchIcon from '@mui/icons-material/Search';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
@@ -9,6 +9,7 @@ import { useRoles, usuariosApi } from '../../api/usuarios';
 import { Alerta } from '../../componentes/Alerta';
 import { Boton } from '../../componentes/Boton';
 import { CampoTexto } from '../../componentes/CampoTexto';
+import { ChipEstado, type EstadoChip } from '../../componentes/ChipEstado';
 import { EncabezadoPagina } from '../../componentes/EncabezadoPagina';
 import { ErrorDeCarga } from '../../componentes/EstadoDeCarga';
 import { Selector } from '../../componentes/Selector';
@@ -17,6 +18,12 @@ import { ColumnaPrincipal, GrillaDeFiltros, Recargando } from '../../utilidades/
 import { oracionDe, pasosParaProbar } from '../../utilidades/sinResultados';
 import { useFiltrosEnUrl } from '../../utilidades/useFiltrosEnUrl';
 import { useRetardo } from '../../utilidades/useRetardo';
+
+/** Dada de baja, bloqueada por intentos fallidos (todavía vigente) o activa. */
+function estadoDeLaCuenta(u: Usuario): EstadoChip {
+  if (!u.activo) return 'DADO_DE_BAJA';
+  return u.bloqueadoHasta && new Date(u.bloqueadoHasta) > new Date() ? 'BLOQUEADO' : 'ACTIVO';
+}
 
 const COLUMNAS: Columna<Usuario>[] = [
   {
@@ -28,14 +35,7 @@ const COLUMNAS: Columna<Usuario>[] = [
   { titulo: 'Rol', valor: (u) => u.rol.nombre },
   {
     titulo: 'Estado',
-    valor: (u) =>
-      !u.activo ? (
-        <Chip label="Dado de baja" size="small" />
-      ) : u.bloqueadoHasta && new Date(u.bloqueadoHasta) > new Date() ? (
-        <Chip label="Bloqueado" size="small" color="warning" />
-      ) : (
-        <Chip label="Activo" size="small" color="success" variant="outlined" />
-      ),
+    valor: (u) => <ChipEstado estado={estadoDeLaCuenta(u)} />,
   },
   {
     titulo: 'Rostro',
