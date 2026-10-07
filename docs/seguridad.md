@@ -56,10 +56,18 @@ Fuente de verdad: [`backend/src/modulos/seguridad/catalogo-permisos.ts`](../back
 | `suministros.registrar`    |       ✔       |        |     ✔     |
 | `suministros.ver`          |       ✔       |   ✔    |     ✔     |
 | `suministros.corregir`     |       ✔       |        |     ✔     |
+| `recordatorios.ver`        |       ✔       |   ✔    |     ✔     |
+| `recordatorios.atender`    |       ✔       |        |     ✔     |
+| `estudios.ver`             |       ✔       |   ✔    |     ✔     |
+| `estudios.gestionar`       |       ✔       |   ✔    |           |
+| `estudios.confirmar`       |       ✔       |        |     ✔     |
 
 El reparto entre Médico y Enfermero es un **supuesto** (ver [supuestos.md](supuestos.md)): si
 enfermería también interna pacientes, alcanza con darle `pacientes.gestionar` como permiso
-adicional a quien corresponda, o moverlo al rol en el catálogo.
+adicional a quien corresponda, o moverlo al rol en el catálogo. Los permisos de recordatorios y
+estudios (E5) siguen los supuestos S14 y S15 de [diseno-e5.md](diseno-e5.md): ven los tres roles,
+atiende y confirma enfermería, programa el médico. `recordatorios.ver` también decide quién
+recibe los avisos del tiempo real ([recordatorios.md](recordatorios.md)).
 
 El frontend oculta las opciones del menú y las pantallas sin permiso, pero eso es solo
 comodidad: **la seguridad real está en el backend**, que valida el permiso en cada endpoint.

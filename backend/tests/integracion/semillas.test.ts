@@ -37,6 +37,17 @@ describe('datos de prueba (T103)', () => {
     expect(permisos).not.toContain('prescripciones.gestionar');
   });
 
+  // E5 (S14 · S15): ven los tres roles; atiende y confirma enfermería; programa el médico.
+  it.each([
+    ['ADMINISTRADOR', ['recordatorios.atender', 'estudios.gestionar', 'estudios.confirmar'], []],
+    ['MEDICO', ['estudios.gestionar'], ['recordatorios.atender', 'estudios.confirmar']],
+    ['ENFERMERO', ['recordatorios.atender', 'estudios.confirmar'], ['estudios.gestionar']],
+  ])('E5: el rol %s ve recordatorios y estudios y actúa según su tarea', async (rol, si, no) => {
+    const permisos = await permisosDelRol(rol);
+    expect(permisos).toEqual(expect.arrayContaining(['recordatorios.ver', 'estudios.ver', ...si]));
+    for (const codigo of no) expect(permisos).not.toContain(codigo);
+  });
+
   it('carga salas con camas, medicamentos, insumos y tipos de estudio', async () => {
     expect(await prisma.sala.count()).toBeGreaterThanOrEqual(3);
     expect(await prisma.cama.count()).toBeGreaterThanOrEqual(20);

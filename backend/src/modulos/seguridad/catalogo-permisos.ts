@@ -54,6 +54,26 @@ export const PERMISOS = {
     modulo: 'suministros',
     descripcion: 'Corregir un suministro dentro de las 24 horas (CU23)',
   },
+  'recordatorios.ver': {
+    modulo: 'recordatorios',
+    descripcion: 'Ver los recordatorios de tomas y estudios y recibir sus avisos (T505, T506)',
+  },
+  'recordatorios.atender': {
+    modulo: 'recordatorios',
+    descripcion: 'Atender un recordatorio: administrar o registrar por qué no se dio (T507)',
+  },
+  'estudios.ver': {
+    modulo: 'estudios',
+    descripcion: 'Consultar los estudios programados de un paciente (T510)',
+  },
+  'estudios.gestionar': {
+    modulo: 'estudios',
+    descripcion: 'Programar, reprogramar y cancelar estudios (T511, T512)',
+  },
+  'estudios.confirmar': {
+    modulo: 'estudios',
+    descripcion: 'Confirmar con el rostro que un estudio se realizó (T513)',
+  },
 } as const;
 
 export type CodigoPermiso = keyof typeof PERMISOS;
@@ -81,6 +101,9 @@ export const ROLES: Record<
       'prescripciones.ver',
       'prescripciones.gestionar',
       'suministros.ver',
+      'recordatorios.ver',
+      'estudios.ver',
+      'estudios.gestionar',
     ],
   },
   ENFERMERO: {
@@ -93,6 +116,10 @@ export const ROLES: Record<
       'suministros.registrar',
       'suministros.ver',
       'suministros.corregir',
+      'recordatorios.ver',
+      'recordatorios.atender',
+      'estudios.ver',
+      'estudios.confirmar',
     ],
   },
 };
