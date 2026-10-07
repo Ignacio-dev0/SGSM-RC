@@ -23,7 +23,7 @@ describe('pestañas de la ficha del paciente (WAI-ARIA tabs · UX-22)', () => {
       within(pestanas)
         .getAllByRole('tab')
         .map((t) => t.textContent),
-    ).toEqual(['Datos', 'Prescripciones', 'Historial']);
+    ).toEqual(['Datos', 'Prescripciones', 'Estudios', 'Historial']);
   });
 
   it('la pestaña seleccionada controla el panel visible, y el panel se nombra con ella', async () => {
@@ -46,9 +46,9 @@ describe('pestañas de la ficha del paciente (WAI-ARIA tabs · UX-22)', () => {
 
     const asociados = screen.getAllByRole('tab').map((t) => t.getAttribute('aria-controls'));
     expect(asociados.every(Boolean)).toBe(true);
-    expect(new Set(asociados).size).toBe(3);
+    expect(new Set(asociados).size).toBe(4);
     const ids = screen.getAllByRole('tab').map((t) => t.id);
-    expect(new Set(ids).size).toBe(3);
+    expect(new Set(ids).size).toBe(4);
   });
 
   it('al cambiar de pestaña, el panel y su asociación cambian con ella', async () => {

@@ -15,6 +15,7 @@ import { ChipEstado } from '../../componentes/ChipEstado';
 import { EncabezadoPagina } from '../../componentes/EncabezadoPagina';
 import { Cargando, ErrorDeCarga } from '../../componentes/EstadoDeCarga';
 import { edad, formatearFechaHora, formatearFechaSinZona } from '../../utilidades/formato';
+import { EstudiosPaciente } from '../estudios/EstudiosPaciente';
 import { PrescripcionesPaciente } from '../prescripciones/PrescripcionesPaciente';
 import { DialogoEgreso, DialogoTraslado } from './DialogosPaciente';
 import { HistorialPaciente } from './HistorialPaciente';
@@ -65,18 +66,25 @@ function DatosDelPaciente({ p }: { p: Paciente }) {
   );
 }
 
-const PESTANAS = ['datos', 'prescripciones', 'historial'] as const;
+const PESTANAS = ['datos', 'prescripciones', 'estudios', 'historial'] as const;
 type Pestana = (typeof PESTANAS)[number];
 
 const ETIQUETAS_PESTANA: Record<Pestana, string> = {
   datos: 'Datos',
   prescripciones: 'Prescripciones',
+  estudios: 'Estudios',
   historial: 'Historial',
+};
+
+/** Las pestañas que piden un permiso para verse. */
+const PERMISO_PESTANA: Partial<Record<Pestana, string>> = {
+  prescripciones: 'prescripciones.ver',
+  estudios: 'estudios.ver',
 };
 
 /**
  * Ficha del paciente: datos, cama actual y acciones (editar T207, trasladar T207, dar de alta
- * T208), con las pestañas de prescripciones (T305) e historial (T209).
+ * T208), con las pestañas de prescripciones (T305), estudios (T510) e historial (T209).
  */
 export function FichaPaciente() {
   const id = Number(useParams().id);
@@ -87,9 +95,13 @@ export function FichaPaciente() {
   const [parametros, setParametros] = useSearchParams();
   // Al lado de la cama lo primero que se busca es la medicación (hallazgo F1).
   const pestanaInicial: Pestana = tienePermiso('prescripciones.ver') ? 'prescripciones' : 'datos';
-  const pestana: Pestana = PESTANAS.includes(parametros.get('pestana') as Pestana)
-    ? (parametros.get('pestana') as Pestana)
-    : pestanaInicial;
+  const visible = (v: Pestana) => {
+    const permiso = PERMISO_PESTANA[v];
+    return !permiso || tienePermiso(permiso);
+  };
+  const pedida = parametros.get('pestana') as Pestana;
+  // Una pestaña sin permiso (un enlace guardado por otro rol) abre la inicial.
+  const pestana: Pestana = PESTANAS.includes(pedida) && visible(pedida) ? pedida : pestanaInicial;
   const [aviso, setAviso] = useState<string | null>(
     (ubicacion.state as { aviso?: string } | null)?.aviso ?? null,
   );
@@ -209,15 +221,16 @@ export function FichaPaciente() {
         }
         sx={{ mb: 2, borderBottom: 1, borderColor: 'divider' }}
       >
-        <Tab {...propiedadesPestana('datos')} />
-        {tienePermiso('prescripciones.ver') && <Tab {...propiedadesPestana('prescripciones')} />}
-        <Tab {...propiedadesPestana('historial')} />
+        {PESTANAS.filter(visible).map((v) => (
+          <Tab key={v} {...propiedadesPestana(v)} />
+        ))}
       </Tabs>
 
       {/* Solo el panel de la pestaña activa está en la página: las otras secciones no cargan datos. */}
       <Box role="tabpanel" id={idPanel(pestana)} aria-labelledby={idPestana(pestana)}>
         {pestana === 'datos' && <DatosDelPaciente p={p} />}
         {pestana === 'prescripciones' && <PrescripcionesPaciente paciente={p} />}
+        {pestana === 'estudios' && <EstudiosPaciente paciente={p} />}
         {pestana === 'historial' && <HistorialPaciente pacienteId={id} />}
       </Box>
 
