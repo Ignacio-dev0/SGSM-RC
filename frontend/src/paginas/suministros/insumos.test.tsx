@@ -75,6 +75,8 @@ describe('registro de insumos (T414 · CU21)', () => {
       screen.getByRole('combobox', { name: 'Paciente' }),
       await screen.findByRole('option', { name: /Gómez, Luis/ }),
     );
+    // Cambiar de paciente borra lo cargado: antes pregunta (UX-11) y recién al descartar lo borra.
+    await userEvent.click(await screen.findByRole('button', { name: 'Descartar' }));
 
     await waitFor(() => expect(screen.getByLabelText('Observaciones')).toHaveValue(''));
     expect(screen.queryByRole('list', { name: 'Insumos a registrar' })).not.toBeInTheDocument();
@@ -275,12 +277,14 @@ describe('registro de insumos · estados y confirmación (UX-05 · UX-07 · UX-0
     await userEvent.click(
       await screen.findByRole('button', { name: /Simular el rostro de enfermero/ }),
     );
-    expect(await screen.findByRole('alert')).toHaveTextContent(/Error inesperado/);
+    expect(await screen.findByRole('alert')).toHaveTextContent(/El servidor tuvo un problema/);
 
     await userEvent.selectOptions(
       screen.getByRole('combobox', { name: 'Paciente' }),
       await screen.findByRole('option', { name: /Gómez, Luis/ }),
     );
+    // Los insumos que no se llegaron a registrar siguen cargados: cambiar de paciente pregunta.
+    await userEvent.click(await screen.findByRole('button', { name: 'Descartar' }));
 
     await waitFor(() => expect(screen.queryByRole('alert')).not.toBeInTheDocument());
   });

@@ -16,6 +16,7 @@ import {
   validarPaciente,
   type ErroresPaciente,
 } from './datosPaciente';
+import { hayDiferencias, useCambiosSinGuardar } from '../../utilidades/useCambiosSinGuardar';
 import { useFocoEnPrimerError } from '../../utilidades/useFocoEnPrimerError';
 
 /** Modificación de los datos personales del paciente (T207 · CU13). */
@@ -32,11 +33,17 @@ export function EdicionPaciente() {
     if (paciente.data) setDatos(datosDePaciente(paciente.data));
   }, [paciente.data]);
 
+  // Cambios respecto de lo cargado: volver al valor original deja de contar como cambio.
+  const { dialogo, permitirSalida } = useCambiosSinGuardar(
+    Boolean(paciente.data) && hayDiferencias(datos, datosDePaciente(paciente.data!)),
+  );
+
   const guardar = useMutation({
     mutationFn: () => pacientesApi.modificar(id, datos),
     onSuccess: async (p) => {
       clienteQuery.setQueryData(['paciente', id], p);
       await clienteQuery.invalidateQueries({ queryKey: ['pacientes'] });
+      permitirSalida();
       navegar(`/pacientes/${id}`, { state: { aviso: 'Los cambios se guardaron' } });
     },
     onError: (err) => {
@@ -100,6 +107,7 @@ export function EdicionPaciente() {
           </AccionesFormulario>
         </Paper>
       )}
+      {dialogo}
     </>
   );
 }

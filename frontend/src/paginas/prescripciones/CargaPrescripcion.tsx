@@ -15,6 +15,7 @@ import { Selector } from '../../componentes/Selector';
 import { proximasTomas } from '../../utilidades/agenda';
 import { soltarAlGirarLaRueda } from '../../utilidades/campoNumerico';
 import { formatearFechaHora, formatearHora } from '../../utilidades/formato';
+import { hayDiferencias, useCambiosSinGuardar } from '../../utilidades/useCambiosSinGuardar';
 import { useFocoEnPrimerError } from '../../utilidades/useFocoEnPrimerError';
 import { FRECUENCIAS, VIAS, aLocal, etiquetaVia, resumenPrescripcion } from './etiquetas';
 import { motivoSinPaciente } from './estadoDelPaciente';
@@ -80,7 +81,7 @@ export function CargaPrescripcion() {
   const clienteQuery = useQueryClient();
   const paciente = usePaciente(pacienteId);
   const medicamentos = useCatalogo('MEDICAMENTO');
-  const [f, setF] = useState<Formulario>(() => ({
+  const [inicial] = useState<Formulario>(() => ({
     insumoId: '',
     dosis: '',
     unidadDosis: '',
@@ -90,6 +91,8 @@ export function CargaPrescripcion() {
     fin: '',
     observaciones: '',
   }));
+  const [f, setF] = useState<Formulario>(inicial);
+  const { dialogo, permitirSalida } = useCambiosSinGuardar(hayDiferencias(f, inicial));
   const [errores, setErrores] = useState<Errores>({});
   const { ref: refFormulario, enfocarPrimerError } = useFocoEnPrimerError<HTMLFormElement>();
   const [duplicadas, setDuplicadas] = useState<Duplicada[] | null>(null);
@@ -124,6 +127,7 @@ export function CargaPrescripcion() {
       }),
     onSuccess: async (p) => {
       await clienteQuery.invalidateQueries({ queryKey: ['prescripciones', pacienteId] });
+      permitirSalida();
       navegar(`/pacientes/${pacienteId}?pestana=prescripciones`, {
         state: {
           aviso: `Prescripción cargada: ${p.medicamento.nombre} ${resumenPrescripcion(p)}`,
@@ -216,9 +220,11 @@ export function CargaPrescripcion() {
             error={
               errores.insumoId ??
               (medicamentos.isError
-                ? 'No se pudo cargar la lista de medicamentos. Revise la conexión y vuelva a entrar a esta pantalla.'
+                ? `No se pudo cargar la lista de medicamentos. ${mensajeDeError(medicamentos.error)}`
                 : undefined)
             }
+            alReintentar={() => void medicamentos.refetch()}
+            reintentando={medicamentos.isFetching}
             required
             textoVacio={medicamentos.isLoading ? 'Cargando medicamentos…' : 'Elegir…'}
             opciones={(medicamentos.data ?? []).map((m) => ({
@@ -347,6 +353,7 @@ export function CargaPrescripcion() {
           </Boton>
         </AccionesFormulario>
       </Paper>
+      {dialogo}
     </>
   );
 }

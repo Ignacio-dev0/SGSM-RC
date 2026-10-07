@@ -18,6 +18,7 @@ import { CampoTexto } from '../../componentes/CampoTexto';
 import { EncabezadoPagina } from '../../componentes/EncabezadoPagina';
 import { Cargando, ErrorDeCarga } from '../../componentes/EstadoDeCarga';
 import { IdentidadPaciente } from '../pacientes/IdentidadPaciente';
+import { useCambiosSinGuardar } from '../../utilidades/useCambiosSinGuardar';
 import { formatearDosis } from '../prescripciones/etiquetas';
 import { ListaCantidades, SelectorPaciente, type ItemCantidad } from './comunes';
 
@@ -36,6 +37,8 @@ export function RegistroInsumos() {
   const [items, setItems] = useState<ItemCantidad[]>([]);
   const [observaciones, setObservaciones] = useState('');
   const [aviso, setAviso] = useState<string | null>(null);
+  // Registrar vacía los insumos y la nota, así que después de guardar ya no hay nada que perder.
+  const { dialogo } = useCambiosSinGuardar(items.length > 0 || observaciones.trim() !== '');
 
   const agregar = (i: Insumo) => {
     setAviso(null);
@@ -265,6 +268,7 @@ export function RegistroInsumos() {
         </AccionesFormulario>
       )}
       {modalValidacion}
+      {dialogo}
     </>
   );
 }

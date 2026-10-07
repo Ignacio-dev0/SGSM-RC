@@ -13,6 +13,7 @@ import { Selector } from '../../componentes/Selector';
 import { CamposPaciente } from './CamposPaciente';
 import { PACIENTE_VACIO, validarPaciente, type ErroresPaciente } from './datosPaciente';
 import { descripcionCama, opcionesDeCamas } from './etiquetas';
+import { hayDiferencias, useCambiosSinGuardar } from '../../utilidades/useCambiosSinGuardar';
 import { useFocoEnPrimerError } from '../../utilidades/useFocoEnPrimerError';
 
 /** Campo del formulario al que corresponde cada conflicto que informa el backend. */
@@ -35,10 +36,14 @@ export function RegistroPaciente() {
   const [errores, setErrores] = useState<ErroresPaciente>({});
   const { ref: refFormulario, enfocarPrimerError } = useFocoEnPrimerError<HTMLFormElement>();
   const [egresadoId, setEgresadoId] = useState<number | null>(null);
+  const { dialogo, permitirSalida } = useCambiosSinGuardar(
+    hayDiferencias(datos, PACIENTE_VACIO) || camaId !== '',
+  );
 
   const alTerminar = async (p: Paciente, accion: string) => {
     await clienteQuery.invalidateQueries({ queryKey: ['pacientes'] });
     await clienteQuery.invalidateQueries({ queryKey: ['camas'] });
+    permitirSalida();
     navegar(`/pacientes/${p.id}`, {
       state: { aviso: `${accion} en ${p.cama ? descripcionCama(p.cama) : 'la cama elegida'}` },
     });
@@ -142,11 +147,13 @@ export function RegistroPaciente() {
             error={
               errores.camaId ??
               (camas.isError
-                ? 'No se pudo cargar la lista de camas. Revise la conexión y vuelva a entrar a esta pantalla.'
+                ? `No se pudo cargar la lista de camas. ${mensajeDeError(camas.error)}`
                 : camas.isSuccess && camas.data.length === 0
                   ? 'No hay camas libres. Hay que liberar o habilitar una antes de internar.'
                   : undefined)
             }
+            alReintentar={() => void camas.refetch()}
+            reintentando={camas.isFetching}
             required
             textoVacio={camas.isLoading ? 'Cargando camas…' : 'Elegir una cama libre…'}
             opciones={opcionesDeCamas(camas.data ?? [])}
@@ -162,6 +169,7 @@ export function RegistroPaciente() {
           </Boton>
         </AccionesFormulario>
       </Paper>
+      {dialogo}
     </>
   );
 }

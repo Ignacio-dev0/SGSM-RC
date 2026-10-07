@@ -18,6 +18,7 @@ import { Cargando, ErrorDeCarga } from '../../componentes/EstadoDeCarga';
 import { soltarAlGirarLaRueda } from '../../utilidades/campoNumerico';
 import { formatearHora } from '../../utilidades/formato';
 import { useAhora } from '../../utilidades/useAhora';
+import { useCambiosSinGuardar } from '../../utilidades/useCambiosSinGuardar';
 import { IdentidadPaciente } from '../pacientes/IdentidadPaciente';
 import { etiquetaVia, formatearDosis } from '../prescripciones/etiquetas';
 import { SelectorPaciente } from './comunes';
@@ -170,6 +171,12 @@ export function AdministracionMedicamento() {
 
   const p = paciente.data;
   const elegida = vigentes.data?.find((x) => x.id === elegidaId) ?? null;
+  // Elegir el medicamento no es un cambio; sí lo son la cantidad distinta de la prescripta, una
+  // nota o marcar otra toma. Registrar vacía todo eso, así que después de guardar no hay nada.
+  const { dialogo } = useCambiosSinGuardar(
+    elegida !== null &&
+      (cantidad !== String(elegida.dosis) || observaciones.trim() !== '' || otraToma),
+  );
   const estado = elegida ? estadoToma(elegida, ahora) : null;
   const cantidadNumero = Number(cantidad);
   const cantidadValida = cantidadNumero > 0;
@@ -415,6 +422,7 @@ export function AdministracionMedicamento() {
         )}
       </Box>
       {modalValidacion}
+      {dialogo}
     </>
   );
 }

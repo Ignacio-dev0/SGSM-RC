@@ -18,6 +18,7 @@ import { Cargando, ErrorDeCarga } from '../../componentes/EstadoDeCarga';
 import { ModalConfirmacion } from '../../componentes/ModalConfirmacion';
 import { Selector } from '../../componentes/Selector';
 import { formatearFechaHora } from '../../utilidades/formato';
+import { hayDiferencias, useCambiosSinGuardar } from '../../utilidades/useCambiosSinGuardar';
 import { useFocoEnPrimerError } from '../../utilidades/useFocoEnPrimerError';
 
 const VACIO: DatosUsuario = {
@@ -87,6 +88,12 @@ export function FormularioUsuario() {
     if (existente.data) setDatos(desdeUsuario(existente.data));
   }, [existente.data]);
 
+  // Lo escrito frente a lo que había: un formulario vacío en el alta, el usuario cargado al editar.
+  const original = esAlta ? VACIO : existente.data ? desdeUsuario(existente.data) : null;
+  const { dialogo, permitirSalida } = useCambiosSinGuardar(
+    original !== null && hayDiferencias(datos, original),
+  );
+
   const actualizar = (campo: keyof DatosUsuario) => (valor: string) => {
     setDatos((d) => ({ ...d, [campo]: valor }));
     setErrores((e) => ({ ...e, [campo]: undefined }));
@@ -110,6 +117,7 @@ export function FormularioUsuario() {
     onSuccess: async (u) => {
       await clienteQuery.invalidateQueries({ queryKey: ['usuarios'] });
       if (esAlta) {
+        permitirSalida();
         navegar('/usuarios', { state: { aviso: `Usuario ${u.nombreUsuario} creado` } });
       } else {
         clienteQuery.setQueryData(['usuario', usuarioId], u);
@@ -333,6 +341,7 @@ export function FormularioUsuario() {
       >
         {darDeBaja.isError && <Alerta tipo="error">{mensajeDeError(darDeBaja.error)}</Alerta>}
       </ModalConfirmacion>
+      {dialogo}
     </>
   );
 }

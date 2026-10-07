@@ -29,6 +29,7 @@ import { ModalConfirmacion } from '../../componentes/ModalConfirmacion';
 import { Selector } from '../../componentes/Selector';
 import { soltarAlGirarLaRueda } from '../../utilidades/campoNumerico';
 import { formatearFechaHora, formatearHora } from '../../utilidades/formato';
+import { useCambiosSinGuardar } from '../../utilidades/useCambiosSinGuardar';
 import {
   ACCIONES,
   cambiosDe,
@@ -70,6 +71,11 @@ export function DetallePrescripcion() {
     if (p) setEdicion(desde(p));
   }, [p]);
 
+  const gestiona = tienePermiso('prescripciones.gestionar');
+  const editable = gestiona && p?.estado === 'VIGENTE';
+  const hayCambios = Boolean(p && edicion) && Object.keys(cambiosDe(p!, edicion!)).length > 0;
+  const { dialogo } = useCambiosSinGuardar(editable && hayCambios);
+
   /** Actualiza el caché conservando la agenda (que solo trae el detalle). */
   const actualizar = (nueva: Prescripcion) => {
     clienteQuery.setQueryData<Prescripcion>(['prescripcion', id], (vieja) => ({
@@ -110,9 +116,6 @@ export function DetallePrescripcion() {
   }
   if (!p || !edicion) return <Cargando texto="Cargando la prescripción…" />;
 
-  const gestiona = tienePermiso('prescripciones.gestionar');
-  const editable = gestiona && p.estado === 'VIGENTE';
-  const hayCambios = Object.keys(cambiosDe(p, edicion)).length > 0;
   const dosisInvalida = !(Number(edicion.dosis) > 0);
   // Por qué Guardar cambios está deshabilitado (UX-17), o null si se puede guardar.
   const motivoBloqueo =
@@ -353,6 +356,7 @@ export function DetallePrescripcion() {
         </Table>
         {modificar.isError && <Alerta tipo="error">{mensajeDeError(modificar.error)}</Alerta>}
       </ModalConfirmacion>
+      {dialogo}
 
       {cambioEstado && (
         <ModalConfirmacion
