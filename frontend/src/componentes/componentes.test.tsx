@@ -76,6 +76,55 @@ describe('Selector', () => {
     await userEvent.selectOptions(screen.getByLabelText('Rol'), 'Médico');
     expect(alCambiar).toHaveBeenCalledWith('MEDICO');
   });
+
+  describe('Reintentar solo cuando la lista no cargó (E5-07)', () => {
+    const conError = (props: { error?: string; errorDeCarga?: boolean }) => (
+      <Selector
+        etiqueta="Cama"
+        valor=""
+        alCambiar={() => {}}
+        opciones={[]}
+        alReintentar={() => {}}
+        {...props}
+      />
+    );
+
+    it('un error de validación (por ejemplo, falta elegir) no ofrece Reintentar', () => {
+      render(conError({ error: 'Elija la cama', errorDeCarga: false }));
+      expect(screen.getByLabelText('Cama')).toHaveAccessibleDescription('Elija la cama');
+      expect(screen.queryByRole('button', { name: 'Reintentar' })).not.toBeInTheDocument();
+    });
+
+    it('si la lista no cargó, ofrece Reintentar al lado', async () => {
+      const alReintentar = vi.fn();
+      render(
+        <Selector
+          etiqueta="Cama"
+          valor=""
+          alCambiar={() => {}}
+          opciones={[]}
+          error="No se pudo cargar la lista de camas."
+          errorDeCarga
+          alReintentar={alReintentar}
+        />,
+      );
+      await userEvent.click(screen.getByRole('button', { name: 'Reintentar' }));
+      expect(alReintentar).toHaveBeenCalled();
+    });
+
+    it('el campo no se vuelve a montar cuando aparece o desaparece Reintentar (no pierde el foco)', () => {
+      const { rerender } = render(conError({ errorDeCarga: false }));
+      const campo = screen.getByLabelText('Cama');
+      campo.focus();
+
+      rerender(conError({ error: 'No se pudo cargar la lista de camas.', errorDeCarga: true }));
+      expect(screen.getByRole('button', { name: 'Reintentar' })).toBeInTheDocument();
+      rerender(conError({ error: 'Elija la cama', errorDeCarga: false }));
+
+      expect(screen.getByLabelText('Cama')).toBe(campo);
+      expect(campo).toHaveFocus();
+    });
+  });
 });
 
 describe('ModalConfirmacion', () => {
@@ -97,6 +146,44 @@ describe('ModalConfirmacion', () => {
     expect(alCancelar).toHaveBeenCalled();
     await userEvent.click(within(dialogo).getByRole('button', { name: 'Dar de baja' }));
     expect(alConfirmar).toHaveBeenCalledWith(undefined);
+  });
+
+  it('el diálogo se describe con el mensaje: el lector de pantalla lo lee al abrirse (E5-13)', () => {
+    const { unmount } = render(
+      <ModalConfirmacion
+        abierto
+        titulo="Dar de baja"
+        mensaje="Se da de baja a Gómez, Juan. No se puede deshacer."
+        textoConfirmar="Dar de baja"
+        alConfirmar={() => {}}
+        alCancelar={() => {}}
+      />,
+    );
+    expect(screen.getByRole('dialog', { name: 'Dar de baja' })).toHaveAccessibleDescription(
+      'Se da de baja a Gómez, Juan. No se puede deshacer.',
+    );
+    unmount();
+
+    // También cuando el mensaje es más que un texto (varios párrafos).
+    render(
+      <ModalConfirmacion
+        abierto
+        titulo="Cancelar el estudio"
+        mensaje={
+          <>
+            <p>Se cancela Rx de tórax.</p>
+            <p>No se puede deshacer.</p>
+          </>
+        }
+        textoConfirmar="Cancelar estudio"
+        pedirMotivo
+        alConfirmar={() => {}}
+        alCancelar={() => {}}
+      />,
+    );
+    expect(screen.getByRole('dialog')).toHaveAccessibleDescription(
+      'Se cancela Rx de tórax. No se puede deshacer.',
+    );
   });
 
   it('cuando pide motivo no deja confirmar sin escribirlo', async () => {

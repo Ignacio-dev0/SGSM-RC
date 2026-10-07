@@ -153,6 +153,7 @@ export function RegistroPaciente() {
                   : undefined)
             }
             alReintentar={() => void camas.refetch()}
+            errorDeCarga={camas.isError}
             reintentando={camas.isFetching}
             required
             textoVacio={camas.isLoading ? 'Cargando camas…' : 'Elegir una cama libre…'}

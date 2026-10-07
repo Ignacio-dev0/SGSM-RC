@@ -106,6 +106,19 @@ describe('registro de paciente: el reingreso pide una decisión (UX-12)', () => 
   });
 });
 
+describe('registro de paciente: Reintentar solo si la lista de camas no cargó (E5-07)', () => {
+  it('sin elegir la cama, el error es de validación y no ofrece Reintentar', async () => {
+    renderizarApp('/pacientes/nuevo', MEDICO);
+
+    await completarDatosPersonales();
+    await screen.findByRole('option', { name: /A-02/ });
+    await userEvent.click(screen.getByRole('button', { name: 'Internar' }));
+
+    expect(screen.getByLabelText(/^Cama/)).toHaveAccessibleDescription('Elija la cama');
+    expect(screen.queryByRole('button', { name: 'Reintentar' })).not.toBeInTheDocument();
+  });
+});
+
 describe('datos del paciente: ayuda del DNI y sin autocompletar (UX-20a · UX-20d)', () => {
   it('el DNI explica el formato desde el principio, no recién cuando falla', async () => {
     renderizarApp('/pacientes/nuevo', MEDICO);

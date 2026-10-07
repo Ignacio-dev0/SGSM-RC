@@ -96,6 +96,7 @@ export function ModalConfirmacion({
   alCancelar,
 }: Props) {
   const idTitulo = useId();
+  const idMensaje = useId();
   const [motivo, setMotivo] = useState('');
 
   useEffect(() => {
@@ -113,12 +114,18 @@ export function ModalConfirmacion({
         alCancelar();
       }}
       aria-labelledby={idTitulo}
+      // El mensaje dice sobre qué se actúa y si se puede deshacer: se lee al abrir (E5-13).
+      aria-describedby={idMensaje}
       fullWidth
       maxWidth="sm"
     >
       <DialogTitle id={idTitulo}>{titulo}</DialogTitle>
       <DialogContent>
-        {typeof mensaje === 'string' ? <Typography>{mensaje}</Typography> : mensaje}
+        {typeof mensaje === 'string' ? (
+          <Typography id={idMensaje}>{mensaje}</Typography>
+        ) : (
+          <Box id={idMensaje}>{mensaje}</Box>
+        )}
         {children}
         {pedirMotivo && (
           <CampoTexto

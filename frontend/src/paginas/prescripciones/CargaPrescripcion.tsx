@@ -13,11 +13,16 @@ import { CampoTexto } from '../../componentes/CampoTexto';
 import { EncabezadoPagina } from '../../componentes/EncabezadoPagina';
 import { Selector } from '../../componentes/Selector';
 import { proximasTomas } from '../../utilidades/agenda';
+import {
+  campoFechaHora,
+  isoDeCampoFechaHora,
+  msDeCampoFechaHora,
+} from '../../utilidades/campoFechaHora';
 import { soltarAlGirarLaRueda } from '../../utilidades/campoNumerico';
 import { formatearFechaHora, formatearHora } from '../../utilidades/formato';
 import { hayDiferencias, useCambiosSinGuardar } from '../../utilidades/useCambiosSinGuardar';
 import { useFocoEnPrimerError } from '../../utilidades/useFocoEnPrimerError';
-import { FRECUENCIAS, VIAS, aLocal, etiquetaVia, resumenPrescripcion } from './etiquetas';
+import { FRECUENCIAS, VIAS, etiquetaVia, resumenPrescripcion } from './etiquetas';
 import { motivoSinPaciente } from './estadoDelPaciente';
 import { IdentidadOEstado } from './IdentidadOEstado';
 
@@ -52,7 +57,7 @@ function validarDosis(f: Formulario): Errores {
 /** Validaciones en línea: se muestran mientras se escribe, no recién al guardar. */
 function validarEnLinea(f: Formulario): Errores {
   const e: Errores = {};
-  if (f.fin && f.inicio && new Date(f.fin) <= new Date(f.inicio)) {
+  if (f.fin && f.inicio && msDeCampoFechaHora(f.fin) <= msDeCampoFechaHora(f.inicio)) {
     e.fin = 'La fecha de fin debe ser posterior al inicio';
   }
   return e;
@@ -87,7 +92,7 @@ export function CargaPrescripcion() {
     unidadDosis: '',
     frecuenciaHoras: '',
     via: '',
-    inicio: aLocal(new Date()),
+    inicio: campoFechaHora(new Date()),
     fin: '',
     observaciones: '',
   }));
@@ -120,8 +125,8 @@ export function CargaPrescripcion() {
         unidadDosis: f.unidadDosis.trim(),
         frecuenciaHoras: Number(f.frecuenciaHoras),
         via: f.via as Via,
-        fechaInicio: new Date(f.inicio).toISOString(),
-        fechaFin: f.fin ? new Date(f.fin).toISOString() : null,
+        fechaInicio: isoDeCampoFechaHora(f.inicio),
+        fechaFin: f.fin ? isoDeCampoFechaHora(f.fin) : null,
         observaciones: f.observaciones,
         confirmarDuplicada,
       }),
@@ -162,9 +167,9 @@ export function CargaPrescripcion() {
   };
 
   const tomas = proximasTomas(
-    f.inicio ? new Date(f.inicio).toISOString() : '',
+    isoDeCampoFechaHora(f.inicio),
     Number(f.frecuenciaHoras),
-    f.fin ? new Date(f.fin).toISOString() : null,
+    isoDeCampoFechaHora(f.fin) || null,
     4,
   );
   const errorGeneral =
@@ -224,6 +229,7 @@ export function CargaPrescripcion() {
                 : undefined)
             }
             alReintentar={() => void medicamentos.refetch()}
+            errorDeCarga={medicamentos.isError}
             reintentando={medicamentos.isFetching}
             required
             textoVacio={medicamentos.isLoading ? 'Cargando medicamentos…' : 'Elegir…'}

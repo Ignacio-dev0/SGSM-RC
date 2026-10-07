@@ -85,6 +85,8 @@ describe('carga de prescripción (T304 · CU17)', () => {
     expect(screen.getByLabelText(/^Medicamento/)).toHaveAccessibleDescription(
       'Elija el medicamento',
     );
+    // La lista de medicamentos cargó: falta elegir, no hay nada que reintentar (E5-07).
+    expect(screen.queryByRole('button', { name: 'Reintentar' })).not.toBeInTheDocument();
     expect(screen.getByLabelText(/^Vía/)).toHaveAccessibleDescription('Elija la vía');
     // El foco va al primer campo con error, para corregirlo sin buscarlo.
     await waitFor(() => expect(document.activeElement).toHaveAttribute('aria-invalid', 'true'));
