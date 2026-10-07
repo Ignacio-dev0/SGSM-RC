@@ -133,6 +133,8 @@ describe('administración de medicamento (T413 · CU20)', () => {
     renderizarApp('/suministros/medicamento', ENFERMERO);
 
     await screen.findByRole('option', { name: /Benítez, Rosa/ });
+    // Sin paciente elegido no hay nada que cargar ni ningún error que mostrar.
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
     await userEvent.selectOptions(
       screen.getByLabelText('Paciente'),
       screen.getByRole('option', { name: /Benítez, Rosa/ }),

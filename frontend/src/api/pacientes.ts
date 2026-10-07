@@ -50,5 +50,10 @@ export const useCamasLibres = (habilitado = true) =>
 export const useSalas = () =>
   useQuery({ queryKey: ['salas'], queryFn: () => api.get<Sala[]>('/api/salas') });
 
+/** Datos de un paciente; con id 0 (todavía no se eligió ninguno) no consulta nada. */
 export const usePaciente = (id: number) =>
-  useQuery({ queryKey: ['paciente', id], queryFn: () => pacientesApi.obtener(id) });
+  useQuery({
+    queryKey: ['paciente', id],
+    queryFn: () => pacientesApi.obtener(id),
+    enabled: id > 0,
+  });
