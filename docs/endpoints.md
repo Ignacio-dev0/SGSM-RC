@@ -114,3 +114,34 @@ volverá a generar con la agenda nueva).
 
 Acciones de auditoría: `CREAR`, `MODIFICAR` (con el motivo en `detalle`), `SUSPENDER`,
 `REANUDAR`, `FINALIZAR` (Prescripcion); `CREAR`, `MODIFICAR`, `BAJA` (Insumo).
+
+## Biometría — T403, T404, T407 · CU07–CU10
+
+| Método | Ruta                               | Permiso               | Descripción                                                                                                                   |
+| ------ | ---------------------------------- | --------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| GET    | `/api/biometria/usuarios`          | `biometria.gestionar` | Personal activo con `registrado` y `actualizadoEn`                                                                            |
+| GET    | `/api/biometria/usuarios/:id`      | `biometria.gestionar` | Estado biométrico de un usuario, con nombre, usuario y rol                                                                    |
+| GET    | `/api/biometria/usuarios/:id/foto` | `biometria.gestionar` | Foto de referencia (sin caché)                                                                                                |
+| PUT    | `/api/biometria/usuarios/:id`      | `biometria.gestionar` | Registra o actualiza: `{ patron: number[128], foto: dataURL }`                                                                |
+| DELETE | `/api/biometria/usuarios/:id`      | `biometria.gestionar` | Elimina patrón y foto                                                                                                         |
+| POST   | `/api/biometria/validar`           | sesión                | `{ patron, operacion? }` → `{ valido: true, validacionToken, similitud }` o `{ valido: false, intentosRestantes, cancelada }` |
+
+Errores: `422 SIN_BIOMETRIA`. Acciones de auditoría: `REGISTRAR_BIOMETRIA`,
+`ACTUALIZAR_BIOMETRIA`, `ELIMINAR_BIOMETRIA` (DatoBiometrico), `VALIDACION_FACIAL_FALLIDA`,
+`OPERACION_CANCELADA` (Usuario).
+
+## Suministros — T408–T412 · CU20–CU23
+
+| Método | Ruta                                                                  | Permiso                 | Descripción                                                                           |
+| ------ | --------------------------------------------------------------------- | ----------------------- | ------------------------------------------------------------------------------------- |
+| POST   | `/api/suministros/medicamentos`                                       | `suministros.registrar` | `{ pacienteId, prescripcionId, cantidad?, observaciones?, validacionToken }`          |
+| POST   | `/api/suministros/insumos`                                            | `suministros.registrar` | `{ pacienteId, items: [{ insumoId, cantidad }], observaciones?, validacionToken }`    |
+| GET    | `/api/suministros?pacienteId&usuarioId&tipoInsumo&desde&hasta&pagina` | `suministros.ver`       | Historial paginado, lo más reciente primero                                           |
+| GET    | `/api/suministros/responsables`                                       | `suministros.ver`       | Usuarios que registraron suministros (para el filtro)                                 |
+| GET    | `/api/suministros/:id`                                                | `suministros.ver`       | Detalle, con `tomaProgramada` y `corregibleHasta`                                     |
+| PATCH  | `/api/suministros/:id`                                                | `suministros.corregir`  | `{ motivo, cantidad? \| items?, observaciones?, validacionToken }` dentro de las 24 h |
+
+Errores: `403 VALIDACION_FACIAL_REQUERIDA` (falta, vencido, ajeno o ya usado),
+`409 PACIENTE_NO_INTERNADO`, `422 SIN_PRESCRIPCION_VIGENTE`, `422 INSUMO_NO_DISPONIBLE`,
+`422 FUERA_DE_PLAZO`, `422 CORRECCION_INVALIDA`, `422 SIN_CAMBIOS`. Acciones de auditoría:
+`REGISTRAR`, `CORREGIR` (Suministro). Reglas en [suministros.md](suministros.md).

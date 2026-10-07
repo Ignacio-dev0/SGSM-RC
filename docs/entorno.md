@@ -18,8 +18,14 @@ El backend lee su configuración de `backend/.env` (plantilla en
 | `LOGIN_MAX_INTENTOS`     | `3`                  | Intentos fallidos que bloquean la cuenta                      |
 | `LOGIN_BLOQUEO_MIN`      | `15`                 | Minutos de bloqueo                                            |
 
-Las variables de la biometría y de los suministros se agregan en
-[biometria.md](biometria.md) y [suministros.md](suministros.md).
+| `BIOMETRIA_UMBRAL` | `0.5` | Distancia máxima entre patrones para aceptar el rostro |
+| `BIOMETRIA_MAX_INTENTOS` | `3` | Validaciones fallidas seguidas que cancelan la operación |
+| `BIOMETRIA_VALIDEZ_SEG` | `120` | Vigencia del comprobante de validación facial |
+| `SUMINISTRO_PLAZO_CORRECCION_HORAS` | `24` | Plazo para corregir un suministro |
+
+Frontend: `VITE_BIOMETRIA_MODO` (`camara` por defecto o `simulado`), en
+`frontend/.env.development.local` (plantilla en `frontend/.env.example`). Ver
+[biometria.md](biometria.md).
 
 El frontend no necesita variables para desarrollo: Vite reenvía `/api` al backend en el puerto
 3000 ([`frontend/vite.config.ts`](../frontend/vite.config.ts)).

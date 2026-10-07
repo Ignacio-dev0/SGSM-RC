@@ -16,7 +16,7 @@ sobre las prescripciones que carga el equipo médico.
 | E1    | Base de datos, inicio de sesión, permisos, auditoría, usuarios | ✅                                          |
 | E2    | Pacientes y camas                                              | ✅                                          |
 | E3    | Prescripciones y catálogo                                      | ✅                                          |
-| E4    | Biometría y registro de suministros                            | en curso                                    |
+| E4    | Biometría y registro de suministros                            | ✅ (falta la prueba en la tablet real)      |
 | E5–E8 | Recordatorios, reportes, integración, despliegue               | fuera del prototipo                         |
 
 El detalle de qué tarea del plan cubre cada parte está en [docs/trazabilidad.md](docs/trazabilidad.md).
@@ -51,6 +51,24 @@ Abrir <http://localhost:5173> e ingresar con uno de los **usuarios de prueba** q
 semilla (uno por rol). Los nombres de usuario y las contraseñas están en
 [`backend/src/semillas/usuarios-prueba.ts`](backend/src/semillas/usuarios-prueba.ts). Son solo
 para desarrollo: la semilla se niega a correr con `NODE_ENV=production`.
+
+### Reconocimiento facial sin cámara
+
+Por defecto la confirmación con el rostro usa la cámara. Para probar el sistema en una PC sin cámara, crear `frontend/.env.development.local` con:
+
+```bash
+VITE_BIOMETRIA_MODO=simulado
+```
+
+Los usuarios de prueba ya tienen un rostro simulado registrado. Detalle en [docs/biometria.md](docs/biometria.md).
+
+### Todo el sistema en Docker
+
+```bash
+docker compose --profile completo up --build -d
+```
+
+Interfaz en <http://localhost:8080>. Ver [docs/despliegue.md](docs/despliegue.md).
 
 ## Pruebas y calidad
 
@@ -88,6 +106,9 @@ El mapa archivo por archivo está en [INDEX.md](INDEX.md).
 | [docs/entorno.md](docs/entorno.md)                 | Variables de entorno                 |
 | [docs/pruebas.md](docs/pruebas.md)                 | Estrategia de pruebas                |
 | [docs/supuestos.md](docs/supuestos.md)             | Supuestos y decisiones técnicas      |
+| [docs/biometria.md](docs/biometria.md)             | Reconocimiento facial                |
+| [docs/suministros.md](docs/suministros.md)         | Registro y corrección de suministros |
+| [docs/despliegue.md](docs/despliegue.md)           | Entornos y despliegue                |
 | [docs/trazabilidad.md](docs/trazabilidad.md)       | Tareas del plan → código → pruebas   |
 
 ## Convenciones

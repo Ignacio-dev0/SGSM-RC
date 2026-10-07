@@ -85,7 +85,8 @@ Acciones registradas hasta ahora:
 | `CREAR`, `MODIFICAR`, `BAJA` | Usuario y demás entidades | Altas, modificaciones y bajas lógicas |
 | `MODIFICAR_PERMISOS`         | Usuario                   | Cambio de permisos adicionales        |
 
-Las acciones de los módulos clínicos se listan en [endpoints.md](endpoints.md).
+Las acciones de los módulos clínicos, biometría y suministros se listan en
+[endpoints.md](endpoints.md).
 
 ## Pendiente para la etapa E7 (T705)
 
