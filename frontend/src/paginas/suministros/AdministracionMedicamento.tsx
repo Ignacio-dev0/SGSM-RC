@@ -2,10 +2,11 @@ import { useEffect, useId, useRef, useState } from 'react';
 import { Box, Checkbox, FormControlLabel, Paper, Typography } from '@mui/material';
 import FaceRetouchingNaturalIcon from '@mui/icons-material/FaceRetouchingNatural';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { ErrorApi, mensajeDeError } from '../../api/cliente';
 import { usePaciente } from '../../api/pacientes';
 import { prescripcionesApi } from '../../api/prescripciones';
+import { CLAVE_RECORDATORIOS } from '../../api/recordatorios';
 import { suministrosApi } from '../../api/suministros';
 import type { Prescripcion, Suministro } from '../../api/tipos';
 import { useValidacionFacial } from '../../biometria/useValidacionFacial';
@@ -72,6 +73,17 @@ function BotonConfirmar({
   );
 }
 
+/**
+ * A dónde vuelve quien llegó desde el panel de recordatorios (`?desde=recordatorios`): la vista
+ * con los filtros que tenía, si el panel los dejó en el estado de la navegación; si no, el panel.
+ */
+function rutaRecordatorios(estado: unknown) {
+  const volverA = (estado as { volverA?: unknown } | null)?.volverA;
+  return typeof volverA === 'string' && /^\/recordatorios(\?|$)/.test(volverA)
+    ? volverA
+    : '/recordatorios';
+}
+
 /** A quién se intentó registrar: el aviso de un fallo habla de él aunque la pantalla ya muestre a otro. */
 interface Intento {
   pacienteId: number;
@@ -89,7 +101,11 @@ export function AdministracionMedicamento() {
   const clienteQuery = useQueryClient();
   const ahora = useAhora();
   const [parametros, setParametros] = useSearchParams();
+  const { state: estadoNavegacion } = useLocation();
   const pacienteId = Number(parametros.get('pacienteId')) || 0;
+  // Se llegó con "Administrar" desde un recordatorio: volver lleva al panel.
+  const desdeRecordatorios = parametros.get('desde') === 'recordatorios';
+  const volverARecordatorios = rutaRecordatorios(estadoNavegacion);
   const paciente = usePaciente(pacienteId);
   const vigentes = useQuery({
     queryKey: ['prescripciones', pacienteId, 'VIGENTE'],
@@ -126,6 +142,8 @@ export function AdministracionMedicamento() {
       // También tras un error: si el registro llegó a guardarse, la tarjeta pasa a "ya se dio".
       void clienteQuery.invalidateQueries({ queryKey: ['prescripciones', pacienteId] });
       void clienteQuery.invalidateQueries({ queryKey: ['suministros'] });
+      // El servidor atiende solo el recordatorio de esa toma: la insignia y el panel se renuevan.
+      void clienteQuery.invalidateQueries({ queryKey: [CLAVE_RECORDATORIOS] });
     },
   });
   const { reset: reiniciarRegistro } = registrar;
@@ -226,18 +244,41 @@ export function AdministracionMedicamento() {
   const noSeSabe = registrar.isError && !rechazada;
   const cargando = pacienteId > 0 && (paciente.isLoading || vigentes.isLoading);
   const hayTarjetas = (vigentes.data?.length ?? 0) > 0;
+  const irALaFicha = (
+    <Boton
+      variante="texto"
+      onClick={() => navegar(`/pacientes/${pacienteId}?pestana=prescripciones`)}
+    >
+      Ir a la ficha
+    </Boton>
+  );
 
   return (
     <>
       <EncabezadoPagina
         titulo="Administrar medicamento"
-        volverA={pacienteId ? `/pacientes/${pacienteId}?pestana=prescripciones` : '/suministros'}
+        volverA={
+          desdeRecordatorios
+            ? volverARecordatorios
+            : pacienteId
+              ? `/pacientes/${pacienteId}?pestana=prescripciones`
+              : '/suministros'
+        }
       />
       <Box sx={{ maxWidth: ANCHO_COLUMNA }}>
         <Box sx={{ mb: 2 }}>
           <SelectorPaciente
             valor={pacienteId ? String(pacienteId) : ''}
-            alCambiar={(v) => setParametros(v ? { pacienteId: v } : {}, { replace: true })}
+            // Otro paciente no cambia de dónde se vino: se conservan `desde` y los filtros del panel.
+            alCambiar={(v) =>
+              setParametros(
+                {
+                  ...(v ? { pacienteId: v } : {}),
+                  ...(desdeRecordatorios ? { desde: 'recordatorios' } : {}),
+                },
+                { replace: true, state: estadoNavegacion },
+              )
+            }
           />
         </Box>
 
@@ -247,14 +288,8 @@ export function AdministracionMedicamento() {
               <Alerta
                 tipo="exito"
                 titulo="Administración registrada"
-                accion={
-                  <Boton
-                    variante="texto"
-                    onClick={() => navegar(`/pacientes/${pacienteId}?pestana=prescripciones`)}
-                  >
-                    Ir a la ficha
-                  </Boton>
-                }
+                // Desde un recordatorio, las acciones van debajo del texto (abajo se lee mejor).
+                accion={desdeRecordatorios ? undefined : irALaFicha}
               >
                 Se registró {registrado.detalles[0]?.insumo}{' '}
                 {formatearDosis(
@@ -264,6 +299,16 @@ export function AdministracionMedicamento() {
                 a {registrado.paciente.apellido}, {registrado.paciente.nombre}
                 {registrado.paciente.cama ? ` (cama ${registrado.paciente.cama})` : ''} a las{' '}
                 {conPunto(formatearHora(registrado.fechaHora))}
+                {desdeRecordatorios && (
+                  // Lo esperable es seguir con el próximo recordatorio: es la acción principal, al
+                  // final. El recordatorio de esta toma ya quedó atendido en el servidor.
+                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 1.5 }}>
+                    {irALaFicha}
+                    <Boton onClick={() => navegar(volverARecordatorios)}>
+                      Volver a Recordatorios
+                    </Boton>
+                  </Box>
+                )}
               </Alerta>
             )}
             {registrar.isError &&

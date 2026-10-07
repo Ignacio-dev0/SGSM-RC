@@ -187,6 +187,8 @@ describe('ayuda de la flecha para volver (UX-23 · tooltips)', () => {
     ['/biometria', 'Volver a Biometría'],
     ['/usuarios', 'Volver a Usuarios'],
     ['/usuarios/3', 'Volver al usuario'],
+    ['/recordatorios', 'Volver a Recordatorios'],
+    ['/recordatorios?salaId=2', 'Volver a Recordatorios'],
     // Un destino que no se reconoce no inventa un nombre.
     ['/otra/cosa', 'Volver'],
   ])('si vuelve a %s dice "%s"', async (destino, texto) => {

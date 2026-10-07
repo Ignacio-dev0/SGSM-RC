@@ -23,6 +23,7 @@ const DESTINOS: [RegExp, string][] = [
   [/^\/biometria$/, 'Volver a Biometría'],
   [/^\/usuarios$/, 'Volver a Usuarios'],
   [/^\/usuarios\/\d+$/, 'Volver al usuario'],
+  [/^\/recordatorios$/, 'Volver a Recordatorios'],
 ];
 
 /** Texto de la ayuda de la flecha: el destino si se reconoce; si no, solo "Volver". */

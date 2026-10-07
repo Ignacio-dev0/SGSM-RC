@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { ENFERMERO } from '../../pruebas/datos';
 import { HISTORIAL, listaDePacientes, paciente } from '../../pruebas/datosPacientes';
+import { simularRecordatorios } from '../../pruebas/datosRecordatorios';
 import {
   prepararSuministros,
   conPrescripciones,
@@ -636,6 +637,20 @@ describe('al cambiar de paciente no queda el intento anterior (UX-05)', () => {
     expect(screen.queryByRole('status')).not.toBeInTheDocument();
   });
 
+  it('si venía del panel de recordatorios, cambiar de paciente no pierde el camino de vuelta', async () => {
+    prepararOtro();
+    renderizarApp(
+      '/suministros/medicamento?pacienteId=7&prescripcionId=40&desde=recordatorios',
+      ENFERMERO,
+    );
+    expect(await screen.findByRole('button', { name: /Paracetamol/ })).toBeInTheDocument();
+
+    await elegirOtro();
+
+    expect(await screen.findByRole('button', { name: /Ibuprofeno/ })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Volver' })).toHaveAttribute('href', '/recordatorios');
+  });
+
   it('si el registro falla después de cambiar de paciente, el aviso nombra al del intento y el historial es el suyo', async () => {
     validarRostro();
     prepararOtro();
@@ -704,5 +719,101 @@ describe('botonera y campos numéricos de la administración (F31 · UX-19)', ()
 
     expect(cantidad).not.toHaveFocus();
     expect(cantidad).toHaveValue(500);
+  });
+});
+
+describe('volver al panel de recordatorios (desde=recordatorios)', () => {
+  const DESDE_RECORDATORIOS =
+    '/suministros/medicamento?pacienteId=7&prescripcionId=40&desde=recordatorios';
+  const flecha = () => screen.getByRole('link', { name: 'Volver' });
+
+  it('la flecha Volver lleva a Recordatorios y su ayuda lo dice', async () => {
+    renderizarApp(DESDE_RECORDATORIOS, ENFERMERO);
+
+    await screen.findByRole('button', { name: /Paracetamol 500\smg/ });
+    expect(flecha()).toHaveAttribute('href', '/recordatorios');
+    expect(flecha()).toHaveAccessibleDescription('Volver a Recordatorios');
+  });
+
+  it('sin venir del panel, la flecha sigue llevando a la ficha y el aviso no ofrece volver al panel', async () => {
+    validarRostro();
+    registroExitoso();
+    renderizarApp('/suministros/medicamento?pacienteId=7', ENFERMERO);
+    await screen.findByRole('button', { name: /Paracetamol 500\smg/ });
+    expect(flecha()).toHaveAttribute('href', '/pacientes/7?pestana=prescripciones');
+
+    await confirmarConRostro();
+
+    const exito = await screen.findByRole('status');
+    expect(within(exito).getByRole('button', { name: 'Ir a la ficha' })).toBeInTheDocument();
+    expect(within(exito).queryByRole('button', { name: 'Volver a Recordatorios' })).toBeNull();
+  });
+
+  it('después de registrar, el aviso ofrece Volver a Recordatorios como acción principal (Ir a la ficha sigue)', async () => {
+    validarRostro();
+    registroExitoso();
+    simularRecordatorios([]);
+    renderizarApp(DESDE_RECORDATORIOS, ENFERMERO);
+
+    await confirmarConRostro();
+
+    const exito = await screen.findByRole('status');
+    expect(exito).toHaveTextContent(/Se registró Paracetamol 500 mg a Benítez, Rosa/);
+    const botones = within(exito).getAllByRole('button');
+    const volver = within(exito).getByRole('button', { name: 'Volver a Recordatorios' });
+    expect(within(exito).getByRole('button', { name: 'Ir a la ficha' })).toBeInTheDocument();
+    // La principal es la única llena y va al final (DESIGN.md).
+    expect(volver).toHaveClass('MuiButton-contained');
+    expect(botones.filter((b) => b.textContent !== '').at(-1)).toBe(volver);
+
+    // No hay nada sin guardar: vuelve sin preguntar.
+    await userEvent.click(volver);
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'Recordatorios' }),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('dialog', { name: '¿Descartar lo cargado?' })).toBeNull();
+  });
+
+  it('al registrar vuelve a pedir los recordatorios: la toma quedó atendida en el servidor', async () => {
+    validarRostro();
+    registroExitoso();
+    const pedidos = { total: 0 };
+    servidor.use(
+      http.get('*/api/recordatorios', () => {
+        pedidos.total++;
+        return HttpResponse.json({
+          data: [],
+          meta: { total: 0, urgentes: 0, ahora: new Date().toISOString() },
+        });
+      }),
+    );
+    renderizarApp(DESDE_RECORDATORIOS, ENFERMERO);
+    // La insignia de la barra ya pidió la lista.
+    await waitFor(() => expect(pedidos.total).toBeGreaterThan(0));
+    await userEvent.click(await screen.findByRole('button', { name: /Paracetamol 500\smg/ }));
+    await userEvent.click(screen.getByRole('button', { name: 'Confirmar con mi rostro' }));
+    const antes = pedidos.total;
+    await userEvent.click(
+      await screen.findByRole('button', { name: /Simular el rostro de enfermero/ }),
+    );
+
+    expect(await screen.findByRole('status')).toHaveTextContent(/Se registró Paracetamol/);
+    await waitFor(() => expect(pedidos.total).toBeGreaterThan(antes));
+  });
+
+  it('con algo cargado sin registrar, la flecha pregunta antes de volver al panel', async () => {
+    simularRecordatorios([]);
+    renderizarApp(DESDE_RECORDATORIOS, ENFERMERO);
+    // La prescripción del recordatorio quedó elegida: se escribe una nota.
+    await waitFor(() => expect(screen.getByLabelText(/^Cantidad/)).toHaveValue(500));
+    await userEvent.type(screen.getByLabelText('Observaciones'), 'Con jugo');
+
+    await userEvent.click(flecha());
+
+    const dialogo = await screen.findByRole('dialog', { name: '¿Descartar lo cargado?' });
+    await userEvent.click(within(dialogo).getByRole('button', { name: 'Descartar' }));
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'Recordatorios' }),
+    ).toBeInTheDocument();
   });
 });
