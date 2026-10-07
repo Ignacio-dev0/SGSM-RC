@@ -61,6 +61,24 @@ Un concepto, un nombre, en todas las pantallas.
 - Lo que se registra queda a nombre de quien confirmó con su rostro; se corrige solo dentro de
   las 24 horas, con motivo.
 - Las horas de las tomas se leen en formato de 24 horas (08:00, 16:00, 00:00).
+- Donde se actúa sobre un paciente se lo identifica siempre con nombre, DNI y cama: la cara
+  identifica a quien registra, no al paciente.
+- Antes de confirmar una administración se ve un resumen (paciente, qué se da, vía, toma). Una
+  dosis distinta de la prescripta o una toma adelantada **se avisan**; una toma que **ya se dio**
+  exige marcar a propósito que corresponde otra (las decisiones clínicas no las toma el sistema).
+- El número y la unidad de una dosis nunca se separan ("500 mg", sin separador de miles).
+- Toda baja o cambio de estado dice sobre qué se hace y si se puede deshacer (suspender sí,
+  finalizar no; un usuario o un insumo dado de baja se reactiva).
+- Un fallo de carga nunca se muestra como "no hay datos".
+- Un minuto antes de cerrar la sesión por inactividad, el sistema avisa.
+
+## Cómo se llega a cada tarea
+
+El **inicio** de cada rol ofrece sus tareas con estas mismas palabras (Administrar medicamento,
+Registrar insumos, Buscar paciente, Internar paciente, Ver lo que se registró, Nuevo usuario,
+Registrar el rostro del personal, Agregar al catálogo). La ficha del paciente abre en sus
+**prescripciones**, con **Administrar** en cada una; donde se ve un registro, se puede abrir y
+corregir.
 
 ## Fuera del alcance actual
 
