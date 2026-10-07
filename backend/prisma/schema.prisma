@@ -1,0 +1,11 @@
+// Esquema de la base de datos del SGSM-RC (T006 · T101).
+// El DER se documenta en docs/modelo-de-datos.md.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
