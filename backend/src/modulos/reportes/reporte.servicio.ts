@@ -58,14 +58,17 @@ const fila = (
   ...extra,
 });
 
+// D75: se agrupa por id y recién después se unen los nombres. Agrupar también por los textos
+// hacía más ancho el ordenamiento de COUNT(DISTINCT) (con un año, el doble de tiempo).
+
 async function porPaciente(p: ParametrosReporte) {
   const filas = await prisma.$queryRaw<
     (Agregado & { id: number; apellido: string; nombre: string })[]
   >`
     ${lineasDelPeriodo(p)}
-    SELECT l.paciente_id AS id, pa.apellido, pa.nombre, ${agregados}
-    FROM lineas l JOIN pacientes pa ON pa.id = l.paciente_id
-    GROUP BY l.paciente_id, pa.apellido, pa.nombre`;
+    SELECT g.id, pa.apellido, pa.nombre, g.suministros, g.unidades
+    FROM (SELECT l.paciente_id AS id, ${agregados} FROM lineas l GROUP BY 1) g
+    JOIN pacientes pa ON pa.id = g.id`;
   return filas
     .map((f) => fila(String(f.id), f.id, nombreCompleto(f), f))
     .sort((a, b) => alfabetico(a.etiqueta, b.etiqueta));
@@ -76,9 +79,9 @@ async function porUsuario(p: ParametrosReporte) {
     (Agregado & { id: number; apellido: string; nombre: string })[]
   >`
     ${lineasDelPeriodo(p)}
-    SELECT l.usuario_id AS id, u.apellido, u.nombre, ${agregados}
-    FROM lineas l JOIN usuarios u ON u.id = l.usuario_id
-    GROUP BY l.usuario_id, u.apellido, u.nombre`;
+    SELECT g.id, u.apellido, u.nombre, g.suministros, g.unidades
+    FROM (SELECT l.usuario_id AS id, ${agregados} FROM lineas l GROUP BY 1) g
+    JOIN usuarios u ON u.id = g.id`;
   return filas
     .map((f) => fila(String(f.id), f.id, nombreCompleto(f), f))
     .sort((a, b) => alfabetico(a.etiqueta, b.etiqueta));
@@ -96,9 +99,10 @@ async function porInsumo(p: ParametrosReporte) {
     })[]
   >`
     ${lineasDelPeriodo(p)}
-    SELECT l.insumo_id AS id, i.nombre, i.presentacion, l.tipo_insumo AS tipo, l.unidad, ${agregados}
-    FROM lineas l JOIN insumos i ON i.id = l.insumo_id
-    GROUP BY l.insumo_id, i.nombre, i.presentacion, l.tipo_insumo, l.unidad`;
+    SELECT g.id, i.nombre, i.presentacion, g.tipo, g.unidad, g.suministros, g.unidades
+    FROM (SELECT l.insumo_id AS id, l.tipo_insumo AS tipo, l.unidad, ${agregados}
+          FROM lineas l GROUP BY 1, 2, 3) g
+    JOIN insumos i ON i.id = g.id`;
   return filas
     .map((f) =>
       fila(

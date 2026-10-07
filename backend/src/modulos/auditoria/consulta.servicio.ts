@@ -1,4 +1,4 @@
-import type { Prisma } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 import { inicioDelDia, sumarDias } from '../../comun/fechas';
 import { respuestaPaginada } from '../../comun/paginacion';
 import { prisma } from '../../db';
@@ -49,18 +49,31 @@ function filtros(f: BusquedaAuditoria): Prisma.AuditoriaWhereInput {
   };
 }
 
+const ORDEN: Prisma.AuditoriaOrderByWithRelationInput[] = [{ fechaHora: 'desc' }, { id: 'desc' }];
+
 export async function consultarAuditoria(f: BusquedaAuditoria) {
   const where = filtros(f);
-  const [filas, total] = await prisma.$transaction([
+  // En dos pasos (D72): primero los ids de la página, que salen solo del índice (fecha_hora, id)
+  // aunque la página sea lejana; después, las filas completas de esos ids.
+  const [, pagina, total] = await prisma.$transaction([
+    // Las acciones son muy desparejas (REGISTRAR es 2/3 de la tabla, EXPORTAR casi nada): se
+    // planifica cada vez con los valores pedidos, no con el plan genérico que PostgreSQL adopta
+    // tras el 5.º pedido preparado y que contaba 400.000 filas por el índice de acción (D73).
+    prisma.$executeRaw`SET LOCAL plan_cache_mode = force_custom_plan`,
     prisma.auditoria.findMany({
       where,
-      include: { usuario: { select: { id: true, apellido: true, nombre: true } } },
-      orderBy: [{ fechaHora: 'desc' }, { id: 'desc' }],
+      select: { id: true },
+      orderBy: ORDEN,
       skip: (f.pagina - 1) * f.tamano,
       take: f.tamano,
     }),
     prisma.auditoria.count({ where }),
   ]);
+  const filas = await prisma.auditoria.findMany({
+    where: { id: { in: pagina.map((a) => a.id) } },
+    include: { usuario: { select: { id: true, apellido: true, nombre: true } } },
+    orderBy: ORDEN,
+  });
   // La auditoría guarda el id del paciente sin relación: se buscan todos juntos.
   const idsPacientes = [...new Set(filas.flatMap((a) => (a.pacienteId ? [a.pacienteId] : [])))];
   const pacientes = new Map(
@@ -100,15 +113,27 @@ export async function consultarAuditoria(f: BusquedaAuditoria) {
 
 export type EntradaAuditoriaDto = Awaited<ReturnType<typeof consultarAuditoria>>['data'][number];
 
+/**
+ * Valores distintos de una columna saltando por su índice (D73): una búsqueda en el índice por
+ * cada valor, en lugar de leer la tabla entera (`distinct` de Prisma trae todas las filas y
+ * descarta en memoria). `accion` usa auditoria(accion, …) y `entidad`, auditoria(entidad, …).
+ */
+async function distintos(columna: 'accion' | 'entidad'): Promise<string[]> {
+  const c = Prisma.raw(`"${columna}"`);
+  const filas = await prisma.$queryRaw<{ valor: string | null }[]>`
+    WITH RECURSIVE v(valor) AS (
+      (SELECT ${c} FROM auditoria ORDER BY ${c} LIMIT 1)
+      UNION ALL
+      SELECT (SELECT ${c} FROM auditoria WHERE ${c} > v.valor ORDER BY ${c} LIMIT 1)
+      FROM v WHERE v.valor IS NOT NULL
+    )
+    SELECT valor FROM v WHERE valor IS NOT NULL`;
+  return filas.map((f) => f.valor!);
+}
+
 /** Acciones y entidades que hay en la base, para armar los filtros (no una lista fija). */
 export async function opcionesDeAuditoria() {
-  const [acciones, entidades] = await Promise.all([
-    prisma.auditoria.findMany({ distinct: ['accion'], select: { accion: true } }),
-    prisma.auditoria.findMany({ distinct: ['entidad'], select: { entidad: true } }),
-  ]);
+  const [acciones, entidades] = await Promise.all([distintos('accion'), distintos('entidad')]);
   const orden = (a: string, b: string) => a.localeCompare(b, 'es');
-  return {
-    acciones: acciones.map((a) => a.accion).sort(orden),
-    entidades: entidades.map((e) => e.entidad).sort(orden),
-  };
+  return { acciones: acciones.sort(orden), entidades: entidades.sort(orden) };
 }

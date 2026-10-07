@@ -19,23 +19,38 @@ import { TIPOS_INSUMO, type Periodo, type TipoInsumoReporte } from './reportes.e
 /** Cuántos insumos trae el ranking de más usados. */
 export const TOP_INSUMOS = 10;
 
-const contar = Prisma.sql`COUNT(DISTINCT l.suministro_id)::int`;
-const deTipo = (tipo: TipoInsumoReporte) =>
-  Prisma.sql`COUNT(DISTINCT l.suministro_id) FILTER (WHERE l.tipo_insumo = ${tipo})::int`;
-
-async function totales(p: Periodo) {
-  const [t] = await prisma.$queryRaw<
-    { suministros: number; medicamentos: number; insumos: number; pacientes: number }[]
+/**
+ * Suministros de cada día con suministros (D74): cada suministro se cuenta una vez, con los tipos
+ * de sus insumos. De acá salen también los totales y el consumo por tipo (un suministro es de un
+ * solo día), en lugar de recorrer el año una vez más para cada uno.
+ */
+async function porDia(p: Periodo) {
+  return prisma.$queryRaw<
+    { fecha: string; suministros: number; medicamentos: number; insumos: number }[]
   >`
+    ${lineasDelPeriodo(p)}, por_suministro AS (
+      SELECT l.suministro_id, l.fecha_hora,
+             bool_or(l.tipo_insumo = 'MEDICAMENTO') AS medicamento,
+             bool_or(l.tipo_insumo = 'INSUMO') AS insumo
+      FROM lineas l GROUP BY l.suministro_id, l.fecha_hora
+    )
+    SELECT ${diaArgentino(Prisma.sql`fecha_hora`)} AS fecha, count(*)::int AS suministros,
+           count(*) FILTER (WHERE medicamento)::int AS medicamentos,
+           count(*) FILTER (WHERE insumo)::int AS insumos
+    FROM por_suministro GROUP BY 1`;
+}
+
+/** Pacientes con al menos un suministro (DISTINCT con pocos grupos: sin ordenar todo el año). */
+async function pacientesAtendidos(p: Periodo) {
+  const [f] = await prisma.$queryRaw<{ pacientes: number }[]>`
     ${lineasDelPeriodo(p)}
-    SELECT ${contar} AS suministros, ${deTipo('MEDICAMENTO')} AS medicamentos,
-           ${deTipo('INSUMO')} AS insumos, COUNT(DISTINCT l.paciente_id)::int AS pacientes
-    FROM lineas l`;
-  return t ?? { suministros: 0, medicamentos: 0, insumos: 0, pacientes: 0 };
+    SELECT count(*)::int AS pacientes FROM (SELECT DISTINCT l.paciente_id FROM lineas l) x`;
+  return f?.pacientes ?? 0;
 }
 
 /** D44: "más usado" = en más suministros (las cantidades de insumos distintos no se comparan). */
 async function insumosMasUsados(p: Periodo) {
+  // D75: se agrupa por id y después se unen nombre y presentación.
   const filas = await prisma.$queryRaw<
     {
       insumoId: number;
@@ -46,38 +61,22 @@ async function insumosMasUsados(p: Periodo) {
     }[]
   >`
     ${lineasDelPeriodo(p)}
-    SELECT l.insumo_id AS "insumoId", i.nombre, i.presentacion, l.tipo_insumo AS tipo,
-           ${contar} AS suministros
-    FROM lineas l JOIN insumos i ON i.id = l.insumo_id
-    GROUP BY l.insumo_id, i.nombre, i.presentacion, l.tipo_insumo`;
+    SELECT g.id AS "insumoId", i.nombre, i.presentacion, g.tipo, g.suministros
+    FROM (SELECT l.insumo_id AS id, l.tipo_insumo AS tipo,
+                 COUNT(DISTINCT l.suministro_id)::int AS suministros
+          FROM lineas l GROUP BY 1, 2) g
+    JOIN insumos i ON i.id = g.id`;
   return filas
     .sort((a, b) => b.suministros - a.suministros || alfabetico(a.nombre, b.nombre))
     .slice(0, TOP_INSUMOS);
 }
 
-async function consumoPorTipo(p: Periodo) {
-  const filas = await prisma.$queryRaw<{ tipo: TipoInsumoReporte; suministros: number }[]>`
-    ${lineasDelPeriodo(p)}
-    SELECT l.tipo_insumo AS tipo, ${contar} AS suministros FROM lineas l GROUP BY 1`;
-  return TIPOS_INSUMO.map((tipo) => ({
-    tipo,
-    suministros: filas.find((f) => f.tipo === tipo)?.suministros ?? 0,
-  }));
-}
-
 /** Un punto por cada día del rango (en hora de Argentina), también los días sin suministros. */
-async function evolucionDiaria(p: Periodo) {
-  const filas = await prisma.$queryRaw<
-    { fecha: string; suministros: number; medicamentos: number; insumos: number }[]
-  >`
-    ${lineasDelPeriodo(p)}
-    SELECT ${diaArgentino(Prisma.sql`l.fecha_hora`)} AS fecha, ${contar} AS suministros,
-           ${deTipo('MEDICAMENTO')} AS medicamentos, ${deTipo('INSUMO')} AS insumos
-    FROM lineas l GROUP BY 1`;
-  const porDia = new Map(filas.map((f) => [f.fecha, f]));
+function evolucionDiaria(p: Periodo, dias: Awaited<ReturnType<typeof porDia>>) {
+  const delDia = new Map(dias.map((f) => [f.fecha, f]));
   return Array.from({ length: diasEntre(p.desde, p.hasta) }, (_, i) => {
     const fecha = sumarDias(p.desde, i);
-    const f = porDia.get(fecha);
+    const f = delDia.get(fecha);
     return {
       fecha,
       suministros: f?.suministros ?? 0,
@@ -132,19 +131,28 @@ async function recordatorios(p: Periodo) {
 
 export async function estadisticasDelPeriodo(p: Periodo) {
   await salaDelFiltro(p.salaId);
-  const [t, top, porTipo, evolucion, recs] = await Promise.all([
-    totales(p),
+  const [dias, pacientes, top, recs] = await Promise.all([
+    porDia(p),
+    pacientesAtendidos(p),
     insumosMasUsados(p),
-    consumoPorTipo(p),
-    evolucionDiaria(p),
     recordatorios(p),
   ]);
+  const evolucion = evolucionDiaria(p, dias);
+  const suma = (campo: 'suministros' | 'medicamentos' | 'insumos') =>
+    evolucion.reduce((total, d) => total + d[campo], 0);
+  const porTipo = { MEDICAMENTO: suma('medicamentos'), INSUMO: suma('insumos') };
   const { desde, hasta, salaId, tipo } = p;
   return {
     data: {
-      totales: t,
+      totales: {
+        suministros: suma('suministros'),
+        medicamentos: porTipo.MEDICAMENTO,
+        insumos: porTipo.INSUMO,
+        pacientes,
+      },
       insumosMasUsados: top,
-      consumoPorTipo: porTipo,
+      // Siempre los dos tipos, en este orden (para la torta).
+      consumoPorTipo: TIPOS_INSUMO.map((t) => ({ tipo: t, suministros: porTipo[t] })),
       evolucionDiaria: evolucion,
       recordatorios: recs,
     },
