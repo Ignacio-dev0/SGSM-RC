@@ -1,0 +1,359 @@
+[
+  {
+    "archivo": "00-ingresar.png",
+    "muestra": "Pantalla Ingresar, con los campos vacíos",
+    "marcadores": [
+      "1: Campo Usuario",
+      "2: Campo Contraseña",
+      "3: Ojo: muestra u oculta la contraseña",
+      "4: Recordar mi usuario en esta tablet",
+      "5: Botón Ingresar"
+    ]
+  },
+  {
+    "archivo": "01-inicio.png",
+    "muestra": "Inicio del administrador: tareas de gestión primero, menú lateral y barra superior",
+    "marcadores": [
+      "1: Tarjeta \"Nuevo usuario\", la tarea destacada (debajo, las demás tareas del administrador)",
+      "2: Menú lateral: Usuarios, Biometría, Catálogo, Reportes, Auditoría y las secciones clínicas",
+      "3: Tema de la pantalla (claro, oscuro o igual que el dispositivo)",
+      "4: Reloj de recordatorios: tomas y estudios del hospital para atender (es para enfermería)",
+      "5: Campana de Notificaciones, con el número de avisos sin leer (los avisos del administrador)",
+      "6: Botón Salir",
+      "7: Franja \"Modo demostración\": la validación facial se simula (no usar con pacientes reales)"
+    ]
+  },
+  {
+    "archivo": "02-usuarios-lista.png",
+    "muestra": "Lista de usuarios: búsqueda, filtros Rol y Estado, y la persona de demostración",
+    "marcadores": [
+      "1: Botón \"Nuevo usuario\"",
+      "2: Buscar por apellido, usuario o DNI",
+      "3: Filtros Rol y Estado (Activos, Dados de baja, Todos)",
+      "4: Fila de una persona: se toca para abrir su ficha; columna Estado (Activo, Bloqueado, Dado de baja)"
+    ]
+  },
+  {
+    "archivo": "03-usuario-nuevo-datos.png",
+    "muestra": "Nuevo usuario: datos personales completos (ejemplo ficticio, sin guardar)",
+    "marcadores": [
+      "1: Datos personales: Nombre, Apellido y DNI son obligatorios (*); Matrícula y Email, opcionales",
+      "2: DNI: 7 u 8 dígitos, sin puntos (lo dice la ayuda debajo)"
+    ]
+  },
+  {
+    "archivo": "04-usuario-nuevo-acceso.png",
+    "muestra": "Nuevo usuario: acceso al sistema (usuario, rol, contraseña) y Guardar, sin guardar",
+    "marcadores": [
+      "1: Nombre de usuario (con el que la persona va a ingresar)",
+      "2: Rol: Administrador, Médico o Enfermero",
+      "3: Contraseña inicial: al menos 8 caracteres, con letras y números",
+      "4: Botón Guardar (Cancelar, a su izquierda, sale sin guardar)"
+    ]
+  },
+  {
+    "archivo": "05-usuario-ficha.png",
+    "muestra": "Ficha de Quiroga, Elena Beatriz: acciones y datos para modificar",
+    "marcadores": [
+      "1: Rol y Último acceso (la última vez que la persona ingresó)",
+      "2: Botón \"Permisos adicionales\"",
+      "3: Botón \"Rostro\" (registro facial de la persona)",
+      "4: Botón \"Dar de baja\"",
+      "5: Datos personales: se corrigen en el lugar y se toca Guardar, al pie (Acceso al sistema: rol y Contraseña nueva)"
+    ]
+  },
+  {
+    "archivo": "06-usuario-dar-de-baja.png",
+    "muestra": "Diálogo \"Dar de baja al usuario\": qué pasa y que se puede reactivar",
+    "marcadores": [
+      "1: Qué pasa: ya no podrá ingresar; sus registros se conservan y se puede reactivar",
+      "2: Botón \"Dar de baja\" (confirma); Cancelar, a su izquierda, no cambia nada"
+    ]
+  },
+  {
+    "archivo": "07-usuario-dado-de-baja.png",
+    "muestra": "La persona quedó dada de baja: aviso, etiqueta \"Dado de baja\" y botón Reactivar",
+    "marcadores": [
+      "1: Aviso: quedó dado de baja y ya no puede ingresar",
+      "2: Etiqueta \"Dado de baja\" junto al rol",
+      "3: Botón \"Reactivar\""
+    ]
+  },
+  {
+    "archivo": "08-usuario-reactivado.png",
+    "muestra": "Después de Reactivar: la persona vuelve a poder ingresar",
+    "marcadores": [
+      "1: Aviso: se reactivó y puede volver a ingresar",
+      "2: Vuelve a aparecer \"Dar de baja\""
+    ]
+  },
+  {
+    "archivo": "09-permisos-adicionales.png",
+    "muestra": "Permisos adicionales: los del rol vienen marcados y bloqueados; se marca uno extra (sin guardar)",
+    "marcadores": [
+      "1: Explicación: los permisos del rol no se pueden quitar desde acá",
+      "2: Permiso extra marcado (Consultar la auditoría)",
+      "3: Permiso \"Incluido en el rol\": marcado y bloqueado"
+    ]
+  },
+  {
+    "archivo": "10-permisos-guardar.png",
+    "muestra": "Final de la lista de permisos, con el botón Guardar permisos",
+    "marcadores": ["1: Botón \"Guardar permisos\" (rigen desde el próximo pedido de la persona)"]
+  },
+  {
+    "archivo": "11-biometria-lista.png",
+    "muestra": "Biometría del personal: quién tiene el rostro registrado",
+    "marcadores": [
+      "1: Fila de la persona: se toca para registrar, actualizar o eliminar su rostro",
+      "2: Columna Rostro: \"Sin registrar\" o \"Registrado\"",
+      "3: Botón \"Prueba de reconocimiento\""
+    ]
+  },
+  {
+    "archivo": "12-rostro-sin-registrar.png",
+    "muestra": "Registro facial de la persona, todavía sin rostro",
+    "marcadores": [
+      "1: Estado: \"Sin rostro registrado\" (no puede confirmar suministros)",
+      "2: Botón \"Registrar rostro\""
+    ]
+  },
+  {
+    "archivo": "13-rostro-registrar-demostracion.png",
+    "muestra": "Diálogo \"Registrar rostro\" en modo demostración: se elige qué rostro simular (sin cámara)",
+    "marcadores": [
+      "1: Aviso \"Modo de demostración\": esta instalación no usa la cámara",
+      "2: Botón \"Simular el rostro de …\" (en el hospital, en su lugar se ve la cámara)",
+      "3: Botón \"Simular otro rostro\"",
+      "4: Botón Cancelar"
+    ]
+  },
+  {
+    "archivo": "14-rostro-revisar-foto.png",
+    "muestra": "Revisión de la captura antes de guardarla (en demostración no hay foto real)",
+    "marcadores": [
+      "1: \"¿Se ve bien el rostro?\": con la cámara, encima se ve la foto tomada, que queda como referencia",
+      "2: Botón \"Volver a capturar\"",
+      "3: Botón Guardar"
+    ]
+  },
+  {
+    "archivo": "15-rostro-registrado.png",
+    "muestra": "Rostro registrado: foto de referencia, Actualizar rostro y Eliminar datos biométricos",
+    "marcadores": [
+      "1: Aviso: rostro registrado; ya puede confirmar operaciones con su rostro",
+      "2: Foto de referencia (en demostración, un cuadro de color) y fecha de la última actualización",
+      "3: Botón \"Actualizar rostro\"",
+      "4: Botón \"Eliminar datos biométricos\""
+    ]
+  },
+  {
+    "archivo": "16-rostro-eliminar.png",
+    "muestra": "Diálogo \"Eliminar datos biométricos\" (sin confirmar)",
+    "marcadores": [
+      "1: Qué se borra: el patrón facial y la foto; no podrá confirmar suministros hasta registrarse de nuevo",
+      "2: Botón Eliminar (confirma); Cancelar no borra nada"
+    ]
+  },
+  {
+    "archivo": "17-prueba-reconocimiento.png",
+    "muestra": "Prueba de reconocimiento: en modo demostración solo explica que necesita la cámara",
+    "marcadores": [
+      "1: Aviso: la prueba necesita la cámara (instalado con la cámara, mide detección, luz y estabilidad)"
+    ]
+  },
+  {
+    "archivo": "18-catalogo-lista.png",
+    "muestra": "Catálogo de insumos y medicamentos, buscando \"Diclo\"",
+    "marcadores": [
+      "1: Botón \"Agregar al catálogo\"",
+      "2: Buscar por nombre (con lo escrito)",
+      "3: Filtros Tipo (Medicamentos, Insumos) y Estado (Activos, Dados de baja)",
+      "4: Fila de un medicamento: se toca para modificarlo o darlo de baja"
+    ]
+  },
+  {
+    "archivo": "19-catalogo-agregar.png",
+    "muestra": "Diálogo \"Nuevo medicamento\" completo (ejemplo, sin guardar)",
+    "marcadores": [
+      "1: Nombre",
+      "2: Tipo: Medicamento o Insumo no medicinal (el título del diálogo cambia con el tipo)",
+      "3: Unidad de medida: cómo se registra el consumo (mg, ml, comprimido, unidad…)",
+      "4: Presentación (opcional)",
+      "5: Botón Guardar (Cancelar no guarda)"
+    ]
+  },
+  {
+    "archivo": "20-catalogo-modificar.png",
+    "muestra": "Diálogo \"Editar medicamento\" (Diclofenac), sin guardar",
+    "marcadores": [
+      "1: Datos del medicamento: se corrigen en el lugar",
+      "2: Botón \"Dar de baja\"",
+      "3: Botón Guardar (Cancelar no guarda)"
+    ]
+  },
+  {
+    "archivo": "21-catalogo-dar-de-baja.png",
+    "muestra": "Confirmación \"Dar de baja Diclofenac\" (sin confirmar)",
+    "marcadores": [
+      "1: Qué pasa: deja de aparecer para prescribir y registrar; lo ya registrado no cambia; se puede reactivar",
+      "2: Botón \"Dar de baja\" (confirma); Cancelar vuelve sin cambios"
+    ]
+  },
+  {
+    "archivo": "22-notificaciones.png",
+    "muestra": "Notificaciones del administrador: cuenta bloqueada, validación facial fallida y toma vencida",
+    "marcadores": [
+      "1: Toma vencida: un recordatorio que nadie atendió a tiempo (medicamento, hora, paciente y cama)",
+      "2: Cuenta bloqueada por 3 intentos fallidos de inicio de sesión",
+      "3: Operación cancelada por 3 validaciones faciales fallidas",
+      "4: Botón \"Marcar leída\" (lo leído pasa a letra normal)",
+      "5: Botón Cerrar"
+    ]
+  },
+  {
+    "archivo": "23-reportes-filtros.png",
+    "muestra": "Reportes: pestañas y filtros (período, sala, tipo, agrupación)",
+    "marcadores": [
+      "1: Pestañas Suministros y Estadísticas",
+      "2: Período: Hoy, 7 días o 30 días (el elegido lleva tilde)",
+      "3: Desde y Hasta: otro período (hasta un año)",
+      "4: Sala (o Todas)",
+      "5: Tipo: Medicamentos, Insumos o Todos",
+      "6: Agrupar por: Paciente, Medicamento o insumo, Personal o Día"
+    ]
+  },
+  {
+    "archivo": "24-reportes-resultado.png",
+    "muestra": "Resultado del reporte: resumen, descargas y tabla con el total",
+    "marcadores": [
+      "1: Resumen: período, sala y tipo que se están mostrando",
+      "2: Botones \"Descargar PDF\" y \"Descargar Excel\"",
+      "3: \"Ver cada unidad por separado\" (agrupa por medicamento o insumo)",
+      "4: Tabla del reporte, con la fila Total"
+    ]
+  },
+  {
+    "archivo": "25-reportes-descarga.png",
+    "muestra": "Aviso después de descargar el PDF (nombre del archivo y período)",
+    "marcadores": ["1: Aviso \"Se descargó … (período)\""]
+  },
+  {
+    "archivo": "26-estadisticas.png",
+    "muestra": "Estadísticas: descargas, indicadores del período y el primer gráfico",
+    "marcadores": [
+      "1: Descargar PDF o Excel de las estadísticas",
+      "2: Indicadores: suministros, pacientes atendidos, recordatorios atendidos y a tiempo",
+      "3: Título y explicación de cada gráfico"
+    ]
+  },
+  {
+    "archivo": "27-estadisticas-grafico.png",
+    "muestra": "Un gráfico (los más usados) con el botón \"Ver como tabla\"",
+    "marcadores": [
+      "1: Gráfico de barras: cantidad de suministros de cada medicamento o insumo",
+      "2: Botón \"Ver como tabla\" (los mismos números, en una tabla)"
+    ]
+  },
+  {
+    "archivo": "28-estadisticas-tabla.png",
+    "muestra": "El mismo gráfico con su tabla abierta",
+    "marcadores": ["1: Botón \"Ocultar la tabla\"", "2: Tabla con los números del gráfico"]
+  },
+  {
+    "archivo": "29-auditoria-filtros.png",
+    "muestra": "Auditoría: filtros (fechas, origen, usuario, paciente, acción, sobre qué)",
+    "marcadores": [
+      "1: Desde y Hasta",
+      "2: Origen: Personas (lo que hizo el personal), Sistema o Todos",
+      "3: Usuario: quién hizo el movimiento (se escribe y se elige)",
+      "4: Paciente: sobre qué paciente (también los que ya se fueron)",
+      "5: Acción: qué se hizo (Creó, Modificó, Dio de baja…)",
+      "6: Sobre qué: Usuario, Paciente, Prescripción, Insumo…"
+    ]
+  },
+  {
+    "archivo": "30-auditoria-origen-sistema.png",
+    "muestra": "Origen \"Sistema\": lo que el sistema hace solo (genera recordatorios, los vence…)",
+    "marcadores": [
+      "1: Origen en \"Sistema\"",
+      "2: Un movimiento del sistema: Usuario \"Sistema\", por ejemplo \"Generó · Recordatorio\""
+    ]
+  },
+  {
+    "archivo": "31-auditoria-buscar-paciente.png",
+    "muestra": "Filtro Paciente: se escribe el apellido y se elige de las sugerencias",
+    "marcadores": ["1: Campo Paciente con lo escrito", "2: Sugerencia con apellido, nombre y DNI"]
+  },
+  {
+    "archivo": "32-auditoria-por-paciente.png",
+    "muestra": "Movimientos sobre un paciente (Olmedo, Ramiro Teodoro)",
+    "marcadores": [
+      "1: Paciente elegido",
+      "2: Columnas: Fecha y hora, Usuario, Acción, Sobre qué y Paciente",
+      "3: Un movimiento: se toca para ver el detalle"
+    ]
+  },
+  {
+    "archivo": "33-auditoria-por-accion.png",
+    "muestra": "Filtros Acción \"Dio de baja\" y Sobre qué \"Usuario\": quién dio de baja a quién",
+    "marcadores": [
+      "1: Acción \"Dio de baja\"",
+      "2: Sobre qué \"Usuario\"",
+      "3: El movimiento: cuándo, quién (Usuario) y sobre qué usuario"
+    ]
+  },
+  {
+    "archivo": "34-auditoria-antes-despues.png",
+    "muestra": "Detalle de un movimiento: datos y tabla Antes y después",
+    "marcadores": [
+      "1: Fecha y hora y quién lo hizo",
+      "2: Tabla Antes y después, campo por campo",
+      "3: Marca \"Cambió\" en los campos que cambiaron",
+      "4: Botón Cerrar"
+    ]
+  },
+  {
+    "archivo": "35-auditoria-datos-protegidos.png",
+    "muestra": "Detalle del registro de un rostro: queda quién, cuándo y de quién, pero no el rostro",
+    "marcadores": [
+      "1: Quién registró el rostro, cuándo y de qué usuario (Detalle)",
+      "2: \"Esta acción no guardó valores\": el patrón facial y la foto (como las contraseñas) no quedan en la auditoría"
+    ]
+  },
+  {
+    "archivo": "36-telefono-barra.png",
+    "muestra": "En el teléfono: barra superior con el botón de menú, la campana y Salir",
+    "marcadores": [
+      "1: Botón \"Abrir el menú\"",
+      "2: Campana de Notificaciones",
+      "3: Salir (solo el ícono)"
+    ]
+  },
+  {
+    "archivo": "37-telefono-menu.png",
+    "muestra": "En el teléfono: el menú se abre en un cajón, con el tema de la pantalla al pie",
+    "marcadores": [
+      "1: Opciones del menú (las mismas del menú lateral de la tablet)",
+      "2: Tema de la pantalla: el del dispositivo, claro u oscuro"
+    ]
+  },
+  {
+    "archivo": "38-telefono-auditoria-detalle.png",
+    "muestra": "En el teléfono: el detalle de la auditoría ocupa la pantalla y cada campo es una tarjeta",
+    "marcadores": [
+      "1: Tarjeta de un campo: Antes, Después y la marca \"Cambió\"",
+      "2: Botón Cerrar"
+    ]
+  },
+  {
+    "archivo": "39-usuario-ficha-acceso.png",
+    "muestra": "Ficha de Quiroga, Elena Beatriz: Acceso al sistema (usuario, rol, contraseña nueva) y Guardar",
+    "marcadores": [
+      "1: Nombre de usuario (con el que ingresa; se puede corregir)",
+      "2: Rol",
+      "3: Contraseña nueva: vacía no cambia nada (\"Dejar vacío para no cambiarla\")",
+      "4: Botón Guardar (guarda todo lo de la ficha; Cancelar vuelve a la lista sin guardar)"
+    ]
+  }
+]
