@@ -181,7 +181,8 @@ function duracion(ms: number) {
  * D113 · D123: una toma que ya se dio (o una dosis de hace menos de media frecuencia) no se
  * vuelve a registrar salvo que la persona marque que corresponde otra (`otraToma`). Las
  * decisiones clínicas no las toma el sistema: solo exige que sea a propósito, y la auditoría lo
- * dice.
+ * dice. `detalles.motivo` dice cuál de los dos casos fue, para que la pantalla no hable de "esta
+ * toma" cuando la dosis fue de otra: `MISMA_TOMA` (D113) o `DOSIS_RECIENTE` (D123).
  */
 function tomaYaDada(previa: Previa, frecuenciaHoras: number, ahora: Date) {
   const cuando = `a las ${horaArgentina(previa.fechaHora)} (${previa.usuario})`;
@@ -191,7 +192,11 @@ function tomaYaDada(previa: Previa, frecuenciaHoras: number, ahora: Date) {
   return conflicto(
     'TOMA_YA_DADA',
     `${que} Si corresponde dar otra, márquelo y vuelva a confirmar.`,
-    { fechaHora: previa.fechaHora.toISOString(), usuario: previa.usuario },
+    {
+      motivo: previa.toma ? 'MISMA_TOMA' : 'DOSIS_RECIENTE',
+      fechaHora: previa.fechaHora.toISOString(),
+      usuario: previa.usuario,
+    },
   );
 }
 

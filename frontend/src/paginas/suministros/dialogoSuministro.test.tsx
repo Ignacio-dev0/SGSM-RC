@@ -325,7 +325,8 @@ describe('corregir un suministro: plazo y observaciones (F5)', () => {
           {
             error: {
               codigo: 'FUERA_DE_PLAZO',
-              mensaje: 'Un suministro solo se puede corregir dentro de las 24 horas de registrado.',
+              mensaje:
+                'Pasaron más de 24 horas: ya no se puede corregir. Avise a su supervisora para dejar constancia.',
             },
           },
           { status: 422 },

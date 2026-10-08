@@ -27,6 +27,7 @@ import { SelectorPaciente } from './comunes';
 import { duracion, estadoToma } from './estadoToma';
 import { ResumenAdministracion } from './ResumenAdministracion';
 import { TarjetaPrescripcion } from './TarjetaPrescripcion';
+import { textoTomaYaDada, tomaYaDadaEn } from './tomaYaDada';
 
 /** Ancho máximo de la única columna de la pantalla: selector, paciente, tarjetas y formulario. */
 const ANCHO_COLUMNA = 760;
@@ -93,23 +94,6 @@ function tomaDeLaDireccion(valor: string | null) {
 
 /** Cada cuánto se vuelven a pedir las prescripciones: otra persona pudo dar la toma (F1). */
 const RENOVAR_CADA_MS = 60_000;
-
-/** La administración que el servidor encontró en esa toma (409 TOMA_YA_DADA · C1), o null. */
-function tomaYaDadaEn(error: unknown) {
-  if (!(error instanceof ErrorApi) || error.codigo !== 'TOMA_YA_DADA') return null;
-  const d = (error.detalles ?? {}) as { fechaHora?: unknown; usuario?: unknown };
-  return {
-    fechaHora: typeof d.fechaHora === 'string' ? d.fechaHora : null,
-    usuario: typeof d.usuario === 'string' ? d.usuario : null,
-  };
-}
-
-/** "Esta toma ya se registró a las 08:05 (Acosta, Sofía). Si corresponde…" */
-function textoTomaYaDada({ fechaHora, usuario }: NonNullable<ReturnType<typeof tomaYaDadaEn>>) {
-  const cuando = fechaHora ? ` a las ${formatearHora(fechaHora)}` : '';
-  const quien = usuario ? ` (${usuario})` : '';
-  return `Esta toma ya se registró${cuando}${quien}. Si corresponde dar otra, márquelo y vuelva a confirmar.`;
-}
 
 /** A quién se intentó registrar: el aviso de un fallo habla de él aunque la pantalla ya muestre a otro. */
 interface Intento {
@@ -396,7 +380,7 @@ export function AdministracionMedicamento() {
                   revise el historial de ese paciente para no darla dos veces.
                 </Alerta>
               ) : tomaYaDada ? (
-                <Alerta tipo="advertencia">{textoTomaYaDada(tomaYaDada)}</Alerta>
+                <Alerta tipo="advertencia">{textoTomaYaDada(tomaYaDada, ahora)}</Alerta>
               ) : (
                 <Alerta tipo="error">{mensajeDeError(registrar.error)}</Alerta>
               ))}

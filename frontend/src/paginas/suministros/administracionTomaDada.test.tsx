@@ -96,7 +96,7 @@ describe('el servidor dice que la toma ya se dio (409 TOMA_YA_DADA)', () => {
     delete (Element.prototype as { scrollIntoView?: unknown }).scrollIntoView;
   });
 
-  it('lo dice con la hora y quién, con el foco, y vuelve a pedir la prescripción', async () => {
+  it('la misma toma (MISMA_TOMA): lo dice con la hora y quién, con el foco, y vuelve a pedir la prescripción', async () => {
     validarRostro();
     const dadaA = enMinutos(-5);
     // Otra persona la dio mientras la pantalla estaba abierta: la tablet no lo sabía.
@@ -116,7 +116,7 @@ describe('el servidor dice que la toma ya se dio (409 TOMA_YA_DADA)', () => {
             error: {
               codigo: 'TOMA_YA_DADA',
               mensaje: 'Esa toma ya tiene una administración registrada',
-              detalles: { fechaHora: dadaA, usuario: 'Acosta, Sofía' },
+              detalles: { motivo: 'MISMA_TOMA', fechaHora: dadaA, usuario: 'Acosta, Sofía' },
             },
           },
           { status: 409 },
@@ -139,6 +139,52 @@ describe('el servidor dice que la toma ya se dio (409 TOMA_YA_DADA)', () => {
     expect(await screen.findByText(`Ya se dio a las ${formatearHora(dadaA)}`)).toBeVisible();
     const confirmar = screen.getByRole('button', { name: 'Confirmar con mi rostro' });
     expect(confirmar).toBeDisabled();
+
+    await userEvent.click(screen.getByRole('checkbox', { name: /Corresponde dar otra toma/ }));
+    await confirmarConRostro();
+
+    expect(await screen.findByRole('status')).toHaveTextContent(/Se registró Paracetamol/);
+    expect(enviados.at(-1)).toMatchObject({ otraToma: true });
+  });
+
+  it('una dosis reciente de otra toma (DOSIS_RECIENTE): dice hace cuánto, a qué hora y quién, sin hablar de "esta toma"', async () => {
+    validarRostro();
+    // Se dio hace 40 minutos, antes de que reanudaran la prescripción: es de otra toma (D123).
+    const dadaA = enMinutos(-40);
+    contarPedidos(() => [vigente]);
+    const enviados: Record<string, unknown>[] = [];
+    servidor.use(
+      http.post('*/api/suministros/medicamentos', async ({ request }) => {
+        const cuerpo = (await request.json()) as Record<string, unknown>;
+        enviados.push(cuerpo);
+        if (cuerpo.otraToma === true) {
+          return HttpResponse.json({ data: suministro() }, { status: 201 });
+        }
+        return HttpResponse.json(
+          {
+            error: {
+              codigo: 'TOMA_YA_DADA',
+              mensaje:
+                'Ya se dio una dosis a las 11:20 (Acosta, Sofía), hace 40 min, y la indicación es cada 8 h.',
+              detalles: { motivo: 'DOSIS_RECIENTE', fechaHora: dadaA, usuario: 'Acosta, Sofía' },
+            },
+          },
+          { status: 409 },
+        );
+      }),
+    );
+    renderizarApp(RUTA, ENFERMERO);
+
+    await userEvent.click(await screen.findByRole('button', { name: /Paracetamol 500\smg/ }));
+    await confirmarConRostro();
+
+    const aviso = await screen.findByRole('alert');
+    expect(aviso).toHaveTextContent(
+      `Hace 40 min se registró una dosis de este medicamento (a las ${formatearHora(dadaA)}, Acosta, Sofía). Si corresponde dar otra, márquelo y vuelva a confirmar.`,
+    );
+    expect(aviso).not.toHaveTextContent(/Esta toma/);
+    expect(aviso.closest('[tabindex="-1"]')).toHaveFocus();
+    expect(screen.getByRole('button', { name: 'Confirmar con mi rostro' })).toBeDisabled();
 
     await userEvent.click(screen.getByRole('checkbox', { name: /Corresponde dar otra toma/ }));
     await confirmarConRostro();

@@ -165,7 +165,12 @@ describe('registro de suministros (T408 · T409 · T410 · CU20 · CU21 · RN07)
       expect(segunda.status).toBe(409);
       expect(segunda.body.error).toMatchObject({
         codigo: 'TOMA_YA_DADA',
-        detalles: { fechaHora: primera.body.data.fechaHora, usuario: await responsable() },
+        // La misma toma ya tiene su administración (D113).
+        detalles: {
+          motivo: 'MISMA_TOMA',
+          fechaHora: primera.body.data.fechaHora,
+          usuario: await responsable(),
+        },
       });
       expect(segunda.body.error.mensaje).toMatch(/ya se dio/);
       expect(await prisma.suministro.count()).toBe(1);
@@ -249,7 +254,12 @@ describe('registro de suministros (T408 · T409 · T410 · CU20 · CU21 · RN07)
       expect(res.status).toBe(409);
       expect(res.body.error).toMatchObject({
         codigo: 'TOMA_YA_DADA',
-        detalles: { fechaHora: antes.toISOString(), usuario: await responsable() },
+        // Una dosis de otra toma, de hace menos de media frecuencia (D123).
+        detalles: {
+          motivo: 'DOSIS_RECIENTE',
+          fechaHora: antes.toISOString(),
+          usuario: await responsable(),
+        },
       });
       expect(res.body.error.mensaje).toMatch(
         /^Ya se dio una dosis a las \d\d:\d\d \(.+\), hace 40 min, y la indicación es cada 8 h\. Si corresponde dar otra, márquelo y vuelva a confirmar\.$/,

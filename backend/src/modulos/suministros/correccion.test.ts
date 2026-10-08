@@ -1,3 +1,4 @@
+import { config } from '../../config';
 import { prisma } from '../../db';
 import { crearInsumo, crearPacienteBasico } from '../../../tests/soporte/fabricas';
 import { agenteConRol, prepararBaseConSeguridad } from '../../../tests/soporte/sesion';
@@ -53,6 +54,7 @@ describe('corrección de suministros (T412 · CU23)', () => {
       })
     ).id;
   });
+  afterEach(() => jest.restoreAllMocks());
   afterAll(() => prisma.$disconnect());
 
   const suministro = (tipo: 'MEDICAMENTO' | 'INSUMOS', haceHoras: number) =>
@@ -134,6 +136,22 @@ describe('corrección de suministros (T412 · CU23)', () => {
     const res = await corregir(s.id, { cantidad: 250, motivo: 'Error de carga' });
     expect(res.status).toBe(422);
     expect(res.body.error.codigo).toBe('FUERA_DE_PLAZO');
+    // Nadie lo puede corregir pasado el plazo (D152): no se manda a pedírselo a otro.
+    expect(res.body.error.mensaje).toBe(
+      'Pasaron más de 24 horas: ya no se puede corregir. Avise a su supervisora para dejar constancia.',
+    );
+  });
+
+  it('el mensaje dice las horas del plazo configurado, no un 24 fijo', async () => {
+    jest.replaceProperty(config.suministros, 'plazoCorreccionHoras', 12);
+    const s = await suministro('MEDICAMENTO', 13);
+
+    const res = await corregir(s.id, { cantidad: 250, motivo: 'Error de carga' });
+
+    expect(res.status).toBe(422);
+    expect(res.body.error.mensaje).toBe(
+      'Pasaron más de 12 horas: ya no se puede corregir. Avise a su supervisora para dejar constancia.',
+    );
   });
 
   it('exige motivo y validación facial', async () => {

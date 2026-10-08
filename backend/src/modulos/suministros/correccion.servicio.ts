@@ -23,10 +23,12 @@ export async function corregirSuministro(id: number, datos: Correccion, usuarioI
     const antes = await tx.suministro.findUnique({ where: { id }, include: incluirSuministro });
     if (!antes) throw noEncontrado('El suministro no existe');
 
+    // D152: pasado el plazo no lo corrige nadie, tampoco el administrador: no se manda a pedirlo.
     if (reloj.ahora() > limiteCorreccion(antes)) {
+      const horas = config.suministros.plazoCorreccionHoras;
       throw reglaNegocio(
         'FUERA_DE_PLAZO',
-        `Un suministro solo se puede corregir dentro de las ${config.suministros.plazoCorreccionHoras} horas de registrado. Pídale la corrección al administrador.`,
+        `Pasaron más de ${horas} ${horas === 1 ? 'hora' : 'horas'}: ya no se puede corregir. Avise a su supervisora para dejar constancia.`,
       );
     }
     if (antes.tipo === 'MEDICAMENTO' && datos.items) {
