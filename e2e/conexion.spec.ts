@@ -1,5 +1,5 @@
 import { expect, test, type WebSocketRoute } from '@playwright/test';
-import { esperarPantalla, ingresar } from './soporte';
+import { enModoDemostracion, esperarPantalla, ingresar } from './soporte';
 
 /**
  * T704 · cortes de conexión (amenaza del FODA: zonas sin Wi-Fi). Contra el servidor real:
@@ -46,7 +46,7 @@ test('se corta la red al registrar: no se sabe si quedó registrada', async ({ p
   await ingresar(page, 'enfermero');
   await page.goto('/');
   test.skip(
-    !(await page.getByText(/Modo demostración/).isVisible()),
+    !(await enModoDemostracion(page)),
     'Sin modo de demostración no se puede simular el rostro',
   );
   await page.getByRole('link', { name: /Administrar medicamento/ }).click();

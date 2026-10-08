@@ -119,3 +119,12 @@ export function medir(page: Page): Promise<Medicion> {
     };
   });
 }
+
+/**
+ * Si la interfaz está en modo demostración (rostro simulado). Espera a que la pantalla con sesión
+ * esté armada (la barra superior): preguntar antes daba falso y salteaba la prueba sin motivo.
+ */
+export async function enModoDemostracion(page: Page) {
+  await page.getByRole('banner').waitFor();
+  return page.getByText(/Modo demostración/).isVisible();
+}

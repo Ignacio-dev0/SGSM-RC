@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { esperarPantalla, ingresar } from './soporte';
+import { enModoDemostracion, esperarPantalla, ingresar } from './soporte';
 
 /**
  * Ciclo completo contra el servidor real (no el imitador), empezando desde el inicio y
@@ -39,7 +39,7 @@ test('administrar, encontrar en el historial, corregir y deshacer', async ({ pag
   await page.goto('/');
   await esperarPantalla(page);
   test.skip(
-    !(await page.getByText(/Modo demostración/).isVisible()),
+    !(await enModoDemostracion(page)),
     'Sin modo de demostración no se puede simular el rostro',
   );
 

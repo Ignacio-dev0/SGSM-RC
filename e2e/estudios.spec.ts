@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { ingresar } from './soporte';
+import { enModoDemostracion, ingresar } from './soporte';
 
 /**
  * T13 de las tareas núcleo (T510–T513): el médico programa un estudio desde la ficha y
@@ -59,7 +59,7 @@ test('T13 · programar un estudio y confirmar que se hizo', async ({ page, brows
     await ingresar(enfermera, 'enfermero');
     await enfermera.goto('/');
     test.skip(
-      !(await enfermera.getByText(/Modo demostración/).isVisible()),
+      !(await enModoDemostracion(enfermera)),
       'Sin modo de demostración no se puede simular el rostro',
     );
     await enfermera.getByRole('link', { name: /Buscar paciente/ }).click();

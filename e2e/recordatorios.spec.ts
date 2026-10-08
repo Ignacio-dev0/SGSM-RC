@@ -1,5 +1,5 @@
 import { expect, test, type APIRequestContext } from '@playwright/test';
-import { ingresar, ingresarPorApi } from './soporte';
+import { enModoDemostracion, ingresar, ingresarPorApi } from './soporte';
 
 /**
  * Recordatorios contra el servidor real (T501–T507 · T701): el médico indica un medicamento cuya
@@ -93,7 +93,7 @@ test('la toma que se acerca aparece sola en el panel y se atiende al administrar
     await ingresar(page, 'enfermero');
     await page.goto('/');
     test.skip(
-      !(await page.getByText(/Modo demostración/).isVisible()),
+      !(await enModoDemostracion(page)),
       'Sin modo de demostración no se puede simular el rostro',
     );
     await page.getByRole('link', { name: /Tomas y estudios para atender/ }).click();
