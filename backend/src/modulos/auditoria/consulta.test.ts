@@ -101,6 +101,7 @@ describe('consulta de la auditoría (T604)', () => {
       accion: 'MODIFICAR',
       entidad: 'Paciente',
       entidadId: String(ana.id),
+      entidadEtiqueta: 'Alvarez, Ana',
       usuario: { id: lucas.id, nombre: 'López, Lucas' },
       paciente: { id: ana.id, nombre: 'Alvarez, Ana', dni: ana.dni },
       valorAnterior: { cama: 'A-01' },

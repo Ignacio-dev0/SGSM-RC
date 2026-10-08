@@ -29,3 +29,12 @@ rutasNotificaciones.patch('/:id/leida', async (req, res) => {
   if (count === 0) throw noEncontrado('La notificación no existe');
   res.json({ data: await prisma.notificacion.findUniqueOrThrow({ where: { id } }) });
 });
+
+/** Marca como leídas todas las del usuario de la sesión, con el mismo permiso que una (D115). */
+rutasNotificaciones.post('/leer-todas', async (req, res) => {
+  const { count } = await prisma.notificacion.updateMany({
+    where: { destinatarioId: usuarioActual(req).id, leida: false },
+    data: { leida: true },
+  });
+  res.json({ data: { marcadas: count } });
+});
