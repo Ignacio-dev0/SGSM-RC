@@ -120,9 +120,10 @@ Los usuarios son los de la semilla de desarrollo (se pueden cambiar con `E2E_USU
 dos servidores; se corren antes de cerrar un cambio de interfaz. Con `E2E_URL` se apuntan a otra
 interfaz (por ejemplo una compilación fija servida con `vite preview` en el puerto 4173).
 
-Última corrida completa (2026-10-07, compilación fija contra el servidor real): 59 de 59 en PC
-(las que se recorren una vez) y la matriz responsive 27 de 27 en teléfono, tablet y PC, en claro
-y oscuro. Suites unitarias y de integración: backend 644 pruebas en 68 archivos, frontend 1300 en 92 (corrida del 2026-10-08, después de la revisión F1–F20).
+Última corrida completa (2026-10-08, compilación fija contra el servidor real): todas las pruebas
+en navegador pasan (las de PC, que se recorren una vez, y la matriz responsive en teléfono, tablet y
+PC, en claro y oscuro); las que se omiten son las que solo corren en otro tamaño. Suites unitarias y
+de integración: backend 764 pruebas en 72 archivos, frontend 1307 en 93.
 
 ## Control de permisos con los tres roles
 
