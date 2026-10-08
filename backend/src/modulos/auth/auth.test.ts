@@ -62,6 +62,15 @@ describe('autenticación con usuario y contraseña (T105 · CU06 · RNF05)', () 
     });
   });
 
+  it('el usuario se compara sin distinguir mayúsculas y sin los espacios de alrededor', async () => {
+    const u = await crearUsuario('ENFERMERO', { nombreUsuario: 'sacosta' });
+
+    const res = await login('  SAcosta ', CONTRASENA);
+
+    expect(res.status).toBe(200);
+    expect(res.body.data).toMatchObject({ id: u.id, nombreUsuario: 'sacosta' });
+  });
+
   it('no deja ingresar a un usuario dado de baja', async () => {
     await crearUsuario('ENFERMERO', { nombreUsuario: 'baja', activo: false });
     expect((await login('baja', CONTRASENA)).status).toBe(401);

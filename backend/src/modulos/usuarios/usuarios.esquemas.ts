@@ -33,7 +33,8 @@ const camposUsuario = {
     .toLowerCase()
     .regex(
       /^[a-z0-9._-]{3,30}$/,
-      'El usuario debe tener entre 3 y 30 letras, números, puntos o guiones, sin espacios',
+      // Dice cada carácter que acepta: sin tildes ni ñ (D111).
+      'El usuario debe tener de 3 a 30 caracteres: letras sin tildes ni ñ, números, punto (.), guion (-) o guion bajo (_), sin espacios',
     ),
   dni: esquemaDni,
   nombre: z.string().trim().min(2, 'Ingrese el nombre').max(80),

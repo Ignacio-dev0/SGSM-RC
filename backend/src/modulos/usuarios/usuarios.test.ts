@@ -1,6 +1,7 @@
 import request from 'supertest';
 import { prisma } from '../../db';
 import { verificarContrasena } from '../auth/contrasenas';
+import { CODIGOS_PERMISO } from '../seguridad/catalogo-permisos';
 import {
   agenteConRol,
   agenteDe,
@@ -82,6 +83,24 @@ describe('API de usuarios (T109 · CU01–CU05)', () => {
       expect(res.status).toBe(400);
       const campos = res.body.error.detalles.map((d: { campo: string }) => d.campo);
       expect(campos).toEqual(expect.arrayContaining(['dni', 'contrasena', 'rol', 'email']));
+    });
+
+    it('el mensaje del usuario dice qué caracteres acepta: sin tildes ni ñ', async () => {
+      for (const nombreUsuario of ['peña', 'josé', 'ana maria', 'ab']) {
+        const res = await admin.post('/api/usuarios').send(nuevo({ nombreUsuario }));
+        expect(res.status).toBe(400);
+        expect(res.body.error.detalles).toEqual([
+          {
+            campo: 'nombreUsuario',
+            mensaje:
+              'El usuario debe tener de 3 a 30 caracteres: letras sin tildes ni ñ, números, punto (.), guion (-) o guion bajo (_), sin espacios',
+          },
+        ]);
+      }
+      const mayusculas = await admin
+        .post('/api/usuarios')
+        .send(nuevo({ nombreUsuario: ' L.Gomez_2 ' }));
+      expect(mayusculas.body.data.nombreUsuario).toBe('l.gomez_2');
     });
   });
 
@@ -266,6 +285,190 @@ describe('API de usuarios (T109 · CU01–CU05)', () => {
       expect(permisos.body.data[0]).toEqual(
         expect.objectContaining({ codigo: expect.any(String), descripcion: expect.any(String) }),
       );
+    });
+  });
+
+  describe('cambios sobre uno mismo (sin escalar privilegios · D110)', () => {
+    it('nadie se cambia a sí mismo el rol', async () => {
+      const res = await admin.patch(`/api/usuarios/${adminId}`).send({ rol: 'MEDICO' });
+      expect(res.status).toBe(403);
+      expect(res.body.error.codigo).toBe('CAMBIO_PROPIO');
+
+      // Un usuario con gestión de usuarios como permiso adicional no se hace administrador.
+      const u = await crearUsuario('ENFERMERO', { permisosAdicionales: ['usuarios.gestionar'] });
+      const enfermero = await agenteDe(u);
+      const escala = await enfermero.patch(`/api/usuarios/${u.id}`).send({ rol: 'ADMINISTRADOR' });
+      expect(escala.status).toBe(403);
+      expect(escala.body.error.codigo).toBe('CAMBIO_PROPIO');
+      const db = await prisma.usuario.findUniqueOrThrow({
+        where: { id: u.id },
+        include: { rol: true },
+      });
+      expect(db.rol.codigo).toBe('ENFERMERO');
+    });
+
+    it('sus propios datos (y el mismo rol que ya tiene) sí los puede cambiar', async () => {
+      const res = await admin
+        .patch(`/api/usuarios/${adminId}`)
+        .send({ apellido: 'Otro', rol: 'ADMINISTRADOR', contrasena: 'Nueva2026' });
+      expect(res.status).toBe(200);
+      expect(res.body.data).toMatchObject({ apellido: 'Otro', rol: { codigo: 'ADMINISTRADOR' } });
+    });
+
+    it('nadie se asigna a sí mismo permisos adicionales, ni siquiera vaciarlos', async () => {
+      const u = await crearUsuario('ENFERMERO', { permisosAdicionales: ['usuarios.permisos'] });
+      const enfermero = await agenteDe(u);
+
+      const res = await enfermero
+        .put(`/api/usuarios/${u.id}/permisos-adicionales`)
+        .send({ permisos: ['usuarios.permisos', 'usuarios.gestionar'] });
+
+      expect(res.status).toBe(403);
+      expect(res.body.error.codigo).toBe('CAMBIO_PROPIO');
+      expect(await prisma.usuarioPermiso.count({ where: { usuarioId: u.id } })).toBe(1);
+      expect(
+        (await admin.put(`/api/usuarios/${adminId}/permisos-adicionales`).send({ permisos: [] }))
+          .status,
+      ).toBe(403);
+      expect(await prisma.auditoria.count({ where: { accion: 'MODIFICAR_PERMISOS' } })).toBe(0);
+    });
+
+    it('nadie se reactiva a sí mismo', async () => {
+      const res = await admin.post(`/api/usuarios/${adminId}/reactivar`);
+      expect(res.status).toBe(403);
+      expect(res.body.error.codigo).toBe('CAMBIO_PROPIO');
+    });
+  });
+
+  describe('nadie otorga lo que no tiene (D119)', () => {
+    // Un enfermero jefe: gestiona usuarios y permisos, pero no es administrador.
+    let jefe: Agente;
+
+    beforeEach(async () => {
+      jefe = (await agenteConRol('ENFERMERO', ['usuarios.gestionar', 'usuarios.permisos'])).agente;
+    });
+
+    const rolDe = async (id: number) =>
+      (await prisma.usuario.findUniqueOrThrow({ where: { id }, include: { rol: true } })).rol
+        .codigo;
+
+    it('no crea un usuario con un rol que tiene permisos que él no tiene', async () => {
+      for (const rol of ['ADMINISTRADOR', 'MEDICO']) {
+        const res = await jefe.post('/api/usuarios').send(nuevo({ rol }));
+        expect(res.status).toBe(403);
+        expect(res.body.error.codigo).toBe('PRIVILEGIO_AJENO');
+      }
+      expect(await prisma.usuario.count({ where: { nombreUsuario: 'lgomez' } })).toBe(0);
+      expect((await jefe.post('/api/usuarios').send(nuevo())).status).toBe(201);
+    });
+
+    it('no toma la cuenta de un administrador: ni su contraseña ni sus datos', async () => {
+      const antes = await prisma.usuario.findUniqueOrThrow({ where: { id: adminId } });
+      for (const cambio of [{ contrasena: 'Tomada2026' }, { apellido: 'Otro' }]) {
+        const res = await jefe.patch(`/api/usuarios/${adminId}`).send(cambio);
+        expect(res.status).toBe(403);
+        expect(res.body.error.codigo).toBe('PRIVILEGIO_AJENO');
+      }
+      const despues = await prisma.usuario.findUniqueOrThrow({ where: { id: adminId } });
+      expect(despues.contrasenaHash).toBe(antes.contrasenaHash);
+      expect(await verificarContrasena('Tomada2026', despues.contrasenaHash)).toBe(false);
+      expect((await jefe.delete(`/api/usuarios/${adminId}`)).status).toBe(403);
+    });
+
+    it('a un enfermero sí lo gestiona, pero no le da un rol que él no tiene', async () => {
+      const u = await crearUsuario('ENFERMERO');
+      expect(
+        (await jefe.patch(`/api/usuarios/${u.id}`).send({ contrasena: 'Nueva2026' })).status,
+      ).toBe(200);
+      const res = await jefe.patch(`/api/usuarios/${u.id}`).send({ rol: 'MEDICO' });
+      expect(res.status).toBe(403);
+      expect(res.body.error.codigo).toBe('PRIVILEGIO_AJENO');
+      expect(await rolDe(u.id)).toBe('ENFERMERO');
+    });
+
+    it('no asigna permisos adicionales que él no tiene ni toca los de quien tiene más', async () => {
+      const u = await crearUsuario('ENFERMERO');
+      const ajeno = await jefe
+        .put(`/api/usuarios/${u.id}/permisos-adicionales`)
+        .send({ permisos: ['auditoria.ver'] });
+      expect(ajeno.status).toBe(403);
+      expect(ajeno.body.error.codigo).toBe('PRIVILEGIO_AJENO');
+      expect(
+        (
+          await jefe
+            .put(`/api/usuarios/${u.id}/permisos-adicionales`)
+            .send({ permisos: ['usuarios.permisos'] })
+        ).status,
+      ).toBe(200);
+
+      const medico = await crearUsuario('MEDICO');
+      const sobreMedico = await jefe
+        .put(`/api/usuarios/${medico.id}/permisos-adicionales`)
+        .send({ permisos: [] });
+      expect(sobreMedico.status).toBe(403);
+      expect(sobreMedico.body.error.codigo).toBe('PRIVILEGIO_AJENO');
+    });
+
+    it('el camino de dos pasos queda cerrado: no hay cuenta Administrador con clave conocida', async () => {
+      const crea = await jefe.post('/api/usuarios').send(nuevo({ rol: 'ADMINISTRADOR' }));
+      expect(crea.status).toBe(403);
+      const otroAdmin = await crearUsuario('ADMINISTRADOR');
+      const clave = await jefe
+        .patch(`/api/usuarios/${otroAdmin.id}`)
+        .send({ contrasena: 'X1234567' });
+      expect(clave.status).toBe(403);
+      expect(
+        await prisma.auditoria.count({
+          where: { entidad: 'Usuario', accion: { in: ['CREAR', 'MODIFICAR'] } },
+        }),
+      ).toBe(0);
+    });
+  });
+
+  describe('siempre queda un administrador activo (D120)', () => {
+    const activos = () =>
+      prisma.usuario.count({ where: { activo: true, rol: { codigo: 'ADMINISTRADOR' } } });
+
+    it('quien tiene todos los permisos sin ser administrador no deja al sistema sin ninguno', async () => {
+      const { agente } = await agenteConRol('ENFERMERO', [...CODIGOS_PERMISO]);
+
+      const rol = await agente.patch(`/api/usuarios/${adminId}`).send({ rol: 'MEDICO' });
+      expect(rol.status).toBe(409);
+      expect(rol.body.error.codigo).toBe('ULTIMO_ADMINISTRADOR');
+      const baja = await agente.delete(`/api/usuarios/${adminId}`);
+      expect(baja.status).toBe(409);
+      expect(baja.body.error.codigo).toBe('ULTIMO_ADMINISTRADOR');
+      expect(await activos()).toBe(1);
+
+      // Con otro administrador activo, sí.
+      await crearUsuario('ADMINISTRADOR');
+      expect((await agente.patch(`/api/usuarios/${adminId}`).send({ rol: 'MEDICO' })).status).toBe(
+        200,
+      );
+    });
+
+    it('dos administradores que se quitan el rol a la vez no dejan cero', async () => {
+      const otro = await agenteConRol('ADMINISTRADOR');
+
+      const respuestas = await Promise.all([
+        admin.patch(`/api/usuarios/${otro.usuario.id}`).send({ rol: 'MEDICO' }),
+        otro.agente.patch(`/api/usuarios/${adminId}`).send({ rol: 'MEDICO' }),
+      ]);
+
+      expect(respuestas.map((r) => r.status).sort()).toEqual([200, 403]);
+      expect(await activos()).toBe(1);
+    });
+
+    it('dos administradores que se dan de baja a la vez tampoco', async () => {
+      const otro = await agenteConRol('ADMINISTRADOR');
+
+      const respuestas = await Promise.all([
+        admin.delete(`/api/usuarios/${otro.usuario.id}`),
+        otro.agente.delete(`/api/usuarios/${adminId}`),
+      ]);
+
+      expect(respuestas.filter((r) => r.status === 200)).toHaveLength(1);
+      expect(await activos()).toBe(1);
     });
   });
 
