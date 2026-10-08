@@ -55,7 +55,12 @@ describe('estado de la toma de una prescripción', () => {
       prescripcion(en(470), [{ fechaHora: en(-10), usuario: 'Acosta, Sofía' }]),
       AHORA,
     );
-    expect(e).toMatchObject({ tipo: 'dada', minutos: 10, usuario: 'Acosta, Sofía' });
+    expect(e).toMatchObject({
+      tipo: 'dada',
+      minutos: 10,
+      usuario: 'Acosta, Sofía',
+      motivo: 'misma-toma',
+    });
     // Hora absoluta (24 h, Argentina): la misma forma que el aviso al elegir la tarjeta.
     expect(textoEstadoToma(e)).toBe('Ya se dio a las 14:50');
   });
@@ -78,7 +83,12 @@ describe('estado de la toma de una prescripción', () => {
       ...prescripcion(en(0), [{ fechaHora: en(-60), usuario: 'Acosta, Sofía' }]),
       agendaDesde: en(-10),
     };
-    expect(estadoToma(reanudada, AHORA)).toMatchObject({ tipo: 'dada', minutos: 60 });
+    // No es "esta toma ya se dio": es una dosis reciente de antes de reanudar (como el servidor).
+    expect(estadoToma(reanudada, AHORA)).toMatchObject({
+      tipo: 'dada',
+      minutos: 60,
+      motivo: 'dosis-reciente',
+    });
   });
 
   it('al reanudar, una dosis vieja de la agenda anterior no cuenta como dada', () => {
@@ -149,7 +159,13 @@ describe('cómo se muestra cada estado', () => {
   const estados: { tipo: string; estado: EstadoToma; color: string; variante: string }[] = [
     {
       tipo: 'dada',
-      estado: { tipo: 'dada', minutos: 10, fechaHora: en(-10), usuario: 'Acosta, Sofía' },
+      estado: {
+        tipo: 'dada',
+        minutos: 10,
+        fechaHora: en(-10),
+        usuario: 'Acosta, Sofía',
+        motivo: 'misma-toma',
+      },
       color: 'warning',
       variante: 'outlined',
     },

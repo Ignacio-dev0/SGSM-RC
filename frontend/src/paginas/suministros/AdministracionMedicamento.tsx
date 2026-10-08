@@ -490,7 +490,9 @@ export function AdministracionMedicamento() {
                 {/* Si lo dijo el servidor, el aviso de arriba (con el foco) ya lo cuenta. */}
                 {estado.tipo === 'dada' && !tomaYaDada && (
                   <Alerta tipo="advertencia">
-                    Esta toma ya se dio a las {formatearHora(estado.fechaHora)} ({estado.usuario}).
+                    {estado.motivo === 'dosis-reciente'
+                      ? `Hace ${duracion(estado.minutos)} se dio una dosis de este medicamento (a las ${formatearHora(estado.fechaHora)}, ${estado.usuario}).`
+                      : `Esta toma ya se dio a las ${formatearHora(estado.fechaHora)} (${estado.usuario}).`}{' '}
                     Revise el historial antes de registrar otra.
                   </Alerta>
                 )}

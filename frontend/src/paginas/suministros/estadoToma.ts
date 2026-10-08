@@ -16,7 +16,14 @@ import { tomaMasCercana } from '../prescripciones/agenda';
 export const MARGEN_AHORA_MINUTOS = 30;
 
 export type EstadoToma =
-  | { tipo: 'dada'; minutos: number; fechaHora: string; usuario: string }
+  | {
+      tipo: 'dada';
+      minutos: number;
+      fechaHora: string;
+      usuario: string;
+      /** Como el `detalles.motivo` del 409: la misma toma, o una dosis reciente de otra (D123). */
+      motivo: 'misma-toma' | 'dosis-reciente';
+    }
   | { tipo: 'atrasada'; minutos: number; toma: string }
   | { tipo: 'ahora'; toma: string }
   | { tipo: 'falta'; minutos: number; toma: string }
@@ -38,7 +45,11 @@ type DatosEstado = Pick<
 > &
   Partial<Pick<Prescripcion, 'agendaDesde'>>;
 
-/** La administración por la que el servidor rechazaría otra ahora (D113 · D123), o undefined. */
+/**
+ * La administración por la que el servidor rechazaría otra ahora (D113 · D123), o undefined, con
+ * el motivo: la de esta misma toma, o una dosis reciente de otra toma (por ejemplo, de antes de
+ * reanudar).
+ */
 function administracionPrevia(p: DatosEstado, ahora: Date) {
   const toma = tomaMasCercana(p, ahora);
   const deLaToma = p.ultimasAdministraciones.find(
@@ -47,18 +58,28 @@ function administracionPrevia(p: DatosEstado, ahora: Date) {
       typeof a.tomaProgramada === 'string' &&
       Date.parse(a.tomaProgramada) === toma,
   );
-  if (deLaToma) return deLaToma;
+  if (deLaToma) return { administracion: deLaToma, motivo: 'misma-toma' as const };
   const ultima = p.ultimasAdministraciones[0];
   if (!ultima) return undefined;
-  const hace = ahora.getTime() - Date.parse(ultima.fechaHora);
-  return hace >= 0 && hace < (p.frecuenciaHoras * 60 * MINUTO) / 2 ? ultima : undefined;
+  const dada = Date.parse(ultima.fechaHora);
+  const hace = ahora.getTime() - dada;
+  if (hace < 0 || hace >= (p.frecuenciaHoras * 60 * MINUTO) / 2) return undefined;
+  // Es otra toma si se dio antes del ancla (reanudar) o si su toma guardada es otra (D121); sin
+  // la toma guardada (datos viejos) se la trata como la misma, que es el aviso más prudente.
+  const antesDelAncla = typeof p.agendaDesde === 'string' && dada < Date.parse(p.agendaDesde);
+  const otraTomaGuardada =
+    typeof ultima.tomaProgramada === 'string' && Date.parse(ultima.tomaProgramada) !== toma;
+  const motivo: 'misma-toma' | 'dosis-reciente' =
+    antesDelAncla || otraTomaGuardada ? 'dosis-reciente' : 'misma-toma';
+  return { administracion: ultima, motivo };
 }
 
 export function estadoToma(p: DatosEstado, ahora = new Date()): EstadoToma {
   const previa = administracionPrevia(p, ahora);
   if (previa) {
-    const minutos = Math.round((ahora.getTime() - Date.parse(previa.fechaHora)) / MINUTO);
-    return { tipo: 'dada', minutos, fechaHora: previa.fechaHora, usuario: previa.usuario };
+    const { administracion: a, motivo } = previa;
+    const minutos = Math.round((ahora.getTime() - Date.parse(a.fechaHora)) / MINUTO);
+    return { tipo: 'dada', minutos, fechaHora: a.fechaHora, usuario: a.usuario, motivo };
   }
   if (!p.proximaToma) return { tipo: 'sin-tomas' };
   const faltan = Math.round((new Date(p.proximaToma).getTime() - ahora.getTime()) / MINUTO);
