@@ -6,15 +6,20 @@ import {
 
 const a = (hora: string) => new Date(`2026-10-07T${hora}:00Z`);
 
-const prescripcion = (datos: Partial<PrescripcionParaRecordar> = {}): PrescripcionParaRecordar => ({
-  id: 1,
-  pacienteId: 10,
-  fechaInicio: a('08:00'),
-  frecuenciaHoras: 8,
-  fechaFin: null,
-  administraciones: [],
-  ...datos,
-});
+/** Sin agendaDesde, la agenda original: anclada en la fecha de inicio. */
+const prescripcion = (datos: Partial<PrescripcionParaRecordar> = {}): PrescripcionParaRecordar => {
+  const fechaInicio = datos.fechaInicio ?? a('08:00');
+  return {
+    id: 1,
+    pacienteId: 10,
+    fechaInicio,
+    agendaDesde: fechaInicio,
+    frecuenciaHoras: 8,
+    fechaFin: null,
+    tomasDadas: [],
+    ...datos,
+  };
+};
 
 const horas = (tomas: { fechaHoraObjetivo: Date }[]) =>
   tomas.map((t) => t.fechaHoraObjetivo.toISOString().slice(11, 16));
@@ -44,15 +49,26 @@ describe('qué tomas se recuerdan (T502 · S9)', () => {
   it('no recuerda una toma que ya se administró, aunque se haya dado antes de hora', () => {
     const desde0 = prescripcion({ fechaInicio: a('00:00') });
     expect(horas(tomasParaRecordar([desde0], a('07:40')))).toEqual(['08:00']);
-    // 04:01 está más cerca de las 08:00 que de las 00:00: cuenta para la toma de las 08:00.
-    const dada = { ...desde0, administraciones: [a('04:01')] };
+    // Una dosis de las 04:01 guardó la toma de las 08:00 (la más cercana, D121).
+    const dada = { ...desde0, tomasDadas: [a('08:00')] };
     expect(tomasParaRecordar([dada], a('07:40'))).toEqual([]);
-    const otraToma = { ...desde0, administraciones: [a('00:10')] };
+    const otraToma = { ...desde0, tomasDadas: [a('00:00')] };
     expect(horas(tomasParaRecordar([otraToma], a('07:40')))).toEqual(['08:00']);
   });
 
   it('no recuerda tomas después del fin del tratamiento', () => {
     expect(tomasParaRecordar([prescripcion({ fechaFin: a('07:59') })], a('07:45'))).toEqual([]);
+  });
+
+  it('D112: con la agenda re-anclada, se recuerda desde el ancla aunque haya dosis de antes', () => {
+    // Reanudada a las 15:00; la última dosis fue la de las 08:00, antes de suspenderla.
+    const reanudada = prescripcion({
+      fechaInicio: a('00:00'),
+      agendaDesde: a('15:00'),
+      tomasDadas: [a('08:00')],
+    });
+    expect(horas(tomasParaRecordar([reanudada], a('15:00')))).toEqual(['15:00']);
+    expect(horas(tomasParaRecordar([reanudada], a('22:40')))).toEqual(['23:00']);
   });
 
   it('junta las tomas de varias prescripciones', () => {

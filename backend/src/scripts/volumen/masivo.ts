@@ -119,11 +119,11 @@ async function suministros(tx: Tx, ahora: Date, personal: Personal, catalogo: Ca
     `CREATE TEMP TABLE vol_sum ON COMMIT DROP AS
      SELECT row_number() OVER (ORDER BY fecha_hora, origen, clave)::int AS id, x.*
      FROM (SELECT 'M'::text AS origen, n AS clave, paciente_id, usuario_id, prescripcion_id,
-                  fecha_dada AS fecha_hora, insumo_id, dosis AS cantidad, 1 AS items
+                  fecha_dada AS fecha_hora, t AS toma, insumo_id, dosis AS cantidad, 1 AS items
            FROM vol_tomas_c WHERE destino = 'D'
            UNION ALL
-           SELECT 'I', g, paciente_id, usuario_id, NULL::int, fecha_hora, NULL::int, NULL::float8,
-                  items
+           SELECT 'I', g, paciente_id, usuario_id, NULL::int, fecha_hora, NULL::timestamptz,
+                  NULL::int, NULL::float8, items
            FROM vol_insumos) x`,
   );
   await tx.$executeRawUnsafe('CREATE INDEX ON vol_sum (origen, clave)');
@@ -133,11 +133,11 @@ async function suministros(tx: Tx, ahora: Date, personal: Personal, catalogo: Ca
     tx,
     'Suministros',
     `INSERT INTO suministros (id, paciente_id, usuario_id, tipo, prescripcion_id, fecha_hora,
-       observaciones, validado_biometricamente, motivo_correccion, corregido_en, corregido_por_id,
-       creado_en)
+       toma_programada, observaciones, validado_biometricamente, motivo_correccion, corregido_en,
+       corregido_por_id, creado_en)
      SELECT id, paciente_id, usuario_id,
        (CASE origen WHEN 'M' THEN 'MEDICAMENTO' ELSE 'INSUMOS' END)::"TipoSuministro",
-       prescripcion_id, fecha_hora,
+       prescripcion_id, fecha_hora, toma,
        CASE WHEN ${azar('id', 21)} < 0.03 THEN ${elegirTextoSql(OBSERVACIONES_SUMINISTRO, 'id', 24)} END,
        true,
        CASE WHEN ${corregido} THEN 'Cantidad mal cargada' END,
@@ -231,7 +231,8 @@ async function notificaciones(tx: Tx, ahora: Date, personal: Personal) {
      SELECT a.id, 'RECORDATORIO_VENCIDO',
        left('Recordatorio vencido sin atender: ' || COALESCE(i.nombre, 'estudio ' || e.nombre)
             || ' de las ' || to_char(r.fecha_hora_objetivo AT TIME ZONE 'America/Argentina/Buenos_Aires', 'HH24:MI')
-            || ' · ' || pa.apellido || ', ' || pa.nombre, 255),
+            || ' · ' || pa.apellido || ', ' || pa.nombre
+            || COALESCE(' (' || sa.nombre || ', cama ' || ca.numero || ')', ''), 255),
        jsonb_build_object('recordatorioId', r.id, 'pacienteId', r.paciente_id,
          'fechaHoraObjetivo', to_char(r.fecha_hora_objetivo AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"')),
        r.vencido_en < ${AHORA} - interval '1 day', r.vencido_en
@@ -240,6 +241,15 @@ async function notificaciones(tx: Tx, ahora: Date, personal: Personal) {
      LEFT JOIN prescripciones p ON p.id = r.prescripcion_id
      LEFT JOIN insumos i ON i.id = p.insumo_id
      LEFT JOIN estudios e ON e.id = r.estudio_id
+     -- La cama (y su sala) en la que estaba cuando venció, como el aviso del ciclo.
+     LEFT JOIN LATERAL (
+       SELECT ac.cama_id FROM asignaciones_cama ac
+       WHERE ac.paciente_id = r.paciente_id AND ac.fecha_desde <= r.vencido_en
+         AND (ac.fecha_hasta IS NULL OR ac.fecha_hasta > r.vencido_en)
+       ORDER BY ac.fecha_desde DESC LIMIT 1
+     ) asig ON true
+     LEFT JOIN camas ca ON ca.id = asig.cama_id
+     LEFT JOIN salas sa ON sa.id = ca.sala_id
      CROSS JOIN unnest(ARRAY[${personal.administradores.join(',')}]) AS a(id)
      WHERE r.vencido_en IS NOT NULL
      ORDER BY r.vencido_en, r.id, a.id`,

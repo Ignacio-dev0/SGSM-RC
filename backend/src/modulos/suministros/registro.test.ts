@@ -2,6 +2,7 @@ import { prisma } from '../../db';
 import { crearInsumo, crearPacienteBasico } from '../../../tests/soporte/fabricas';
 import { agenteConRol, prepararBaseConSeguridad } from '../../../tests/soporte/sesion';
 import { comprobanteDe, registrarRostro } from '../../../tests/soporte/biometria';
+import { mientrasEspera, transaccionAbierta } from '../../../tests/soporte/concurrencia';
 
 type Sesion = Awaited<ReturnType<typeof agenteConRol>>;
 const HORA = 3_600_000;
@@ -37,6 +38,7 @@ describe('registro de suministros (T408 · T409 · T410 · CU20 · CU21 · RN07)
         presentacion: 'x10',
       })
     ).id;
+    const inicio = new Date(Date.now() - 2 * HORA);
     prescripcionId = (
       await prisma.prescripcion.create({
         data: {
@@ -46,7 +48,8 @@ describe('registro de suministros (T408 · T409 · T410 · CU20 · CU21 · RN07)
           unidadDosis: 'mg',
           frecuenciaHoras: 8,
           via: 'ORAL',
-          fechaInicio: new Date(Date.now() - 2 * HORA),
+          fechaInicio: inicio,
+          agendaDesde: inicio,
           prescriptorId: medico.usuario.id,
         },
       })
@@ -79,6 +82,9 @@ describe('registro de suministros (T408 · T409 · T410 · CU20 · CU21 · RN07)
       // La toma de hace 2 h es la más cercana a ahora (la próxima es dentro de 6 h).
       const toma = new Date(res.body.data.tomaProgramada).getTime();
       expect(Math.abs(toma - (Date.now() - 2 * HORA))).toBeLessThan(60_000);
+      // D121: queda guardada con la administración.
+      const db = await prisma.suministro.findUniqueOrThrow({ where: { id: res.body.data.id } });
+      expect(db.tomaProgramada?.toISOString()).toBe(res.body.data.tomaProgramada);
       expect(
         await prisma.auditoria.count({
           where: { accion: 'REGISTRAR', entidad: 'Suministro', pacienteId },
@@ -125,9 +131,10 @@ describe('registro de suministros (T408 · T409 · T410 · CU20 · CU21 · RN07)
         'SIN_PRESCRIPCION_VIGENTE',
       );
 
+      const manana = new Date(Date.now() + 24 * HORA);
       await prisma.prescripcion.update({
         where: { id: prescripcionId },
-        data: { fechaInicio: new Date(Date.now() + 24 * HORA) },
+        data: { fechaInicio: manana, agendaDesde: manana },
       });
       expect((await administrar()).body.error.codigo).toBe('SIN_PRESCRIPCION_VIGENTE');
     });
@@ -140,6 +147,170 @@ describe('registro de suministros (T408 · T409 · T410 · CU20 · CU21 · RN07)
       const res = await administrar();
       expect(res.status).toBe(409);
       expect(res.body.error.codigo).toBe('PACIENTE_NO_INTERNADO');
+    });
+  });
+
+  describe('una toma que ya se dio (D113)', () => {
+    const responsable = async () => {
+      const u = await prisma.usuario.findUniqueOrThrow({ where: { id: enfermera.usuario.id } });
+      return `${u.apellido}, ${u.nombre}`;
+    };
+
+    it('responde 409 TOMA_YA_DADA con cuándo y quién la dio, sin registrar otra', async () => {
+      const primera = await administrar();
+      expect(primera.status).toBe(201);
+
+      const segunda = await administrar();
+
+      expect(segunda.status).toBe(409);
+      expect(segunda.body.error).toMatchObject({
+        codigo: 'TOMA_YA_DADA',
+        detalles: { fechaHora: primera.body.data.fechaHora, usuario: await responsable() },
+      });
+      expect(segunda.body.error.mensaje).toMatch(/ya se dio/);
+      expect(await prisma.suministro.count()).toBe(1);
+    });
+
+    it('con otraToma la registra igual', async () => {
+      await administrar();
+      const otra = await administrar({ otraToma: true });
+      expect(otra.status).toBe(201);
+      expect(await prisma.suministro.count()).toBe(2);
+      // Queda dicho en la auditoría que se marcó a propósito.
+      const a = await prisma.auditoria.findFirstOrThrow({
+        where: { accion: 'REGISTRAR', entidadId: String(otra.body.data.id) },
+      });
+      expect(a.detalle).toMatch(
+        /^Se marcó que corresponde dar otra toma: la de las \d\d:\d\d ya se había dado/,
+      );
+
+      // Sin una administración previa, otraToma no deja nada dicho.
+      await prisma.suministro.deleteMany();
+      const sola = await administrar({ otraToma: true });
+      const b = await prisma.auditoria.findFirstOrThrow({
+        where: { accion: 'REGISTRAR', entidadId: String(sola.body.data.id) },
+      });
+      expect(b.detalle).toBeNull();
+    });
+
+    it('el 409 no gasta la validación facial: se reenvía con otraToma sin volver a validar', async () => {
+      await administrar();
+      const validacionToken = await comprobanteDe(enfermera.agente);
+      const enviar = (extra: Record<string, unknown>) =>
+        enfermera.agente
+          .post('/api/suministros/medicamentos')
+          .send({ pacienteId, prescripcionId, validacionToken, ...extra });
+
+      expect((await enviar({})).status).toBe(409);
+      expect((await enviar({ otraToma: true })).status).toBe(201);
+    });
+
+    /** Una dosis registrada en ese momento para esa toma (sin la validación facial). */
+    const dosis = (fechaHora: Date, tomaProgramada: Date) =>
+      prisma.suministro.create({
+        data: {
+          pacienteId,
+          usuarioId: enfermera.usuario.id,
+          tipo: 'MEDICAMENTO',
+          prescripcionId,
+          fechaHora,
+          tomaProgramada,
+          validadoBiometricamente: true,
+          detalles: { create: [{ insumoId: paracetamol, cantidad: 500 }] },
+        },
+      });
+
+    it('una administración de otra toma no cuenta', async () => {
+      // La toma de hace 10 h ya se dio; la de hace 2 h (la de ahora) no.
+      await prisma.prescripcion.update({
+        where: { id: prescripcionId },
+        data: {
+          fechaInicio: new Date(Date.now() - 10 * HORA),
+          agendaDesde: new Date(Date.now() - 10 * HORA),
+        },
+      });
+      const p = await prisma.prescripcion.findUniqueOrThrow({ where: { id: prescripcionId } });
+      await dosis(p.fechaInicio, p.fechaInicio);
+      expect((await administrar()).status).toBe(201);
+    });
+
+    it('una dosis de hace menos de media frecuencia pide confirmar, aunque sea de antes de reanudar (D123)', async () => {
+      const antes = new Date(Date.now() - 40 * 60_000);
+      const p = await prisma.prescripcion.findUniqueOrThrow({ where: { id: prescripcionId } });
+      await dosis(antes, p.fechaInicio);
+      // Se reanudó hace 5 minutos: la toma de ahora es la primera de la agenda nueva.
+      await prisma.prescripcion.update({
+        where: { id: prescripcionId },
+        data: { agendaDesde: new Date(Date.now() - 5 * 60_000) },
+      });
+
+      const res = await administrar();
+
+      expect(res.status).toBe(409);
+      expect(res.body.error).toMatchObject({
+        codigo: 'TOMA_YA_DADA',
+        detalles: { fechaHora: antes.toISOString(), usuario: await responsable() },
+      });
+      expect(res.body.error.mensaje).toMatch(
+        /^Ya se dio una dosis a las \d\d:\d\d \(.+\), hace 40 min, y la indicación es cada 8 h\. Si corresponde dar otra, márquelo y vuelva a confirmar\.$/,
+      );
+      const otra = await administrar({ otraToma: true });
+      expect(otra.status).toBe(201);
+      const a = await prisma.auditoria.findFirstOrThrow({
+        where: { accion: 'REGISTRAR', entidadId: String(otra.body.data.id) },
+      });
+      expect(a.detalle).toMatch(
+        /^Se marcó que corresponde dar otra toma: ya se había dado una dosis a las \d\d:\d\d/,
+      );
+    });
+
+    it('dos enfermeras a la vez: una registra la toma y la otra recibe TOMA_YA_DADA', async () => {
+      const otra = await agenteConRol('ENFERMERO');
+      await registrarRostro(otra.usuario.id);
+      const tokens = await Promise.all([
+        comprobanteDe(enfermera.agente),
+        comprobanteDe(otra.agente),
+      ]);
+
+      const respuestas = await Promise.all(
+        [enfermera.agente, otra.agente].map((agente, i) =>
+          agente
+            .post('/api/suministros/medicamentos')
+            .send({ pacienteId, prescripcionId, validacionToken: tokens[i] }),
+        ),
+      );
+
+      expect(respuestas.map((r) => r.status).sort()).toEqual([201, 409]);
+      expect(await prisma.suministro.count()).toBe(1);
+    });
+
+    it('decide con la agenda que confirma un cambio en curso, no con la que leyó antes (D121)', async () => {
+      // Iba desde hace 10 h cada 8 h: la toma de ahora es la de hace 2 h, que ya se dio
+      // adelantada hace 5 h 50 min.
+      const inicio = new Date(Date.now() - 10 * HORA);
+      await prisma.prescripcion.update({
+        where: { id: prescripcionId },
+        data: { fechaInicio: inicio, agendaDesde: inicio },
+      });
+      await dosis(new Date(Date.now() - 350 * 60_000), new Date(Date.now() - 2 * HORA));
+      const validacionToken = await comprobanteDe(enfermera.agente);
+      // En ese momento un médico la pasa a cada 4 h, anclada hace un minuto.
+      const cambio = await transaccionAbierta((tx) =>
+        tx.prescripcion.update({
+          where: { id: prescripcionId },
+          data: { frecuenciaHoras: 4, agendaDesde: new Date(Date.now() - 60_000) },
+        }),
+      );
+
+      const r = await mientrasEspera(
+        enfermera.agente
+          .post('/api/suministros/medicamentos')
+          .send({ pacienteId, prescripcionId, validacionToken }),
+        cambio,
+      );
+
+      expect(r.respondioAntes).toBe(false);
+      expect(r.res.status).toBe(201);
     });
   });
 

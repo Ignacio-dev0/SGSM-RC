@@ -5,7 +5,14 @@ import { prisma, type ClienteDb } from '../../db';
 import { cambios, registrarAuditoria } from '../auditoria/auditoria.servicio';
 import { esperarCandadoDelCiclo } from '../recordatorios/ciclo.servicio';
 import { avisarCambioRecordatorios } from '../tiempo-real/bus';
-import { proximaTomaPendiente, tomasEntre } from './agenda';
+import {
+  anclaAlReanudar,
+  anclaPorCambioDeFrecuencia,
+  esTomaDeLaAgenda,
+  proximaTomaPendiente,
+  tomasDadas,
+  tomasEntre,
+} from './agenda';
 import type { AltaPrescripcion, ModificacionPrescripcion } from './prescripciones.esquemas';
 
 /**
@@ -44,6 +51,8 @@ export function aDtoPrescripcion(p: PrescripcionCompleta, ahora = reloj.ahora())
     frecuenciaHoras: p.frecuenciaHoras,
     via: p.via,
     fechaInicio: p.fechaInicio,
+    /** Desde dónde se cuentan las tomas (D112). */
+    agendaDesde: p.agendaDesde,
     fechaFin: p.fechaFin,
     observaciones: p.observaciones,
     estado: p.estado,
@@ -53,11 +62,13 @@ export function aDtoPrescripcion(p: PrescripcionCompleta, ahora = reloj.ahora())
     proximaToma: proximaTomaPendiente(
       p,
       ahora,
-      p.suministros.map((s) => s.fechaHora),
+      p.suministros.map((s) => s.tomaProgramada),
     ),
     ultimasAdministraciones: p.suministros.map((s) => ({
       id: s.id,
       fechaHora: s.fechaHora,
+      /** La toma para la que se dio, guardada al registrarla (D121). */
+      tomaProgramada: s.tomaProgramada,
       cantidad: s.detalles[0]?.cantidad ?? null,
       usuario: nombreDe(s.usuario),
     })),
@@ -118,6 +129,53 @@ async function cancelarRecordatoriosPendientes(
   return count;
 }
 
+/**
+ * D122: al volver a anclar la agenda (reanudar o cambiar la frecuencia), los recordatorios
+ * vencidos de tomas que ya no están en la agenda nueva se cancelan (conservan `vencidoEn`, como
+ * D28 de los estudios): ninguna administración los atendería y quedarían en el panel. Cada uno
+ * queda en la auditoría. Devuelve cuántos canceló.
+ */
+async function cancelarVencidosDeOtraAgenda(
+  tx: Prisma.TransactionClient,
+  p: PrescripcionCompleta,
+  actorId: number,
+) {
+  const vencidos = await tx.recordatorio.findMany({
+    where: { prescripcionId: p.id, estado: 'VENCIDO' },
+  });
+  let cancelados = 0;
+  for (const r of vencidos.filter((v) => !esTomaDeLaAgenda(p, v.fechaHoraObjetivo))) {
+    const { count } = await tx.recordatorio.updateMany({
+      where: { id: r.id, estado: 'VENCIDO' },
+      data: { estado: 'CANCELADO' },
+    });
+    if (count === 0) continue;
+    cancelados++;
+    await registrarAuditoria(tx, {
+      usuarioId: actorId,
+      accion: 'CANCELAR',
+      entidad: 'Recordatorio',
+      entidadId: r.id,
+      pacienteId: p.pacienteId,
+      anterior: { estado: 'VENCIDO' },
+      nuevo: { estado: 'CANCELADO' },
+      detalle:
+        'La toma ya no está en la agenda de la prescripción (se reanudó o cambió la frecuencia)',
+    });
+  }
+  return cancelados;
+}
+
+/**
+ * D121: bloquea la prescripción al empezar la transacción, antes de leerla. Las
+ * administraciones y los cambios de agenda de una misma prescripción van de a uno y cada uno lee
+ * lo que el otro confirmó. FOR NO KEY UPDATE no choca con el FOR KEY SHARE de los recordatorios
+ * que inserta el ciclo.
+ */
+export async function bloquearPrescripcion(tx: Prisma.TransactionClient, id: number) {
+  await tx.$queryRaw`SELECT 1 FROM prescripciones WHERE id = ${id} FOR NO KEY UPDATE`;
+}
+
 /** Avisa al tiempo real si la transacción (ya confirmada) canceló recordatorios. */
 function avisarSiCancelo<T>({ dto, cancelados }: { dto: T; cancelados: number }): T {
   if (cancelados > 0) avisarCambioRecordatorios();
@@ -141,12 +199,21 @@ export async function listarPrescripcionesDePaciente(
   return lista.map((p) => aDtoPrescripcion(p, ahora));
 }
 
+/**
+ * Detalle con las tomas de las próximas 24 h: empiezan por la próxima toma (la que falta dar,
+ * aunque sea de hace unos minutos) y no incluyen las que ya se dieron.
+ */
 export async function obtenerPrescripcion(id: number) {
   const p = await obtenerDb(prisma, id);
   const ahora = reloj.ahora();
-  const agenda =
-    p.estado === 'VIGENTE' ? tomasEntre(p, ahora, new Date(ahora.getTime() + 24 * 3_600_000)) : [];
-  return { ...aDtoPrescripcion(p, ahora), agenda };
+  const dto = aDtoPrescripcion(p, ahora);
+  const dadas = tomasDadas(p.suministros.map((s) => s.tomaProgramada));
+  const agenda = dto.proximaToma
+    ? tomasEntre(p, dto.proximaToma, new Date(ahora.getTime() + 24 * 3_600_000)).filter(
+        (toma) => !dadas.has(toma.getTime()),
+      )
+    : [];
+  return { ...dto, agenda };
 }
 
 export async function crearPrescripcion(
@@ -156,6 +223,8 @@ export async function crearPrescripcion(
 ) {
   return prisma.$transaction(async (tx) => {
     await pacienteInternado(tx, pacienteId);
+    // D116: un cambio de tipo en curso termina antes de leer el tipo (y no al revés).
+    await tx.$queryRaw`SELECT 1 FROM insumos WHERE id = ${datos.insumoId} FOR SHARE`;
     const insumo = await tx.insumo.findUnique({ where: { id: datos.insumoId } });
     if (!insumo) throw noEncontrado('El medicamento no existe');
     if (insumo.tipo !== 'MEDICAMENTO') {
@@ -195,6 +264,7 @@ export async function crearPrescripcion(
         ...resto,
         pacienteId,
         fechaInicio: new Date(fechaInicio),
+        agendaDesde: new Date(fechaInicio),
         fechaFin: fechaFin ? new Date(fechaFin) : null,
         prescriptorId: actorId,
       },
@@ -224,6 +294,8 @@ export async function modificarPrescripcion(
   const resultado = await prisma.$transaction(async (tx) => {
     // D30: no cruzarse con un ciclo que está generando un recordatorio de esta prescripción.
     await esperarCandadoDelCiclo(tx);
+    // D121: ni con una administración en curso (el ancla tiene que ver su dosis).
+    await bloquearPrescripcion(tx, id);
     const antes = await obtenerDb(tx, id);
     if (antes.estado !== 'VIGENTE') {
       throw conflicto(
@@ -235,12 +307,19 @@ export async function modificarPrescripcion(
     if (nuevaFin && nuevaFin <= antes.fechaInicio) {
       throw reglaNegocio('FECHA_FIN_INVALIDA', 'La fecha de fin debe ser posterior al inicio');
     }
+    const cambiaFrecuencia =
+      datos.frecuenciaHoras !== undefined && datos.frecuenciaHoras !== antes.frecuenciaHoras;
     const despues = await tx.prescripcion.update({
       where: { id },
-      data: { ...datos, ...(nuevaFin !== undefined ? { fechaFin: nuevaFin } : {}) },
+      data: {
+        ...datos,
+        ...(nuevaFin !== undefined ? { fechaFin: nuevaFin } : {}),
+        // D112 · D122: la próxima toma se cuenta desde la última dosis dada (o desde ahora).
+        ...(cambiaFrecuencia ? { agendaDesde: await anclaAlCambiarFrecuencia(tx, antes) } : {}),
+      },
       include: incluir,
     });
-    const { anterior, nuevo } = cambios(paraAuditoria(antes), paraAuditoria(despues));
+    const { anterior, nuevo } = cambios(conAncla(antes), conAncla(despues));
     await registrarAuditoria(tx, {
       usuarioId: actorId,
       accion: 'MODIFICAR',
@@ -251,13 +330,35 @@ export async function modificarPrescripcion(
       nuevo,
       detalle: motivo,
     });
-    const cancelados =
+    const pendientes =
       'frecuenciaHoras' in nuevo || 'fechaFin' in nuevo
         ? await cancelarRecordatoriosPendientes(tx, id, antes.pacienteId, actorId)
         : 0;
-    return { dto: aDtoPrescripcion(despues), cancelados };
+    const vencidos = cambiaFrecuencia
+      ? await cancelarVencidosDeOtraAgenda(tx, despues, actorId)
+      : 0;
+    return { dto: aDtoPrescripcion(despues), cancelados: pendientes + vencidos };
   });
   return avisarSiCancelo(resultado);
+}
+
+/** La auditoría de un cambio que puede mover la agenda incluye el ancla (D112). */
+const conAncla = (p: PrescripcionCompleta) => ({
+  ...paraAuditoria(p),
+  agendaDesde: p.agendaDesde,
+});
+
+/**
+ * D112 · D122: la toma de la última dosis dada en la agenda vigente (la guardada al registrarla,
+ * D121); si no hay o quedó alguna toma sin dar después, ahora.
+ */
+async function anclaAlCambiarFrecuencia(tx: Prisma.TransactionClient, p: PrescripcionCompleta) {
+  const ultima = await tx.suministro.findFirst({
+    where: { prescripcionId: p.id, tipo: 'MEDICAMENTO', tomaProgramada: { gte: p.agendaDesde } },
+    orderBy: { tomaProgramada: 'desc' },
+    select: { tomaProgramada: true },
+  });
+  return anclaPorCambioDeFrecuencia(p, reloj.ahora(), ultima?.tomaProgramada ?? null);
 }
 
 /** Transiciones permitidas y la acción que queda en la auditoría. */
@@ -274,6 +375,7 @@ export async function cambiarEstadoPrescripcion(
 ) {
   const resultado = await prisma.$transaction(async (tx) => {
     await esperarCandadoDelCiclo(tx); // D30
+    await bloquearPrescripcion(tx, id); // D121
     const antes = await obtenerDb(tx, id);
     const accion = TRANSICIONES[antes.estado][estado];
     if (!accion) {
@@ -284,9 +386,15 @@ export async function cambiarEstadoPrescripcion(
     }
     if (estado === 'VIGENTE') await pacienteInternado(tx, antes.pacienteId);
 
+    // D112: al reanudar, las tomas vuelven a empezar desde ahora.
+    const reanuda = accion === 'REANUDAR';
     const despues = await tx.prescripcion.update({
       where: { id },
-      data: { estado, motivoCambioEstado: motivo },
+      data: {
+        estado,
+        motivoCambioEstado: motivo,
+        ...(reanuda ? { agendaDesde: anclaAlReanudar(antes, reloj.ahora()) } : {}),
+      },
       include: incluir,
     });
     await registrarAuditoria(tx, {
@@ -295,14 +403,20 @@ export async function cambiarEstadoPrescripcion(
       entidad: 'Prescripcion',
       entidadId: id,
       pacienteId: antes.pacienteId,
-      anterior: { estado: antes.estado },
-      nuevo: { estado, motivoCambioEstado: motivo },
+      anterior: { estado: antes.estado, ...(reanuda ? { agendaDesde: antes.agendaDesde } : {}) },
+      nuevo: {
+        estado,
+        motivoCambioEstado: motivo,
+        ...(reanuda ? { agendaDesde: despues.agendaDesde } : {}),
+      },
     });
-    const cancelados =
+    const pendientes =
       antes.estado === 'VIGENTE'
         ? await cancelarRecordatoriosPendientes(tx, id, antes.pacienteId, actorId)
         : 0;
-    return { dto: aDtoPrescripcion(despues), cancelados };
+    // D122: los vencidos de antes de suspender ya no son de la agenda nueva.
+    const vencidos = reanuda ? await cancelarVencidosDeOtraAgenda(tx, despues, actorId) : 0;
+    return { dto: aDtoPrescripcion(despues), cancelados: pendientes + vencidos };
   });
   return avisarSiCancelo(resultado);
 }

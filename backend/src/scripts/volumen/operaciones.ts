@@ -155,6 +155,9 @@ export function operaciones(s: Sesiones, e: Escenario): Operacion[] {
           pacienteId,
           prescripcionId,
           validacionToken: data.validacionToken,
+          // El volumen ya dio muchas de estas tomas: con otraToma se busca la previa igual
+          // (el mismo trabajo) pero se registra en lugar de responder TOMA_YA_DADA (D113).
+          otraToma: true,
         }),
       );
     }),

@@ -36,6 +36,7 @@ describe('corrección de suministros (T412 · CU23)', () => {
         presentacion: '',
       })
     ).id;
+    const inicio = new Date(Date.now() - 30 * HORA);
     prescripcionId = (
       await prisma.prescripcion.create({
         data: {
@@ -45,7 +46,8 @@ describe('corrección de suministros (T412 · CU23)', () => {
           unidadDosis: 'mg',
           frecuenciaHoras: 8,
           via: 'ORAL',
-          fechaInicio: new Date(Date.now() - 30 * HORA),
+          fechaInicio: inicio,
+          agendaDesde: inicio,
           prescriptorId: enfermera.usuario.id,
         },
       })

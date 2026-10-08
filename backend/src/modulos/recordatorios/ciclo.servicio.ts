@@ -20,9 +20,6 @@ import { prioridadDe } from './prioridad';
 /** Número del candado de PostgreSQL (pg_try_advisory_xact_lock) del ciclo de recordatorios. */
 const CANDADO_DEL_CICLO = 50_501;
 
-/** Mitad de la frecuencia máxima (168 h): más atrás, una administración ya no es de estas tomas. */
-const MEDIA_FRECUENCIA_MAXIMA = 84 * 3_600_000;
-
 type Tx = Prisma.TransactionClient;
 
 /**
@@ -66,7 +63,10 @@ const incluirParaAviso = {
     select: {
       apellido: true,
       nombre: true,
-      asignaciones: { where: { fechaHasta: null }, select: { cama: true } },
+      asignaciones: {
+        where: { fechaHasta: null },
+        select: { cama: { select: { numero: true, sala: { select: { nombre: true } } } } },
+      },
     },
   },
   prescripcion: { include: { insumo: true } },
@@ -75,13 +75,17 @@ const incluirParaAviso = {
 
 type RecordatorioParaAviso = Prisma.RecordatorioGetPayload<{ include: typeof incluirParaAviso }>;
 
-/** "Recordatorio vencido sin atender: Paracetamol de las 05:00 · Benítez, Rosa (cama A-01)". */
+/**
+ * "Recordatorio vencido sin atender: Paracetamol de las 05:00 · Benítez, Rosa (Sala A –
+ * Neurorrehabilitación, cama A-01)": con la sala, para ir sin abrir la ficha.
+ */
 function mensajeDeVencido(r: RecordatorioParaAviso) {
   const que = r.prescripcion
     ? r.prescripcion.insumo.nombre
     : `estudio ${r.estudio?.nombre ?? ''}`.trim();
-  const cama = r.paciente.asignaciones[0]?.cama.numero;
-  const quien = `${r.paciente.apellido}, ${r.paciente.nombre}${cama ? ` (cama ${cama})` : ''}`;
+  const cama = r.paciente.asignaciones[0]?.cama;
+  const donde = cama ? ` (${cama.sala.nombre}, cama ${cama.numero})` : '';
+  const quien = `${r.paciente.apellido}, ${r.paciente.nombre}${donde}`;
   const hora = horaArgentina(r.fechaHoraObjetivo);
   return `Recordatorio vencido sin atender: ${que} de las ${hora} · ${quien}`.slice(0, 255);
 }
@@ -170,23 +174,28 @@ async function tomasDeLaVentana(
     where: {
       estado: 'VIGENTE',
       paciente: { estado: 'INTERNADO' },
-      fechaInicio: { lte: hasta },
+      agendaDesde: { lte: hasta },
       OR: [{ fechaFin: null }, { fechaFin: { gte: desde } }],
     },
     select: {
       id: true,
       pacienteId: true,
       fechaInicio: true,
+      agendaDesde: true,
       frecuenciaHoras: true,
       fechaFin: true,
+      // D121: las administraciones de las tomas de la ventana, por la toma que guardaron.
       suministros: {
-        where: { fechaHora: { gte: new Date(desde.getTime() - MEDIA_FRECUENCIA_MAXIMA) } },
-        select: { fechaHora: true },
+        where: { tomaProgramada: { gte: desde, lte: hasta } },
+        select: { tomaProgramada: true },
       },
     },
   });
   const tomas = tomasParaRecordar(
-    prescripciones.map((p) => ({ ...p, administraciones: p.suministros.map((s) => s.fechaHora) })),
+    prescripciones.map((p) => ({
+      ...p,
+      tomasDadas: p.suministros.flatMap((s) => (s.tomaProgramada ? [s.tomaProgramada] : [])),
+    })),
     ahora,
   );
   return tomas.map((t) => ({

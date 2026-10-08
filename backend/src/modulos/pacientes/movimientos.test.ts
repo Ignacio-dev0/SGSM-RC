@@ -149,6 +149,7 @@ describe('traslado y egreso de pacientes (CU14 · CU15 · T210)', () => {
             frecuenciaHoras: 8,
             via: 'ORAL',
             fechaInicio: new Date('2026-10-01T08:00:00Z'),
+            agendaDesde: new Date('2026-10-01T08:00:00Z'),
             prescriptorId: medicoId,
             estado,
           },

@@ -136,6 +136,38 @@ describe('aviso al tiempo real cuando se cancelan recordatorios', () => {
     expect(r?.estado).toBe('CANCELADO');
   });
 
+  it('reanudar cancela el vencido de la agenda vieja y avisa (D122)', async () => {
+    await prisma.recordatorio.create({
+      data: {
+        tipo: 'MEDICAMENTO',
+        pacienteId,
+        prescripcionId,
+        fechaHoraObjetivo: new Date(Date.now() - HORA),
+        generadoEn: new Date(Date.now() - 2 * HORA),
+        estado: 'VENCIDO',
+        vencidoEn: new Date(Date.now() - HORA),
+        prioridad: 'ALTA',
+      },
+    });
+    const estado = (e: string) =>
+      medico.agente
+        .post(`/api/prescripciones/${prescripcionId}/estado`)
+        .send({ estado: e, motivo: 'Control de la presión' });
+    expect((await estado('SUSPENDIDA')).status).toBe(200);
+    // Suspender no lo toca: sigue a la vista para anotar por qué no se dio.
+    expect((await prisma.recordatorio.findFirstOrThrow()).estado).toBe('VENCIDO');
+    const { publicar, vistos } = espiarBus();
+
+    expect((await estado('VIGENTE')).status).toBe(200);
+
+    expect(publicar).toHaveBeenCalledTimes(1);
+    expect(await Promise.all(vistos)).toEqual([1]);
+    expect(await prisma.recordatorio.findFirstOrThrow()).toMatchObject({
+      estado: 'CANCELADO',
+      vencidoEn: expect.any(Date),
+    });
+  });
+
   it('un cambio que no toca la agenda (la dosis) no cancela ni avisa', async () => {
     await recordarPendiente();
     const { publicar } = espiarBus();

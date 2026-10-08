@@ -216,6 +216,7 @@ export async function crearPrescripciones(
         ] as const),
         via: viaPara(azar, m.presentacion),
         fechaInicio: inicio,
+        agendaDesde: inicio,
         fechaFin: planificado,
         observaciones: azar.num() < 0.05 ? 'Administrar con alimentos' : null,
         estado,

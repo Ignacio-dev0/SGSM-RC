@@ -89,6 +89,7 @@ describe('ciclo de recordatorios (T501 · T502 · T503 · T508 · T514)', () => 
           tipo: 'MEDICAMENTO',
           prescripcionId,
           fechaHora: a('07:50'),
+          tomaProgramada: a('08:00'),
         },
       });
       expect((await ciclo('07:55')).nuevos).toBe(0);
@@ -167,8 +168,10 @@ describe('ciclo de recordatorios (T501 · T502 · T503 · T508 · T514)', () => 
           leida: false,
         }),
       ]);
-      // 08:00 UTC son las 05:00 en Argentina.
-      expect(notificaciones[0]?.mensaje).toMatch(/Paracetamol.*05:00.*Prueba\d+.*A-01/);
+      // 08:00 UTC son las 05:00 en Argentina. Con la sala además de la cama.
+      expect(notificaciones[0]?.mensaje).toMatch(
+        /^Recordatorio vencido sin atender: Paracetamol de las 05:00 · Prueba\d+, Paciente \(Sala A, cama A-01\)$/,
+      );
       expect(notificaciones[0]?.datos).toMatchObject({ recordatorioId: r!.id, pacienteId });
       expect(
         await prisma.auditoria.count({ where: { accion: 'VENCER', entidadId: String(r!.id) } }),
@@ -244,7 +247,7 @@ describe('ciclo de recordatorios (T501 · T502 · T503 · T508 · T514)', () => 
       });
       // 10:00 UTC son las 07:00 en Argentina.
       expect((await prisma.notificacion.findFirstOrThrow()).mensaje).toMatch(
-        /estudio Rx de tórax de las 07:00.*A-01/,
+        /estudio Rx de tórax de las 07:00 · .* \(Sala A, cama A-01\)$/,
       );
       expect((await ciclo('10:31')).nuevos).toBe(0);
     });
@@ -296,7 +299,7 @@ describe('ciclo de recordatorios (T501 · T502 · T503 · T508 · T514)', () => 
     it('genera tomas y estudios en el mismo ciclo, con un solo aviso', async () => {
       await prisma.prescripcion.update({
         where: { id: prescripcionId },
-        data: { estado: 'VIGENTE', fechaInicio: a('10:00') },
+        data: { estado: 'VIGENTE', fechaInicio: a('10:00'), agendaDesde: a('10:00') },
       });
       const publicar = jest.spyOn(bus, 'publicar').mockImplementation(() => undefined);
 

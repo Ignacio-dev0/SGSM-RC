@@ -92,6 +92,7 @@ export async function crearPrescripcionBasica(
   datos: Partial<Prisma.PrescripcionUncheckedCreateInput> = {},
 ) {
   const insumoId = datos.insumoId ?? (await crearInsumo()).id;
+  const fechaInicio = datos.fechaInicio ?? new Date();
   return prisma.prescripcion.create({
     data: {
       pacienteId,
@@ -100,9 +101,11 @@ export async function crearPrescripcionBasica(
       unidadDosis: 'mg',
       frecuenciaHoras: 8,
       via: 'ORAL',
-      fechaInicio: new Date(),
       prescriptorId,
       ...datos,
+      fechaInicio,
+      // Sin re-anclar (D112): la agenda se cuenta desde el inicio.
+      agendaDesde: datos.agendaDesde ?? fechaInicio,
     },
   });
 }

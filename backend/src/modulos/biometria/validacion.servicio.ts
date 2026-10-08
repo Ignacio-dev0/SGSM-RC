@@ -115,10 +115,21 @@ const validacionRequerida = (mensaje = 'La operación requiere una validación f
   new ErrorApi(403, 'VALIDACION_FACIAL_REQUERIDA', mensaje);
 
 /**
- * Verifica y consume el comprobante de una validación facial: tiene que ser del usuario que
- * hace la operación, no estar vencido y no haberse usado antes.
+ * Verifica el comprobante de una validación facial sin gastarlo: tiene que ser del usuario que
+ * hace la operación, no estar vencido y no haberse usado antes. Lo usa quien todavía puede
+ * rechazar la operación por una regla que la persona resuelve y reenvía (TOMA_YA_DADA, D113).
  */
+export function comprobarValidacion(token: unknown, usuarioId: number) {
+  leerComprobante(token, usuarioId);
+}
+
+/** Verifica y consume el comprobante: después de esto ya no sirve para otra operación. */
 export function consumirValidacion(token: unknown, usuarioId: number) {
+  const { jti, vence } = leerComprobante(token, usuarioId);
+  usados.set(jti, vence);
+}
+
+function leerComprobante(token: unknown, usuarioId: number) {
   if (typeof token !== 'string' || token === '') throw validacionRequerida();
   const ahora = segundos(reloj.ahora());
   let datos: jwt.JwtPayload;
@@ -141,5 +152,5 @@ export function consumirValidacion(token: unknown, usuarioId: number) {
   if (usados.has(datos.jti)) {
     throw validacionRequerida('Esa validación facial ya se usó. Vuelva a validar su rostro.');
   }
-  usados.set(datos.jti, datos.exp ?? ahora);
+  return { jti: datos.jti, vence: datos.exp ?? ahora };
 }

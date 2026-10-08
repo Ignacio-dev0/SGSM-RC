@@ -1,18 +1,18 @@
 import { config } from '../../config';
-import { tomaMasCercana, tomasEntre, type DatosAgenda } from '../prescripciones/agenda';
+import { tomasDadas, tomasEntre, type DatosAgenda } from '../prescripciones/agenda';
 
 /**
  * Qué tomas se recuerdan (T502 · S9). Funciones puras sobre la agenda de las prescripciones:
  * las tomas entre `anticipación` minutos antes y después de ahora que todavía no tienen una
- * administración (una administración cuenta para su toma más cercana, como en el historial).
+ * administración (cada una cuenta para la toma que guardó al registrarse, D121).
  * Las de más atrás no se recuperan: tras una caída solo vuelven las de los últimos 30 min.
  */
 
 export interface PrescripcionParaRecordar extends DatosAgenda {
   id: number;
   pacienteId: number;
-  /** Momentos de las administraciones registradas de la prescripción. */
-  administraciones: Date[];
+  /** Tomas que ya tienen una administración: las que guardaron al registrarse (D121). */
+  tomasDadas: Date[];
 }
 
 export interface TomaParaRecordar {
@@ -35,7 +35,7 @@ export function tomasParaRecordar(
 ): TomaParaRecordar[] {
   const { desde, hasta } = ventanaDeGeneracion(ahora);
   return prescripciones.flatMap((p) => {
-    const dadas = new Set(p.administraciones.map((a) => tomaMasCercana(p, a)?.getTime()));
+    const dadas = tomasDadas(p.tomasDadas);
     return tomasEntre(p, desde, hasta)
       .filter((toma) => !dadas.has(toma.getTime()))
       .map((toma) => ({ prescripcionId: p.id, pacienteId: p.pacienteId, fechaHoraObjetivo: toma }));

@@ -34,6 +34,11 @@ export const esquemaAdministracion = z.object({
   cantidad: cantidad.optional(),
   observaciones,
   validacionToken,
+  /**
+   * D113: la persona marcó "Corresponde dar otra toma". Sin esto, si la toma ya tiene una
+   * administración, responde 409 TOMA_YA_DADA.
+   */
+  otraToma: z.boolean({ error: 'Indique si corresponde dar otra toma' }).default(false),
 });
 
 export const esquemaInsumos = z.object({

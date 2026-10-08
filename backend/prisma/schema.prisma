@@ -279,6 +279,9 @@ model Prescripcion {
   frecuenciaHoras    Int                @map("frecuencia_horas")
   via                ViaAdministracion
   fechaInicio        DateTime           @map("fecha_inicio") @db.Timestamptz(3)
+  /// Toma 0 de la agenda vigente (D112): la fecha de inicio, o cuándo se reanudó o se cambió la
+  /// frecuencia (la última dosis dada). Las tomas se cuentan desde acá.
+  agendaDesde        DateTime           @map("agenda_desde") @db.Timestamptz(3)
   fechaFin           DateTime?          @map("fecha_fin") @db.Timestamptz(3)
   observaciones      String?            @db.VarChar(500)
   estado             EstadoPrescripcion @default(VIGENTE)
@@ -294,6 +297,8 @@ model Prescripcion {
   recordatorios Recordatorio[]
 
   @@index([pacienteId, estado])
+  /// Si un medicamento está en uso (D116): se pregunta por existencia, sin leer la tabla.
+  @@index([insumoId])
   @@map("prescripciones")
 }
 
@@ -306,6 +311,9 @@ model Suministro {
   tipo                    TipoSuministro
   prescripcionId          Int?           @map("prescripcion_id")
   fechaHora               DateTime       @map("fecha_hora") @db.Timestamptz(3)
+  /// Toma de la agenda a la que se atribuyó al registrarla (D121): no cambia aunque después la
+  /// agenda se vuelva a anclar. Nula en los movimientos de insumos.
+  tomaProgramada          DateTime?      @map("toma_programada") @db.Timestamptz(3)
   observaciones           String?        @db.VarChar(500)
   validadoBiometricamente Boolean        @default(false) @map("validado_biometricamente")
   motivoCorreccion        String?        @map("motivo_correccion") @db.VarChar(255)
@@ -324,8 +332,10 @@ model Suministro {
   @@index([usuarioId])
   /// Reportes de todo el hospital por período (E6).
   @@index([fechaHora])
-  /// Últimas administraciones de cada prescripción y tomas ya dadas del ciclo (T702).
+  /// Últimas administraciones de cada prescripción (T702).
   @@index([prescripcionId, fechaHora])
+  /// La administración de una toma (TOMA_YA_DADA) y las tomas ya dadas del ciclo (D121).
+  @@index([prescripcionId, tomaProgramada])
   @@map("suministros")
 }
 
@@ -340,6 +350,8 @@ model DetalleSuministro {
 
   /// Los detalles de cada suministro (sin él, cada lista recorría la tabla entera · T702).
   @@index([suministroId])
+  /// Si un insumo está en uso (D116): se pregunta por existencia, sin leer la tabla.
+  @@index([insumoId])
   @@map("detalles_suministro")
 }
 

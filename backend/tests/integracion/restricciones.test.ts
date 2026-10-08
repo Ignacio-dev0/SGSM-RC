@@ -84,7 +84,8 @@ describe('restricciones de negocio en la base (T102)', () => {
           unidadDosis: 'mg',
           frecuenciaHoras,
           via: 'ORAL',
-          fechaInicio: new Date(),
+          fechaInicio: new Date('2026-10-07T08:00:00Z'),
+          agendaDesde: new Date('2026-10-07T08:00:00Z'),
           prescriptorId: usuarioId,
         },
       });
@@ -142,6 +143,7 @@ describe('restricciones de negocio en la base (T102)', () => {
             frecuenciaHoras: 8,
             via: 'ORAL',
             fechaInicio: toma,
+            agendaDesde: toma,
             prescriptorId: usuarioId,
           },
         })
