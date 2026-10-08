@@ -10,12 +10,12 @@ Este manual es para el personal de enfermería que usa la tablet al lado de la c
 
 **Si esta tabla está en blanco, pídale a su supervisora que la complete antes de su primer turno.** Cuando este manual dice «la supervisora», «el administrador», «el área de sistemas» o «el médico», se refiere a estas personas:
 
-| Para…                                                                                                                     | Quién                                     | Interno o teléfono   | De noche y el fin de semana  |
-| ------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------- | -------------------- | ---------------------------- |
-| Avisar que no puede registrar algo, un error de carga o cualquier duda del turno                                          | Supervisora de enfermería                 | \_\_\_\_\_\_\_\_\_\_ | \_\_\_\_\_\_\_\_\_\_\_\_\_\_ |
-| Cuenta bloqueada, contraseña olvidada, rostro sin registrar o que no la reconoce, falta un insumo, un registro equivocado | Administrador del sistema: \_\_\_\_\_\_\_ | \_\_\_\_\_\_\_\_\_\_ | \_\_\_\_\_\_\_\_\_\_\_\_\_\_ |
-| El sistema no anda (no carga, da errores, no hay conexión en el sector, la cámara no enciende)                            | Área de sistemas: \_\_\_\_\_\_\_\_\_\_    | \_\_\_\_\_\_\_\_\_\_ | \_\_\_\_\_\_\_\_\_\_\_\_\_\_ |
-| Falta una prescripción, la dosis no le parece correcta, un estudio que no se pudo hacer, una indicación de palabra        | El médico del paciente o el de guardia    | \_\_\_\_\_\_\_\_\_\_ | \_\_\_\_\_\_\_\_\_\_\_\_\_\_ |
+| Para…                                                                                                              | Quién                                     | Interno o teléfono   | De noche y el fin de semana  |
+| ------------------------------------------------------------------------------------------------------------------ | ----------------------------------------- | -------------------- | ---------------------------- |
+| Avisar que no puede registrar algo, un error de carga o cualquier duda del turno                                   | Supervisora de enfermería                 | \_\_\_\_\_\_\_\_\_\_ | \_\_\_\_\_\_\_\_\_\_\_\_\_\_ |
+| Cuenta bloqueada, contraseña olvidada, rostro sin registrar o que no la reconoce, falta un insumo                  | Administrador del sistema: \_\_\_\_\_\_\_ | \_\_\_\_\_\_\_\_\_\_ | \_\_\_\_\_\_\_\_\_\_\_\_\_\_ |
+| El sistema no anda (no carga, da errores, no hay conexión en el sector, la cámara no enciende)                     | Área de sistemas: \_\_\_\_\_\_\_\_\_\_    | \_\_\_\_\_\_\_\_\_\_ | \_\_\_\_\_\_\_\_\_\_\_\_\_\_ |
+| Falta una prescripción, la dosis no le parece correcta, un estudio que no se pudo hacer, una indicación de palabra | El médico del paciente o el de guardia    | \_\_\_\_\_\_\_\_\_\_ | \_\_\_\_\_\_\_\_\_\_\_\_\_\_ |
 
 Si no puede registrar lo que hizo (el sistema no anda, la cámara no enciende, no la reconoce), siga [Si no puede registrar](#si-no-puede-registrar).
 
@@ -56,7 +56,7 @@ Si no puede registrar lo que hizo (el sistema no anda, la cámara no enciende, n
 
 1. [Entrar y salir del sistema](#entrar-y-salir-del-sistema) (y [si deja de tocar la pantalla](#si-deja-de-tocar-la-pantalla), [la sesión de otra persona](#salir), [en el teléfono](#en-el-teléfono))
 2. [Recordatorios: las tomas y estudios para atender](#recordatorios-las-tomas-y-estudios-para-atender) (y [Urgente, Pronto, Programada y Vencida](#urgente-pronto-programada-y-vencida), [el sonido](#los-avisos-y-el-sonido), [sin conexión en tiempo real](#si-dice-sin-conexión-en-tiempo-real))
-3. [Administrar un medicamento](#administrar-un-medicamento) (y [el orden correcto](#el-orden-correcto), [No se sabe si quedó registrada](#si-aparece-no-se-sabe-si-quedó-registrada), [No se administró](#cuando-una-toma-no-se-da-no-se-administró))
+3. [Administrar un medicamento](#administrar-un-medicamento) (y [el orden correcto](#el-orden-correcto), [Esta toma ya se registró](#si-al-confirmar-aparece-esta-toma-ya-se-registró), [No se sabe si quedó registrada](#si-aparece-no-se-sabe-si-quedó-registrada), [No se administró](#cuando-una-toma-no-se-da-no-se-administró))
 4. [Registrar insumos](#registrar-insumos)
 5. [Buscar un paciente y ver su ficha](#buscar-un-paciente-y-ver-su-ficha) (y [alergias](#datos-las-alergias), [corregir algo que cargó mal](#corregir-algo-que-cargó-mal), [confirmar un estudio](#confirmar-que-se-realizó-un-estudio))
 6. [Si no puede registrar](#si-no-puede-registrar)
@@ -72,7 +72,7 @@ Para empezar a trabajar con su nombre y cerrar al terminar.
 
 ### Ingresar
 
-1. Abra el SGSM-RC en la tablet (el administrador le indica cómo: un acceso directo o una dirección).
+1. Abra el SGSM-RC en la tablet: toque el ícono **SGSM-RC**, una cruz blanca sobre un cuadrado verde azulado oscuro. Si no lo encuentra, el administrador le indica cómo abrirlo.
 2. Toque **Usuario** y escriba su usuario.
 3. Toque **Contraseña** y escriba su contraseña.
 4. Toque **Ingresar**.
@@ -94,7 +94,7 @@ Para empezar a trabajar con su nombre y cerrar al terminar.
 | Aviso que puede aparecer                                                                     | Qué hacer                                                                                                                                                                                                                      |
 | -------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | «Ingrese su usuario» / «Ingrese su contraseña»                                               | Falta completar ese campo.                                                                                                                                                                                                     |
-| «Usuario o contraseña incorrectos»                                                           | Escríbalos de nuevo, despacio. Revise las mayúsculas y use el ojo para ver la contraseña.                                                                                                                                      |
+| «Usuario o contraseña incorrectos»                                                           | Escríbalos de nuevo, despacio. En el usuario no importan las mayúsculas; en la contraseña sí: use el ojo para revisarla.                                                                                                       |
 | «La cuenta está bloqueada por intentos fallidos hasta las …»                                 | Después de tres intentos fallidos seguidos, la cuenta se bloquea un rato (en general, 15 minutos). Espere a la hora que indica o llame al administrador. Mientras tanto, siga [Si no puede registrar](#si-no-puede-registrar). |
 | «Demasiados intentos fallidos desde este dispositivo. Espere … minutos y vuelva a intentar.» | Hubo muchos intentos fallidos en esa tablet. Espere los minutos que dice.                                                                                                                                                      |
 | Se olvidó la contraseña                                                                      | La pantalla no la recupera: pídale una nueva al administrador. No pruebe varias veces, porque al tercer intento la cuenta se bloquea.                                                                                          |
@@ -111,7 +111,7 @@ Desde acá se llega a cada tarea con un toque.
 - ② **Administrar medicamento**: dar una toma y registrarla con su rostro. Ver [Administrar un medicamento](#administrar-un-medicamento).
 - ③ **Registrar insumos**: pañales, gasas, filtros… usados con un paciente. Ver [Registrar insumos](#registrar-insumos).
 - ④ **Buscar paciente**: por apellido, DNI o cama. Ver [Buscar un paciente](#buscar-un-paciente).
-- ⑤ **Menú lateral**: **Inicio**, **Recordatorios**, **Pacientes** y **Suministros**. Está en todas las pantallas. Se ve resaltada la opción de la parte del sistema en la que está: **Administrar medicamento** y **Registrar insumos** son parte de **Suministros**, así que en esas pantallas el menú muestra resaltado **Suministros**; en la ficha de un paciente, **Pacientes**. No quiere decir que se fue a otra pantalla.
+- ⑤ **Menú lateral**: **Inicio**, **Recordatorios**, **Pacientes** y **Suministros**. Está en todas las pantallas. Se ve resaltada la opción de la parte del sistema en la que está; en la ficha de un paciente, **Pacientes**. En **Administrar medicamento** y **Registrar insumos** se resalta desde dónde llegó: **Recordatorios** si vino de una tarjeta, **Pacientes** si ya hay un paciente elegido, y ninguna si entró desde el Inicio y todavía no eligió paciente. No quiere decir que se fue a otra pantalla.
 - ⑥ **Salir**: cierra la sesión.
 
 La tarea **Ver lo que se registró** (abajo a la derecha) abre la pantalla **Suministros**, la misma que la opción **Suministros** del menú: los medicamentos e insumos registrados, por paciente, fecha o responsable.
@@ -200,6 +200,8 @@ Para saber qué toca ahora en el hospital, de lo más urgente a lo menos. En est
 
 Cada recordatorio aparece **30 minutos antes** de la hora de la toma. La lista se actualiza sola: no hace falta recargarla. Cuando una toma se atiende (se administra o se registra que no se administró), sale de la lista.
 
+Cuando el médico reanuda una prescripción o le cambia la frecuencia, las tomas se vuelven a contar desde ese cambio: una toma puede aparecer enseguida como **Urgente**, y las del horario anterior que ya no corresponden salen de la lista.
+
 Si no hay nada pendiente, dice «No hay tomas ni estudios para atender ahora.» y la hora de la última actualización.
 
 ### Cómo leer una tarjeta
@@ -212,7 +214,7 @@ Si no hay nada pendiente, dice «No hay tomas ni estudios para atender ahora.» 
 - ② **El nivel**: **Urgente**, **Pronto**, **Programada** o **Vencida**, siempre escrito. Ver [la tabla](#urgente-pronto-programada-y-vencida).
 - ③ **El paciente**: apellido y nombre, DNI, cama y sala.
 - ④ **Qué se da**: el medicamento con su dosis («Ketorolac 30 mg»), la vía y la presentación («Intravenosa · Ampolla 30 mg»).
-- ⑤ **No se administró**: **es un botón, aunque se vea como texto suelto.** Sirve para registrar que esta toma no se dio, con el motivo. Está cerca de **Administrar**: con guantes, toque con cuidado. Si lo toca sin querer, toque **Cancelar** en la ventana que se abre: no se registra nada. Ver [No se administró](#cuando-una-toma-no-se-da-no-se-administró).
+- ⑤ **No se administró**: **es un botón, aunque se vea como texto suelto.** Sirve para registrar que esta toma no se dio, con el motivo. Está separado de **Administrar**, pero con guantes toque con cuidado. Si lo toca sin querer, toque **Cancelar** en la ventana que se abre: no se registra nada. Ver [No se administró](#cuando-una-toma-no-se-da-no-se-administró).
 - ⑥ **Administrar**: abre la pantalla para darla, con el paciente y el medicamento ya elegidos. Ver [Desde un recordatorio](#desde-un-recordatorio).
 
 Las indicaciones del médico (por ejemplo, «Controlar la tensión arterial antes de dar») no están en la tarjeta: se leen al tocar **Administrar**.
@@ -239,7 +241,7 @@ El nivel se calcula solo, minuto a minuto: una toma **Programada** pasa a **Pron
 
 Una toma vencida sigue en la lista hasta 12 horas, o hasta que alguien la atiende: tóquele **Administrar** si la da (lea antes [¿La puedo dar igual?](#una-toma-quedó-vencida-la-puedo-dar-igual)), o **No se administró** con el motivo si no la da.
 
-**Pasadas 12 horas sin que nadie la atienda, la tarjeta sale de la lista.** La toma no se borra: queda registrada como vencida sin atender. El administrador recibió el aviso cuando venció, y en la ficha del paciente, **Historial** › **Modificaciones**, queda un renglón que en **Acción** dice «VENCER», con la hora y el usuario «Sistema». **No queda como «No se administró»:** si no la dio, regístrelo antes de que pasen las 12 horas, con el motivo.
+**Pasadas 12 horas sin que nadie la atienda, la tarjeta sale de la lista.** La toma no se borra: queda registrada como vencida sin atender. El administrador recibió el aviso cuando venció, y en la ficha del paciente, **Historial** › **Modificaciones**, con **Mostrar los avisos automáticos** prendido, queda un renglón que en **Acción** dice «Marcó como vencido», con la hora, y en **Quién lo hizo**, «Sistema». **No queda como «No se administró»:** si no la dio, regístrelo antes de que pasen las 12 horas, con el motivo.
 
 ### Los avisos y el sonido
 
@@ -287,7 +289,7 @@ Si la franja sigue **más de 10 minutos**, o aparece «No hay conexión con el s
 
 Para dar la medicación indicada y dejarla registrada a su nombre.
 
-Solo se puede administrar sobre una **prescripción vigente** del paciente. Si el medicamento que le piden no aparece, consulte al médico: tiene que indicarlo él. Las indicaciones «si dolor» o «a demanda» y lo indicado de palabra en una urgencia tienen su propio camino: ver [esta pregunta](#cómo-registro-una-indicación-si-dolor-una-dosis-única-o-algo-que-el-médico-indicó-de-palabra).
+Solo se puede administrar sobre una **prescripción vigente** del paciente. Si el medicamento que le piden no aparece, consulte al médico: tiene que indicarlo él. Las indicaciones «si dolor» o «a demanda», las dosis únicas y lo indicado de palabra en una urgencia tienen su propio camino: ver [esta pregunta](#cómo-registro-una-indicación-si-dolor-una-dosis-única-o-algo-que-el-médico-indicó-de-palabra).
 
 Se llega por tres caminos a la misma pantalla: **Administrar** en la tarjeta de un recordatorio (lo más común), **Administrar medicamento** en la pantalla de Inicio, o **Administrar** en una prescripción de la ficha del paciente.
 
@@ -295,7 +297,7 @@ Se llega por tres caminos a la misma pantalla: **Administrar** en la tarjeta de 
 
 1. **Antes de preparar el medicamento**, toque **Administrar** en la tarjeta de la toma y lea todo: el paciente, la línea gris con las indicaciones del médico y los avisos amarillos. Si dice «**Esta toma ya se dio a las …**», **no la prepare**: alguien ya la dio. Revise el historial y consulte.
 2. Prepare el medicamento.
-3. Al lado de la cama, vuelva a abrir la pantalla (por ejemplo, toque la flecha **Volver** y otra vez **Administrar** en la tarjeta): **la pantalla no se actualiza sola**, y si otra persona la dio mientras usted preparaba, recién al abrirla de nuevo aparece «Esta toma ya se dio…». Si la tarjeta ya no está en Recordatorios, es que alguien la atendió: no la dé sin revisar el historial.
+3. Al lado de la cama, antes de darla, vuelva a mirar la pantalla. Se actualiza sola cada minuto y cada vez que vuelve a ella: si otra persona la dio mientras usted preparaba, aparece «Esta toma ya se dio…». Para no esperar ese minuto, toque la flecha **Volver** y otra vez **Administrar** en la tarjeta. Si la tarjeta ya no está en Recordatorios, es que alguien la atendió: no la dé sin revisar el historial.
 4. Compare el nombre, el DNI y la cama de la pantalla con el paciente que tiene delante.
 5. **Dé el medicamento.**
 6. **Recién ahí**, enseguida y al lado de la cama, toque **Confirmar con mi rostro**.
@@ -391,21 +393,29 @@ Lo que confirma con su rostro queda **a su nombre**. Si se equivocó, ver [Corre
 
 El sistema avisa, pero la decisión clínica es suya. Estos avisos aparecen apenas elige el medicamento: por eso conviene abrir la pantalla **antes de preparar** ([el orden correcto](#el-orden-correcto)).
 
-| Aviso                                                                                           | Qué hacer                                                                                                                                                                                                                                        |
-| ----------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| «La cantidad 1 mg es distinta de la dosis prescripta (0,5 mg). Verifique antes de confirmar.»   | Revise la cantidad. Si es la que corresponde dar, puede confirmar igual. En el resumen, **Dar** dice «Distinta de la prescripta (0,5 mg)».                                                                                                       |
-| «Faltan 2 h para la toma de las 08:00. Verifique que corresponda adelantarla.»                  | Esa toma todavía no toca. Confirme solo si corresponde adelantarla. Si está registrando tarde una toma que ya dio, ver [Si no puede registrar](#si-no-puede-registrar), paso 4.                                                                  |
-| «Esta toma ya se dio a las 20:31 (Acosta, Sofía). Revise el historial antes de registrar otra.» | Alguien ya la registró. **No la dé.** Revise el historial del paciente. **Confirmar con mi rostro** queda gris hasta que marque **Corresponde dar otra toma (por ejemplo, por indicación médica)**. Márquela solo si de verdad corresponde otra. |
+| Aviso                                                                                           | Qué hacer                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| ----------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| «La cantidad 1 mg es distinta de la dosis prescripta (0,5 mg). Verifique antes de confirmar.»   | Revise la cantidad. Si es la que corresponde dar, puede confirmar igual. En el resumen, **Dar** dice «Distinta de la prescripta (0,5 mg)».                                                                                                                                                                                                                                                                                                                           |
+| «Faltan 2 h para la toma de las 08:00. Verifique que corresponda adelantarla.»                  | Esa toma todavía no toca. Confirme solo si corresponde adelantarla. Si está registrando tarde una toma que ya dio, ver [Si no puede registrar](#si-no-puede-registrar), paso 4.                                                                                                                                                                                                                                                                                      |
+| «Esta toma ya se dio a las 20:31 (Acosta, Sofía). Revise el historial antes de registrar otra.» | Ya hay una dosis registrada en esta toma, o la última dosis de esta prescripción fue hace menos de la mitad del intervalo (por ejemplo, hace menos de 4 horas en una cada 8 h), también si el médico la suspendió y la reanudó en el medio. **No la dé.** Revise el historial del paciente. **Confirmar con mi rostro** queda gris hasta que marque **Corresponde dar otra toma (por ejemplo, por indicación médica)**. Márquela solo si de verdad corresponde otra. |
+
+### Si al confirmar aparece «Esta toma ya se registró…»
+
+Pasa cuando otra persona registró esa toma mientras usted la preparaba o la daba (por ejemplo, desde otra tablet), y la pantalla todavía no lo mostraba. El aviso dice, por ejemplo: «Esta toma ya se registró a las 08:05 (Acosta, Sofía). Si corresponde dar otra, márquelo y vuelva a confirmar.» **No se registró nada**, y más abajo, antes del resumen **Revise antes de confirmar**, aparece la casilla **Corresponde dar otra toma (por ejemplo, por indicación médica)**. Salvo que el hospital indique otra cosa:
+
+1. Revise el historial del paciente y hable con quien la registró (el aviso dice su nombre).
+2. Si usted **todavía no la dio**, no la dé.
+3. Si usted **ya la dio**, el paciente recibió dos dosis: avise enseguida al médico y a su supervisora. Para que quede registrada la que dio usted, marque la casilla, escriba en **Observaciones** qué pasó (por ejemplo, «Dada sin saber que ya se había dado a las 08:05») y toque otra vez **Confirmar con mi rostro**: el sistema le vuelve a pedir el rostro.
 
 ### Si el sistema no reconoce su rostro
 
-| Lo que ve                                                                                                                  | Qué hacer                                                                                                                                                                                                                                                                                                  |
-| -------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| «No se reconoció su rostro. Le quedan 2 intentos.»                                                                         | Busque buena luz, despeje la cara (barbijo, antiparras, pelo) y toque **Intentar de nuevo**.                                                                                                                                                                                                               |
-| «Se canceló la operación por tres validaciones fallidas. Quedó registrado y se avisó al administrador.»                    | **Lo que quedó registrado son los intentos fallidos, NO la administración. La toma sigue sin registrar.** Toque **Entendido** y vuelva a cargarla desde el principio: tiene tres intentos nuevos. Si sigue sin reconocerla, llame al administrador y siga [Si no puede registrar](#si-no-puede-registrar). |
-| «Usted no tiene el rostro registrado, así que no puede confirmar esta operación. Pídale al administrador que lo registre.» | Llame al administrador. Hasta entonces no puede confirmar registros: siga [Si no puede registrar](#si-no-puede-registrar).                                                                                                                                                                                 |
-| «No se pudo encender la cámara…» con el botón **Reintentar**                                                               | Toque **Reintentar**. Si sigue igual, avise al área de sistemas (puede faltar un permiso de la tablet) y siga [Si no puede registrar](#si-no-puede-registrar).                                                                                                                                             |
-| «No se pudo verificar: revise la conexión.»                                                                                | Revise que la tablet tenga el Wi-Fi prendido y toque **Intentar de nuevo**.                                                                                                                                                                                                                                |
+| Lo que ve                                                                                                                  | Qué hacer                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| -------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| «No se reconoció su rostro. Le quedan 2 intentos.»                                                                         | Busque buena luz, despeje la cara (barbijo, antiparras, pelo) y toque **Intentar de nuevo**.                                                                                                                                                                                                                                                                                                                                                                       |
+| «No se registró la administración. Los tres intentos fallidos quedaron registrados y se avisó al administrador.»           | **La toma sigue sin registrar**: lo que quedó registrado son los intentos fallidos. Toque **Entendido** y vuelva a cargarla desde el principio: tiene tres intentos nuevos. Si sigue sin reconocerla, llame al administrador y siga [Si no puede registrar](#si-no-puede-registrar). En las otras tareas el aviso empieza con lo que no se guardó: «No se registraron los insumos.», «No se guardó la corrección.» o «No se registró la confirmación del estudio.» |
+| «Usted no tiene el rostro registrado, así que no puede confirmar esta operación. Pídale al administrador que lo registre.» | Llame al administrador. Hasta entonces no puede confirmar registros: siga [Si no puede registrar](#si-no-puede-registrar).                                                                                                                                                                                                                                                                                                                                         |
+| «No se pudo encender la cámara…» con el botón **Reintentar**                                                               | Toque **Reintentar**. Si sigue igual, avise al área de sistemas (puede faltar un permiso de la tablet) y siga [Si no puede registrar](#si-no-puede-registrar).                                                                                                                                                                                                                                                                                                     |
+| «No se pudo verificar: revise la conexión.»                                                                                | Revise que la tablet tenga el Wi-Fi prendido y toque **Intentar de nuevo**.                                                                                                                                                                                                                                                                                                                                                                                        |
 
 ### Si aparece «No se sabe si quedó registrada»
 
@@ -427,7 +437,7 @@ Qué hacer:
 5. Si está, quedó registrada: no haga nada más.
 6. Si no está, vuelva a **Administrar medicamento** y regístrela otra vez.
 
-Si al registrarla otra vez aparece «Esta toma ya se dio a las…», es que sí había quedado guardada: no la registre de nuevo.
+Si al registrarla otra vez aparece «Esta toma ya se dio a las…» o «Esta toma ya se registró a las…», es que quedó guardada: no la registre de nuevo.
 
 ### Cuando una toma no se da: No se administró
 
@@ -569,19 +579,19 @@ Si ya está en **Administrar medicamento** y quiere mirarlas: mientras no haya e
 - ③ **Suministros**: la solapa con los medicamentos dados y los insumos registrados; entre paréntesis, cuántos hay. Las otras dos son **Camas** y **Modificaciones**. Ojo: es la solapa de acá, debajo de las fechas, no la opción **Suministros** del menú.
 - ④ **Un registro**: fecha y hora, tipo (**Medicamento** o **Insumos**), detalle («Ketorolac × 30 mg») y quién lo registró. Tóquelo para abrirlo.
 
-**Dónde se ve un «No se administró».** No está en **Suministros** (ahí solo están los medicamentos que sí se dieron) ni en las prescripciones. Está en la solapa **Modificaciones**, que muestra todo lo que cambió en la ficha, con palabras técnicas del sistema. Lo más nuevo está arriba.
+**Dónde se ve un «No se administró».** No está en **Suministros** (ahí solo están los medicamentos que sí se dieron) ni en las prescripciones. Está en la solapa **Modificaciones**, que muestra lo que cambió en la ficha: qué se hizo, sobre qué, qué cambió y quién lo hizo. Lo más nuevo está arriba.
 
-![Historial del paciente Arrieta en la solapa Modificaciones con la pestaña Historial, la solapa Modificaciones y un renglón NO_ADMINISTRAR con su detalle y su usuario señalados](img/enfermeria/30-historial-no-administrado.png)
+![Historial del paciente Arrieta en la solapa Modificaciones con la pestaña Historial, la solapa Modificaciones y un renglón Marcó como no administrado con su detalle y quién lo hizo señalados](img/enfermeria/30-historial-no-administrado.png)
 
 **En la imagen:**
 
 - ① **Historial**.
 - ② **Modificaciones**: la solapa, debajo de las fechas.
-- ③ **Acción**: un «No se administró» dice **NO_ADMINISTRAR**, así, en mayúsculas.
-- ④ **Detalle**: el motivo está después de «motivoNoAdministrado:» (en la imagen, «Lo rechazó: refiere náuseas»).
-- ⑤ **Usuario**: quién lo registró.
+- ③ **Acción**: un «No se administró» dice «Marcó como no administrado». Al lado, en **Sobre qué**, dice «Recordatorio».
+- ④ **Detalle**: solo lo que cambió. El motivo está después de «Motivo por el que no se administró:» (en la imagen, «Lo rechazó: refiere náuseas»).
+- ⑤ **Quién lo hizo**: quién lo registró.
 
-Para encontrarlo rápido, ponga en **Desde** y **Hasta** la fecha de ese día y busque **NO_ADMINISTRAR** en la columna **Acción**. Los renglones que dicen «GENERAR» o «VENCER», con el usuario «Sistema», son los recordatorios que el sistema creó o que vencieron sin atender.
+Para encontrarlo rápido, ponga en **Desde** y **Hasta** la fecha de ese día y busque «Marcó como no administrado» en la columna **Acción**. Los recordatorios que el sistema creó o que vencieron sin atender («Generó» y «Marcó como vencido», hechos por «Sistema») no se ven de entrada: aparecen al prender **Mostrar los avisos automáticos**, arriba de la tabla.
 
 ### Corregir algo que cargó mal
 
@@ -589,12 +599,13 @@ Para arreglar una cantidad mal cargada. Se puede **dentro de las 24 horas** del 
 
 - En una administración se corrige **solo la cantidad** (por ejemplo, si dio la mitad). No se puede poner 0 ni anular el registro.
 - En un registro de insumos se corrigen las cantidades o se quita un insumo.
+- En los dos se pueden corregir también las **Observaciones**.
 - Si se equivocó de paciente o de medicamento, **no use Corregir**: vea [más abajo](#si-lo-registró-en-el-paciente-o-el-medicamento-equivocado).
 
 1. En la ficha del paciente, toque la pestaña **Historial** y después la solapa **Suministros**, debajo de las fechas. (También puede usar la opción **Suministros** del menú, que muestra los registros de todos los pacientes.)
 2. Toque el registro.
 3. Toque **Corregir**.
-4. Escriba la cantidad correcta.
+4. Escriba la cantidad correcta (y, si hace falta, corrija las observaciones).
 5. Escriba el motivo.
 6. Toque **Confirmar corrección con mi rostro** y mire a la cámara.
 
@@ -615,6 +626,8 @@ Para arreglar una cantidad mal cargada. Se puede **dentro de las 24 horas** del 
 - ③ **Confirmar corrección con mi rostro**: gris hasta que estén la cantidad y el motivo. Al lado dice qué falta («Falta indicar el motivo (mínimo 3 letras).»).
 - ④ **Cancelar**: deja el registro como estaba.
 
+Entre la cantidad y el motivo está también **Observaciones**, con las que tenía el registro. Cámbielas solo si hace falta: si las deja vacías, se borran («Déjelas vacías para borrarlas»). Si las cambia, la ventana de la cámara muestra las de antes y las nuevas.
+
 ![Ventana Confirmar con su rostro de la corrección con la operación, el aviso de modo demostración, el antes, el después y el motivo, el botón que en la tablet real es la cámara y Cancelar señalados](img/enfermeria/25-corregir-rostro.png)
 
 **En la imagen:**
@@ -627,7 +640,7 @@ Para arreglar una cantidad mal cargada. Se puede **dentro de las 24 horas** del 
 
 **Cuando sale bien**, el registro muestra arriba «Corregido por Acosta, Sofía el 07/10/2026 20:40. Motivo: …». Nada se borra: queda quién lo cargó, quién lo corrigió, qué había antes y por qué.
 
-Pasadas las 24 horas, **Corregir** no aparece y el registro dice «El plazo de corrección venció (24 h desde el registro). Si hay un error, pídale la corrección al administrador.» Avísele al administrador. Un **No se administró** no se corrige ni se deshace.
+Pasadas las 24 horas, **Corregir** no aparece y el registro dice «Pasaron más de 24 horas: ya no se puede corregir. Avise a su supervisora para dejar constancia.» Desde ese momento nadie lo puede corregir en el sistema, tampoco el administrador: avise a su supervisora. Si el plazo termina mientras está corrigiendo, aparece el mismo aviso y la corrección no se guarda. Un **No se administró** no se corrige ni se deshace.
 
 #### Si lo registró en el paciente o el medicamento equivocado
 
@@ -684,22 +697,23 @@ Cuando el sistema no anda, no hay conexión, la cámara no enciende, el rostro n
    - Si la tarjeta de esa toma sigue en **Recordatorios**, tóquele **Administrar**: la pantalla muestra esa toma, con la hora que tenía.
    - Si no está, use **Administrar medicamento**. Puede aparecer «Faltan … para la toma de las … Verifique que corresponda adelantarla»: es por el retraso.
    - En **Observaciones** escriba la hora real: «Dada a las 03:10; registro tardío por falla del sistema». La hora que guarda el sistema es la del registro.
-5. **Si ya pasó más de la mitad del tiempo entre una toma y la siguiente** (más de 4 horas en un medicamento cada 8 h, más de 3 horas en uno cada 6 h, más de 6 horas en uno cada 12 h), **no la registre**: el sistema la contaría como la toma siguiente, y esa toma ya no le avisaría. Déjela en el papel y avise al administrador y a su supervisora.
+5. **Si ya pasó más de la mitad del tiempo entre una toma y la siguiente** (más de 4 horas en un medicamento cada 8 h, más de 3 horas en uno cada 6 h, más de 6 horas en uno cada 12 h), **no la registre**: el sistema la contaría como la toma siguiente, esa toma ya no le avisaría y figuraría como «Ya se dio». Déjela en el papel y avise al administrador y a su supervisora.
 
 ---
 
 ## Si algo no funciona
 
-| Lo que ve                                                                                                    | Qué pasó y qué hacer                                                                                                                                                                                                                                                                |
-| ------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| «No hay conexión con el servidor. Revise el Wi-Fi e intente de nuevo.»                                       | La tablet perdió la red del hospital. Revise que tenga el Wi-Fi prendido. **Antes de repetir un registro, fíjese en el historial del paciente si quedó guardado.** Si no vuelve, siga [Si no puede registrar](#si-no-puede-registrar).                                              |
-| «No se pudo cargar …» con el botón **Reintentar**                                                            | La información no llegó. **No quiere decir que no haya datos**: toque **Reintentar**.                                                                                                                                                                                               |
-| «El servidor tuvo un problema…» u «Ocurrió un problema inesperado…»                                          | Una falla del sistema. Revise si lo último quedó guardado e intente de nuevo en unos minutos. Si se repite, llame al área de sistemas y siga [Si no puede registrar](#si-no-puede-registrar).                                                                                       |
-| «El paciente no está internado»                                                                              | Le dieron el alta mientras usted cargaba: ya no se le puede registrar nada. Para encontrarlo, en **Pacientes** cambie **Estado** a **Todos**. Si ya le dio el medicamento, anótelo en papel ([Si no puede registrar](#si-no-puede-registrar)) y avise al médico y al administrador. |
-| «No se puede registrar el medicamento: la prescripción está suspendida» (o «finalizada», «ya terminó»)       | El médico cambió la indicación mientras usted cargaba. Vuelva a abrir **Administrar medicamento**. Si falta lo que tiene que dar, consulte al médico. Si ya la dio, anótelo en papel y avísele.                                                                                     |
-| «¿Descartar lo cargado?»                                                                                     | Quiso salir de una pantalla con datos sin confirmar. **Seguir editando** vuelve a la pantalla; **Descartar** sale y lo cargado se pierde.                                                                                                                                           |
-| «La sesión alcanzó su duración máxima. Vuelva a ingresar.» o «La sesión ya no es válida. Vuelva a ingresar.» | Ingrese de nuevo con su usuario y su contraseña.                                                                                                                                                                                                                                    |
-| La tablet no suena                                                                                           | Revise que **Sonido de avisos** esté prendido, que el volumen esté alto y que haya tocado una parte vacía de la pantalla después de ingresar. El texto y el número aparecen igual.                                                                                                  |
+| Lo que ve                                                                                                                                      | Qué pasó y qué hacer                                                                                                                                                                                                                                                                |
+| ---------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| «No hay conexión con el servidor. Revise el Wi-Fi e intente de nuevo.»                                                                         | La tablet perdió la red del hospital. Revise que tenga el Wi-Fi prendido. **Antes de repetir un registro, fíjese en el historial del paciente si quedó guardado.** Si no vuelve, siga [Si no puede registrar](#si-no-puede-registrar).                                              |
+| «No se pudo cargar …» con el botón **Reintentar**                                                                                              | La información no llegó. **No quiere decir que no haya datos**: toque **Reintentar**.                                                                                                                                                                                               |
+| «El servidor tuvo un problema…» u «Ocurrió un problema inesperado…»                                                                            | Una falla del sistema. Revise si lo último quedó guardado e intente de nuevo en unos minutos. Si se repite, llame al área de sistemas y siga [Si no puede registrar](#si-no-puede-registrar).                                                                                       |
+| «El paciente no está internado»                                                                                                                | Le dieron el alta mientras usted cargaba: ya no se le puede registrar nada. Para encontrarlo, en **Pacientes** cambie **Estado** a **Todos**. Si ya le dio el medicamento, anótelo en papel ([Si no puede registrar](#si-no-puede-registrar)) y avise al médico y al administrador. |
+| «No se puede registrar el medicamento: la prescripción está suspendida» (o «finalizada», «ya terminó»)                                         | El médico cambió la indicación mientras usted cargaba. Vuelva a abrir **Administrar medicamento**. Si falta lo que tiene que dar, consulte al médico. Si ya la dio, anótelo en papel y avísele.                                                                                     |
+| «La prescripción de Paracetamol ya no está vigente: la suspendieron o la finalizaron mientras tenía la pantalla abierta. No se registró nada.» | Lo mismo, visto antes de confirmar. Toque **Ir a la ficha** para ver cómo quedó la indicación. Si falta lo que tiene que dar, consulte al médico. Si ya la dio, anótelo en papel y avísele.                                                                                         |
+| «¿Descartar lo cargado?»                                                                                                                       | Quiso salir de una pantalla con datos sin confirmar. **Seguir editando** vuelve a la pantalla; **Descartar** sale y lo cargado se pierde.                                                                                                                                           |
+| «La sesión alcanzó su duración máxima. Vuelva a ingresar.» o «La sesión ya no es válida. Vuelva a ingresar.»                                   | Ingrese de nuevo con su usuario y su contraseña.                                                                                                                                                                                                                                    |
+| La tablet no suena                                                                                                                             | Revise que **Sonido de avisos** esté prendido, que el volumen esté alto y que haya tocado una parte vacía de la pantalla después de ingresar. El texto y el número aparecen igual.                                                                                                  |
 
 ---
 
@@ -725,8 +739,7 @@ Para que no pase, confirme solo después de darla ([el orden correcto](#el-orden
 
 ### ¿Cómo registro una indicación «si dolor», una dosis única o algo que el médico indicó de palabra?
 
-- **«Si dolor», «si fiebre», «a demanda» (SOS):** el sistema no las tiene. El médico no las puede cargar como tales, así que no aparecen en Recordatorios ni en Administrar medicamento y no se pueden registrar acá. Regístrelas como indique el hospital fuera del sistema (por ejemplo, en papel) y consulte a su supervisora. Si ve una prescripción con horario fijo que en la línea gris dice «si dolor» o «fiebre o dolor», el sistema la recuerda igual a cada hora indicada: consulte al médico cómo darla.
-- **Dosis única:** el médico la carga como una prescripción con una sola toma. Aparece en **Administrar medicamento** y, desde 30 minutos antes de su hora, en Recordatorios. Regístrela apenas la da: si tarda, puede aparecer «No se puede registrar el medicamento: la prescripción ya terminó»; en ese caso, anótela en papel y avise al médico.
+- **«Si dolor», «si fiebre», «a demanda» (SOS) y dosis única («stat»):** el sistema no las maneja. El médico no las puede cargar como tales, así que no aparecen en Recordatorios ni en Administrar medicamento y no se pueden registrar acá. Regístrelas como indique el hospital fuera del sistema (por ejemplo, en papel) y consulte a su supervisora. Si ve una prescripción con horario fijo que en la línea gris dice «si dolor» o «fiebre o dolor», el sistema la recuerda igual a cada hora indicada: consulte al médico cómo darla.
 - **Indicación de palabra en una urgencia:** mientras el médico no la cargue, no hay dónde registrarla. Anote en papel la hora real, el medicamento, la dosis y la vía, y pídale al médico que la cargue. Cuando aparezca, regístrela y escriba en **Observaciones** la hora real y que fue por indicación verbal (tenga en cuenta el paso 5 de [Si no puede registrar](#si-no-puede-registrar)).
 
 ### El paciente está en aislamiento: ¿tengo que sacarme el barbijo para confirmar?
@@ -735,7 +748,7 @@ La cámara pide «el rostro descubierto» y con barbijo o antiparras puede no re
 
 ### Me equivoqué en la cantidad. ¿Cómo lo arreglo?
 
-Dentro de las 24 horas, ábralo en el historial del paciente y toque **Corregir** ([cómo](#corregir-algo-que-cargó-mal)). Después de 24 horas, avise al administrador.
+Dentro de las 24 horas, ábralo en el historial del paciente y toque **Corregir** ([cómo](#corregir-algo-que-cargó-mal)). Después de 24 horas ya nadie lo puede corregir en el sistema: avise a su supervisora para dejar constancia.
 
 ### Lo registré en el paciente equivocado (o con otro medicamento).
 
@@ -777,26 +790,26 @@ En la ficha, pestaña **Datos**, en **Observaciones**, si el médico lo anotó (
 
 ## Glosario
 
-| Palabra                                   | Qué significa en el sistema                                                                                                                                           |
-| ----------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Ingresar**                              | Entrar al sistema con su usuario y su contraseña. No confundir con internar a un paciente.                                                                            |
-| **Sesión**                                | El tiempo que usted está adentro del sistema con su usuario, desde que toca **Ingresar** hasta que toca **Salir** o se cierra sola.                                   |
-| **Servidor**                              | La computadora central donde se guarda todo lo que se registra. La tablet le manda los datos por el Wi-Fi.                                                            |
-| **Enfermero**                             | El nombre del perfil de todo el personal de enfermería en el sistema. Define qué puede hacer.                                                                         |
-| **Internar** / **Internado**              | Registrar el ingreso de un paciente al hospital con su cama. Solo se registra algo a pacientes internados.                                                            |
-| **Dar de alta** / **Egresado**            | El paciente se fue del hospital: se libera la cama y se suspenden sus prescripciones.                                                                                 |
-| **Prescripción**                          | Indicación médica de un medicamento: dosis, frecuencia y vía. Solo se administra sobre una prescripción **vigente**.                                                  |
-| **Toma**                                  | Cada momento en que corresponde dar un medicamento según la prescripción.                                                                                             |
-| **Administrar**                           | Dar un medicamento a un paciente y registrarlo con su rostro.                                                                                                         |
-| **No se administró**                      | Registro de que una toma no se dio, con el motivo (ayuno, rechazo, estudio…). No se puede deshacer.                                                                   |
-| **Insumo**                                | Material no medicinal: pañal, gasa, filtro, guantes…                                                                                                                  |
-| **Suministro**                            | Registro de una administración o de los insumos usados con un paciente.                                                                                               |
-| **Suministros** (menú)                    | La opción del menú, y la tarea **Ver lo que se registró** del Inicio: los registros de todos los pacientes. Administrar y Registrar insumos son parte de esta opción. |
-| **Historial**                             | Pestaña de la ficha del paciente con tres solapas: **Camas**, **Modificaciones** y **Suministros** (los registros de ese paciente).                                   |
-| **Modificaciones**                        | Solapa del historial con todo lo que cambió en la ficha, quién y cuándo. Ahí está un «No se administró» (NO_ADMINISTRAR).                                             |
-| **Recordatorio**                          | Aviso de una toma o de un estudio que se acerca (30 minutos antes) o que está atrasado. La pantalla **Recordatorios** los muestra todos.                              |
-| **Insignia de recordatorios**             | El reloj con un número, arriba: cuántos recordatorios hay para atender en todo el hospital.                                                                           |
-| **Urgente** / **Pronto** / **Programada** | Cuánto falta para la toma: 5 minutos o menos (o atrasada), entre 5 y 15, o más de 15.                                                                                 |
-| **Vencida**                               | Toma que nadie atendió (en general, 30 minutos después de su hora). Se avisa al administrador y todavía se puede atender, tarde.                                      |
-| **Estudio**                               | Práctica programada a un paciente (laboratorio, radiografía…) que enfermería confirma con su rostro.                                                                  |
-| **Confirmar con mi rostro**               | Validación facial de quien registra. Identifica a quien registra, no al paciente.                                                                                     |
+| Palabra                                   | Qué significa en el sistema                                                                                                              |
+| ----------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| **Ingresar**                              | Entrar al sistema con su usuario y su contraseña. No confundir con internar a un paciente.                                               |
+| **Sesión**                                | El tiempo que usted está adentro del sistema con su usuario, desde que toca **Ingresar** hasta que toca **Salir** o se cierra sola.      |
+| **Servidor**                              | La computadora central donde se guarda todo lo que se registra. La tablet le manda los datos por el Wi-Fi.                               |
+| **Enfermero**                             | El nombre del perfil de todo el personal de enfermería en el sistema. Define qué puede hacer.                                            |
+| **Internar** / **Internado**              | Registrar el ingreso de un paciente al hospital con su cama. Solo se registra algo a pacientes internados.                               |
+| **Dar de alta** / **Egresado**            | El paciente se fue del hospital: se libera la cama y se suspenden sus prescripciones.                                                    |
+| **Prescripción**                          | Indicación médica de un medicamento: dosis, frecuencia y vía. Solo se administra sobre una prescripción **vigente**.                     |
+| **Toma**                                  | Cada momento en que corresponde dar un medicamento según la prescripción.                                                                |
+| **Administrar**                           | Dar un medicamento a un paciente y registrarlo con su rostro.                                                                            |
+| **No se administró**                      | Registro de que una toma no se dio, con el motivo (ayuno, rechazo, estudio…). No se puede deshacer.                                      |
+| **Insumo**                                | Material no medicinal: pañal, gasa, filtro, guantes…                                                                                     |
+| **Suministro**                            | Registro de una administración o de los insumos usados con un paciente.                                                                  |
+| **Suministros** (menú)                    | La opción del menú, y la tarea **Ver lo que se registró** del Inicio: los registros de todos los pacientes.                              |
+| **Historial**                             | Pestaña de la ficha del paciente con tres solapas: **Camas**, **Modificaciones** y **Suministros** (los registros de ese paciente).      |
+| **Modificaciones**                        | Solapa del historial con lo que cambió en la ficha, quién y cuándo. Ahí está un «No se administró» («Marcó como no administrado»).       |
+| **Recordatorio**                          | Aviso de una toma o de un estudio que se acerca (30 minutos antes) o que está atrasado. La pantalla **Recordatorios** los muestra todos. |
+| **Insignia de recordatorios**             | El reloj con un número, arriba: cuántos recordatorios hay para atender en todo el hospital.                                              |
+| **Urgente** / **Pronto** / **Programada** | Cuánto falta para la toma: 5 minutos o menos (o atrasada), entre 5 y 15, o más de 15.                                                    |
+| **Vencida**                               | Toma que nadie atendió (en general, 30 minutos después de su hora). Se avisa al administrador y todavía se puede atender, tarde.         |
+| **Estudio**                               | Práctica programada a un paciente (laboratorio, radiografía…) que enfermería confirma con su rostro.                                     |
+| **Confirmar con mi rostro**               | Validación facial de quien registra. Identifica a quien registra, no al paciente.                                                        |

@@ -20,7 +20,7 @@ Internar, trasladar y dar de alta pacientes; indicar, cambiar, suspender y final
 **Lo que el sistema no hace** (léalo antes de la primera indicación)
 
 - **No controla alergias, interacciones ni dosis máxima.** Lo único que avisa es si el paciente ya tiene vigente el mismo medicamento del catálogo ([aviso de duplicada](#aviso-de-posible-prescripción-duplicada)). No tiene un campo de alergias: anótelas en **Observaciones** de los datos del paciente (se ven en la pestaña **Datos** de la ficha, no al indicar ni al administrar).
-- **No admite indicaciones «si dolor», «si fiebre» (SOS) ni infusiones continuas.** Ver [Indicaciones que no son cada tantas horas](#indicaciones-que-no-son-cada-tantas-horas).
+- **No admite indicaciones «si dolor», «si fiebre» (SOS), dosis únicas («stat») ni infusiones continuas.** Ver [Indicaciones que no son cada tantas horas](#indicaciones-que-no-son-cada-tantas-horas).
 - **No le hace el pedido al laboratorio, a imágenes ni al interconsultor**, y no muestra resultados. Ver [Estudios](#estudios).
 - **No le avisa a usted** si una toma de su paciente no se dio. Ver [Ver si una toma no se dio](#ver-si-una-toma-no-se-dio).
 
@@ -61,7 +61,7 @@ Cuando esta guía dice «el administrador» o «el área de sistemas», es esto:
 
 Para empezar a trabajar con su nombre. La pantalla se llama **Ingresar**.
 
-1. Abra el SGSM-RC en la tablet (el administrador le indica cómo: un acceso directo o una dirección).
+1. Abra el SGSM-RC en la tablet: toque el ícono **SGSM-RC**, una cruz blanca sobre un cuadrado verde azulado oscuro. Si no lo encuentra, el administrador le indica cómo abrirlo.
 2. En **Usuario**, escriba su usuario.
 3. En **Contraseña**, escriba su contraseña.
 4. Toque **Ingresar**.
@@ -79,7 +79,7 @@ Para empezar a trabajar con su nombre. La pantalla se llama **Ingresar**.
 | Aviso que puede aparecer                                     | Qué hacer                                                                                                                                                                                |
 | ------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | «Ingrese su usuario» / «Ingrese su contraseña»               | Falta completar ese campo.                                                                                                                                                               |
-| «Usuario o contraseña incorrectos»                           | Vuelva a escribirlos. Revise mayúsculas.                                                                                                                                                 |
+| «Usuario o contraseña incorrectos»                           | Vuelva a escribirlos. En el usuario no importan las mayúsculas; en la contraseña sí (use el ojo para revisarla).                                                                         |
 | «La cuenta está bloqueada por intentos fallidos hasta las …» | Después de tres intentos fallidos seguidos, la cuenta se bloquea un rato. Espere a la hora que indica o llame al administrador.                                                          |
 | «Se cerró la sesión por inactividad. Vuelva a ingresar.»     | La sesión se cerró sola por falta de uso. Ingrese de nuevo.                                                                                                                              |
 | Se olvidó la contraseña                                      | La pantalla no tiene forma de recuperarla: pídale una nueva al administrador ([A quién llamar](#a-quién-llamar)). No pruebe varias veces, porque al tercer intento la cuenta se bloquea. |
@@ -137,7 +137,7 @@ Si hay muchos resultados, debajo de la tabla se pasa de página con las flechas.
 
 Para registrar la internación de un paciente y asignarle una cama libre, todo en un solo paso.
 
-> **Antes de completar el formulario**, si el paciente pudo haber estado internado antes, búsquelo en **Pacientes** con **Estado: Todos**. Si aparece como egresado, es un [reingreso](#reingreso-el-paciente-ya-estuvo-internado): abra su ficha y tenga a mano sus datos (pestaña **Datos**), porque el formulario los reemplaza.
+> **Antes de completar el formulario**, si el paciente pudo haber estado internado antes, búsquelo en **Pacientes** con **Estado: Todos**. Si aparece como egresado, es un [reingreso](#reingreso-el-paciente-ya-estuvo-internado): no use este formulario; abra su ficha y toque **Registrar reingreso**, que trae sus datos ya cargados.
 
 1. Toque **Internar paciente** (en la pantalla de Inicio o en Pacientes).
 2. Complete los **Datos personales** y, si los tiene, los **Datos clínicos y contacto**.
@@ -163,7 +163,7 @@ Más abajo siguen **Obra social** y **N.º de afiliado**, que son opcionales. Lo
 3. **Internar**: guarda la internación.
 4. **Cancelar**: sale sin guardar nada.
 
-**Cuando sale bien**, se abre la ficha del paciente con el aviso «Paciente internado en Sala C – Cuidados intermedios · C-04».
+**Cuando sale bien**, se abre la ficha del paciente con el aviso «Paciente internado en la cama C-04 (Sala C – Cuidados intermedios)».
 
 | Aviso que puede aparecer                                                  | Qué pasó y qué hacer                                                                                                                               |
 | ------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -181,12 +181,24 @@ El sistema solo acepta un DNI de 7 u 8 dígitos: no tiene número provisorio ni 
 
 ### Reingreso: el paciente ya estuvo internado
 
-Si el DNI es de un paciente que ya se fue de alta, el sistema no crea otra ficha: le ofrece registrar el reingreso en la misma.
+Un paciente que ya se fue de alta conserva su ficha: el reingreso se registra en la misma, con su historial.
 
-1. Complete el formulario y elija la cama como en cualquier internación.
-2. Toque **Internar**.
-3. Arriba aparece el aviso **El paciente ya estuvo internado**. Lea el nombre que muestra.
-4. Si es la misma persona, toque **Registrar reingreso**.
+**Desde su ficha (lo más simple)**
+
+1. Busque al paciente en **Pacientes** con **Estado: Todos** (o **Egresados**) y abra su ficha.
+2. Toque **Registrar reingreso**, arriba, donde en un paciente internado están **Trasladar** y **Dar de alta**.
+3. Se abre **Reingreso de** (apellido y nombre) con sus datos ya cargados y la indicación «Se usa su misma ficha. Revise los datos y elija la cama: lo que no cambie queda como está.»
+4. Corrija lo que haya cambiado (por ejemplo, el diagnóstico) y elija la **Cama**.
+5. Toque **Registrar reingreso**.
+
+Solo se guarda lo que cambió: lo que no tocó queda como estaba en la ficha.
+
+**Si lo empezó como una internación nueva**
+
+Si en **Internar paciente** escribió el DNI de un paciente que ya se fue de alta, el sistema no crea otra ficha: al tocar **Internar** le ofrece registrar el reingreso en la misma.
+
+1. Arriba aparece el aviso **El paciente ya estuvo internado**. Lea el nombre que muestra.
+2. Si es la misma persona, toque **Registrar reingreso**.
 
 ![Aviso «El paciente ya estuvo internado» con el botón Registrar reingreso y el DNI escrito señalados](img/medico/05-reingreso-aviso.png)
 
@@ -196,11 +208,11 @@ Si el DNI es de un paciente que ya se fue de alta, el sistema no crea otra ficha
 
 > **Revise el nombre antes de tocar Registrar reingreso.** Si no es el paciente que tiene delante, probablemente el DNI está mal escrito: corríjalo y toque **Internar** otra vez.
 
-**Los datos del formulario reemplazan los de la ficha**: nombre, fecha de nacimiento, obra social, diagnóstico, contacto, observaciones. **Lo que deje vacío queda vacío en la ficha** (por ejemplo, la obra social o las alergias que estaban anotadas). Por eso conviene buscarlo antes y copiar sus datos.
+Por este camino se guarda solo lo que escribió en el formulario: lo que dejó vacío (por ejemplo, la obra social o las observaciones con las alergias) queda como estaba en la ficha.
 
-**Cuando sale bien**, se abre la ficha con el aviso «Reingreso registrado en …» y la cama nueva. Su historial anterior sigue en la misma ficha, y la **Fecha de ingreso** pasa a ser la del reingreso.
+**Cuando sale bien**, por cualquiera de los dos caminos, se abre la ficha con el aviso «Reingreso registrado en la cama …» y la cama nueva. Su historial anterior sigue en la misma ficha, y la **Fecha de ingreso** pasa a ser la del reingreso.
 
-**Sus prescripciones anteriores quedaron suspendidas** por el alta y sus estudios, cancelados. En **Prescripciones**, elija **Mostrar: Todas**, revise cada una y [reanude](#suspender-reanudar-o-finalizar-una-indicación) solo las que sigan correspondiendo, o cargue otras nuevas. Los estudios se programan de nuevo.
+**Sus prescripciones anteriores quedaron suspendidas** por el alta y sus estudios, cancelados. En **Prescripciones**, elija **Mostrar: Todas**, revise cada una y [reanude](#suspender-reanudar-o-finalizar-una-indicación) solo las que sigan correspondiendo (las tomas vuelven a empezar desde que la reanuda), o cargue otras nuevas. Los estudios se programan de nuevo.
 
 ---
 
@@ -223,18 +235,19 @@ Todo lo del paciente en un lugar: su identificación, sus acciones y sus pestañ
 
 **Cómo leer cada tarjeta de prescripción:** arriba, el medicamento con su dosis («Ketorolac 30 mg») y la presentación («Ampolla 30 mg»); el estado (**Vigente**, Suspendida o Finalizada) y cómo va la toma (**Atrasada 6 min**, **Toca ahora**, **Faltan 20 min** o **Ya se dio a las 19:11**); la vía y la frecuencia («Intravenosa · cada 8 h»); la **Próxima** toma («hoy 19:35», «mañana 03:25») y la **Última** administración, con fecha, hora y quién la registró.
 
-**La próxima toma sigue el horario de la prescripción, no la hora en que se dio la anterior.** El horario es el **Inicio** más cada tantas horas. En la imagen, Ketorolac cada 8 h empezó a las 19:25: se dio a las 19:11 y la próxima es 03:25, no 03:11.
+**La próxima toma sigue el horario de la prescripción, no la hora en que se dio la anterior.** El horario es el **Inicio** más cada tantas horas. En la imagen, Ketorolac cada 8 h empezó a las 19:25: se dio a las 19:11 y la próxima es 03:25, no 03:11. Si la prescripción se reanudó o se le cambió la frecuencia, el horario se cuenta desde ese cambio (ver [Si cambia la frecuencia](#si-cambia-la-frecuencia) y [Reanudar](#suspender-reanudar-o-finalizar-una-indicación)).
 
 El selector **Mostrar** cambia entre **Vigentes** (por defecto) y **Todas**, para ver también las suspendidas y finalizadas. En una pantalla ancha, las prescripciones se ven en una tabla en lugar de tarjetas; se toca la fila igual.
 
-El botón **Editar datos** corrige los datos personales o clínicos; la cama se cambia con **Trasladar**. Cuando el paciente está de alta, en lugar de la cama aparece **Egresado** y ya no se ven los botones de acción ni **Nueva prescripción**.
+El botón **Editar datos** corrige los datos personales o clínicos; la cama se cambia con **Trasladar**. Cuando el paciente está de alta, en lugar de la cama aparece **Egresado** y ya no se ven los botones de acción ni **Nueva prescripción**: en su lugar está **Registrar reingreso** ([Reingreso](#reingreso-el-paciente-ya-estuvo-internado)).
 
 ### Ver si una toma no se dio
 
 No le llega ningún aviso: hay que mirarlo.
 
 - **Una toma que nadie atendió** aparece en [Recordatorios](#ver-los-recordatorios) como **Vencida** y se sigue viendo ahí hasta 12 horas, o hasta que alguien la atiende.
-- **Una toma que enfermería marcó «No se administró»** sale de Recordatorios y queda en la ficha: pestaña **Historial**, sección **Modificaciones**, en una fila cuya acción dice «NO_ADMINISTRAR» (así, en mayúsculas), con el motivo en la columna **Detalle**.
+- **Una toma que enfermería marcó «No se administró»** sale de Recordatorios y queda en la ficha: pestaña **Historial**, sección **Modificaciones**, en una fila cuya **Acción** dice «Marcó como no administrado», con el motivo en la columna **Detalle** («Motivo por el que no se administró: …») y en **Quién lo hizo**, quién lo registró.
+- **Las tomas que vencieron sin atender** también quedan en **Modificaciones** («Marcó como vencido», hecho por «Sistema»), pero no se ven de entrada: prenda **Mostrar los avisos automáticos**, arriba de la tabla.
 - En la tarjeta de la prescripción, **Última** muestra siempre la última dosis que **sí** se dio.
 
 ---
@@ -255,7 +268,7 @@ Para trasladar a un paciente a otra cama libre. La cama anterior queda libre.
 3. **Trasladar**: confirma el cambio. Se activa cuando eligió una cama.
 4. **Cancelar**: cierra sin cambiar nada.
 
-**Cuando sale bien**, la ficha muestra «Paciente trasladado a Sala B – Traumatología · B-05» y la cama nueva arriba. El traslado queda en **Historial**. **Si no hay camas libres**, el diálogo dice: «No hay camas libres en este momento. Se puede trasladar cuando se libere una.»
+**Cuando sale bien**, la ficha muestra «Paciente trasladado a la cama B-05 (Sala B – Traumatología)» y la cama nueva arriba. El traslado queda en **Historial**. **Si no hay camas libres**, el diálogo dice: «No hay camas libres en este momento. Se puede trasladar cuando se libere una.»
 
 ---
 
@@ -292,10 +305,9 @@ Para registrar que el paciente se va del hospital, también por derivación o fa
 Al paciente equivocado o antes de tiempo. El alta no se deshace, pero se puede volver a dejar todo como estaba:
 
 1. **Avise ya a enfermería de la sala**: desde el alta, ese paciente no tiene recordatorios.
-2. Busque al paciente en **Pacientes** con **Estado: Todos** y tenga a mano sus datos (pestaña **Datos**). Toque **Internar paciente**, complete el formulario **con esos mismos datos** (lo que deje vacío se borra de la ficha) y elija **la misma cama**, si sigue libre.
-3. Toque **Internar** y después **Registrar reingreso** (ver [Reingreso](#reingreso-el-paciente-ya-estuvo-internado)).
-4. En la ficha, pestaña **Prescripciones**, elija **Mostrar: Todas**. Las que estaban vigentes quedaron **Suspendidas**, con el motivo «Egreso del paciente: …». [Reanude](#suspender-reanudar-o-finalizar-una-indicación) cada una; siguen su horario de siempre.
-5. En la pestaña **Estudios**, los que estaban programados quedaron cancelados: [prográmelos](#programar-un-estudio) de nuevo.
+2. Busque al paciente en **Pacientes** con **Estado: Todos**, abra su ficha y toque **Registrar reingreso**. Sus datos vienen cargados: elija **la misma cama**, si sigue libre, y toque **Registrar reingreso** (ver [Reingreso](#reingreso-el-paciente-ya-estuvo-internado)).
+3. En la ficha, pestaña **Prescripciones**, elija **Mostrar: Todas**. Las que estaban vigentes quedaron **Suspendidas**, con el motivo «Egreso del paciente: …». [Reanude](#suspender-reanudar-o-finalizar-una-indicación) cada una. **Al reanudarla, las tomas vuelven a empezar desde ese momento**, no siguen el horario que tenía: la primera aparece enseguida en Recordatorios. Si prefiere conservar el horario anterior, en lugar de reanudarla finalícela y cargue una nueva con el **Inicio** a la hora de la próxima toma.
+4. En la pestaña **Estudios**, los que estaban programados quedaron cancelados: [prográmelos](#programar-un-estudio) de nuevo.
 
 El alta y el reingreso quedan en el **Historial**, y la **Fecha de ingreso** de la ficha pasa a ser la del reingreso.
 
@@ -357,14 +369,14 @@ Para cargar una prescripción: qué medicamento, cuánto, cada cuánto, por qué
 
 El sistema calcula todas las tomas como **Inicio + cada tantas horas**. Lo que no entra en esa regla se resuelve así:
 
-| Lo que quiere indicar                                                    | Cómo se hace                                                                                                                                                                                                                                                                                                                                                            |
-| ------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Horarios fijos a intervalos iguales (8 y 20 h; 6, 14 y 22 h)             | Frecuencia cada 12 h (o cada 8 h) con **Inicio** a la primera de esas horas (08:00 o 06:00).                                                                                                                                                                                                                                                                            |
-| Una vez por día, en ayunas                                               | Cada 24 h con **Inicio** a la hora del ayuno (por ejemplo, 06:00).                                                                                                                                                                                                                                                                                                      |
-| Horarios que no son a intervalos iguales (con las comidas: 8, 13 y 20 h) | Una sola prescripción no los admite. Si hace falta, cargue una por horario, cada 24 h, cada una con su Inicio; desde la segunda aparece **Posible prescripción duplicada** y hay que tocar **Cargar igual**.                                                                                                                                                            |
-| Dosis única («stat»)                                                     | **Inicio** a la hora de la dosis y **Fin** un minuto después: el sistema calcula una sola toma (Primeras tomas muestra una). La frecuencia se pide igual: elija cada 24 h. Si la dosis es ya, avísele a enfermería. Después, finalícela.                                                                                                                                |
-| «Si dolor», «si fiebre», SOS                                             | **No se pueden cargar.** No elija una frecuencia y escriba «SOS» en Observaciones: el sistema genera las tomas igual, le avisa a enfermería a cada hora y el paciente la recibiría reglada. Indíquela como prevea el hospital fuera del sistema y avísele a enfermería. Sin prescripción en el sistema, enfermería no puede registrar esa administración en el SGSM-RC. |
-| Infusión continua (goteo, bomba)                                         | **No se puede cargar**: la frecuencia mínima es cada 1 hora y el sistema generaría una toma por hora. Igual que SOS.                                                                                                                                                                                                                                                    |
+| Lo que quiere indicar                                                    | Cómo se hace                                                                                                                                                                                                                                                                                                                                                                                        |
+| ------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Horarios fijos a intervalos iguales (8 y 20 h; 6, 14 y 22 h)             | Frecuencia cada 12 h (o cada 8 h) con **Inicio** a la primera de esas horas (08:00 o 06:00).                                                                                                                                                                                                                                                                                                        |
+| Una vez por día, en ayunas                                               | Cada 24 h con **Inicio** a la hora del ayuno (por ejemplo, 06:00).                                                                                                                                                                                                                                                                                                                                  |
+| Horarios que no son a intervalos iguales (con las comidas: 8, 13 y 20 h) | Una sola prescripción no los admite. Si hace falta, cargue una por horario, cada 24 h, cada una con su Inicio; desde la segunda aparece **Posible prescripción duplicada** y hay que tocar **Cargar igual**.                                                                                                                                                                                        |
+| Dosis única («stat»)                                                     | **No se puede cargar**: el sistema no maneja dosis únicas. No la cargue con un **Fin** pegado al **Inicio**: si enfermería la registra después de la hora de Fin, el sistema la rechaza («la prescripción ya terminó»). Indíquela como prevea el hospital fuera del sistema y avísele a enfermería. Sin prescripción en el sistema, enfermería no puede registrar esa administración en el SGSM-RC. |
+| «Si dolor», «si fiebre», SOS                                             | **No se pueden cargar.** No elija una frecuencia y escriba «SOS» en Observaciones: el sistema genera las tomas igual, le avisa a enfermería a cada hora y el paciente la recibiría reglada. Indíquela como prevea el hospital fuera del sistema y avísele a enfermería. Sin prescripción en el sistema, enfermería no puede registrar esa administración en el SGSM-RC.                             |
+| Infusión continua (goteo, bomba)                                         | **No se puede cargar**: la frecuencia mínima es cada 1 hora y el sistema generaría una toma por hora. Igual que SOS.                                                                                                                                                                                                                                                                                |
 
 ### Aviso de posible prescripción duplicada
 
@@ -424,16 +436,19 @@ Después de guardar, vuelva a la ficha y revise la **Próxima** en la tarjeta.
 
 ### Si cambia la frecuencia
 
-El horario nuevo se cuenta **desde el Inicio original** de la prescripción, no desde la última dosis, y cada dosis ya dada cuenta para la toma del horario nuevo que le quede más cerca.
+Con la frecuencia nueva, las tomas no se cuentan desde el **Inicio** original: se vuelven a contar desde la última dosis dada o desde el momento del cambio. Al tocar **Guardar cambios**, debajo de la tabla **Antes / Después** el diálogo dice cuál de estos casos es:
 
-**Ejemplo.** Inicio 06:00, cada 6 h; se dio a las 06:00 y a las 12:00. A las 13:00 la pasa a cada 8 h. El horario nuevo es 06:00, 14:00 y 22:00. El sistema toma la dosis de las 12:00 como si fuera la de las 14:00, y la próxima toma que le recuerda a enfermería es la de las **22:00**: diez horas después de la última. Si la pasara a cada 12 h, la próxima quedaría a las 06:00 del día siguiente.
+| Lo que dice                                                                | Cuándo                                                                                                                                            | La próxima toma                                                                                                                                                          |
+| -------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| «La próxima toma se cuenta desde la última dosis dada.»                    | Ya se dio alguna dosis (desde el Inicio, o desde la última vez que la reanudó o le cambió la frecuencia) y después no quedó ninguna toma sin dar. | La hora de la toma de esa dosis más la frecuencia nueva. Cuenta la hora de la toma, no el minuto en que se dio: la de las 12:00 dada a las 12:40 cuenta desde las 12:00. |
+| «La próxima toma se cuenta desde ahora.»                                   | No se dio ninguna dosis, o después de la última quedó una toma sin dar.                                                                           | Ahora mismo: aparece enseguida en Recordatorios como **Urgente**. Avísele a enfermería.                                                                                  |
+| «La próxima toma se cuenta desde el inicio del tratamiento (08/10 08:00).» | El tratamiento todavía no empezó.                                                                                                                 | El **Inicio**, con la frecuencia nueva.                                                                                                                                  |
 
-**Por eso, si ya se dio alguna toma, no cambie la frecuencia acá.** Haga esto:
+**Ejemplo.** Inicio 06:00, cada 6 h; se dio a las 06:00 y a las 12:00. A las 13:00 la pasa a cada 12 h: la próxima toma es a las **00:00** (12:00 + 12 h), y la de las 18:00 del horario anterior ya no se recuerda.
 
-1. [Finalice](#suspender-reanudar-o-finalizar-una-indicación) la prescripción, con un motivo como «cambio de frecuencia».
-2. Cargue una [nueva](#indicar-un-medicamento) con la misma dosis, la frecuencia nueva y el **Inicio** a la hora en que corresponde la próxima dosis. En el ejemplo, cada 8 h con Inicio 20:00 (8 horas después de la de las 12:00).
+**Si quedó una toma sin dar.** El mismo caso, pero la de las 12:00 no se dio: a las 13:00 la próxima toma es **ahora** y la siguiente, a la 01:00.
 
-Cambiar la frecuencia acá sirve si todavía no se dio ninguna toma.
+Las tomas del horario anterior que estaban vencidas sin atender salen de Recordatorios. Si necesita que las tomas empiecen a otra hora, [finalice](#suspender-reanudar-o-finalizar-una-indicación) la prescripción y cargue una [nueva](#indicar-un-medicamento) con el **Inicio** que corresponda.
 
 ---
 
@@ -475,14 +490,16 @@ En los dos casos se cancelan los recordatorios pendientes de esa prescripción y
 
 ![Diálogo Reanudar la prescripción con el texto de qué se reanuda, el motivo y los botones Reanudar y Cancelar señalados](img/medico/29-prescripcion-reanudar.png)
 
-1. **Qué se reanuda**: medicamento, dosis, frecuencia, paciente y cama.
+1. **Qué se reanuda**: medicamento, dosis, frecuencia, paciente y cama, y desde cuándo se cuentan las tomas.
 2. **Motivo** (obligatorio, mínimo 3 letras).
 3. **Reanudar**: confirma.
 4. **Cancelar**: cierra sin reanudar.
 
 **Cuando sale bien**, el detalle dice «La prescripción volvió a estar vigente».
 
-**Desde cuándo se cuentan las tomas.** El diálogo dice «vuelve a generar tomas desde ahora», pero el horario es el de siempre: **Inicio + cada tantas horas**. La próxima toma es la siguiente de ese horario, y las que cayeron mientras estuvo suspendida no se recuperan. Ejemplo: Inicio 06:00, cada 8 h, suspendida a las 10:00 y reanudada a las 17:00: la próxima toma es a las **22:00**. Si una toma del horario cayó en la última media hora, aparece enseguida en Recordatorios como atrasada. Si necesita otro horario, finalícela y cargue una nueva con el Inicio que corresponda.
+**Desde cuándo se cuentan las tomas.** El diálogo lo dice: «Las tomas vuelven a empezar desde ahora, cada 8 h.» La primera toma es en el momento de reanudar: aparece enseguida en Recordatorios como **Urgente**, y las siguientes, cada tantas horas desde ahí. Las que cayeron mientras estuvo suspendida no se recuperan. Ejemplo: cada 8 h, reanudada a las 15:00: tomas a las **15:00**, 23:00 y 07:00. Si el tratamiento todavía no empezó, dice «Las tomas empiezan en el inicio del tratamiento (08/10 08:00), cada 8 h.» y se respeta el **Inicio**.
+
+**Si el paciente recibió una dosis hace poco** (menos de la mitad del intervalo, por ejemplo justo antes de suspenderla), enfermería va a ver «Ya se dio a las …» y no puede registrar otra sin confirmar que corresponde: avísele qué hacer. Si quiere que la primera toma sea a otra hora, reanúdela a esa hora, o finalícela y cargue una nueva con el **Inicio** que corresponda.
 
 **Para finalizar**
 
@@ -665,16 +682,16 @@ No. Administrar y registrar una toma lo hace enfermería, confirmando con su ros
 No. Solo avisa si el paciente ya tiene vigente el mismo medicamento. Las alergias se anotan en **Observaciones** de los datos del paciente (pestaña **Datos**).
 
 **Cargué una prescripción con un error. ¿Cómo la borro?**
-Las prescripciones no se borran: todo queda registrado. Si el error está en la dosis, la unidad, la vía, el fin o las observaciones, [cámbiela](#cambiar-una-indicación) con el motivo. Si se equivocó de medicamento, de inicio o de frecuencia (y ya se dio alguna toma), [finalícela](#suspender-reanudar-o-finalizar-una-indicación) con el motivo («cargada por error») y cargue la correcta.
+Las prescripciones no se borran: todo queda registrado. Si el error está en la dosis, la unidad, la frecuencia, la vía, el fin o las observaciones, [cámbiela](#cambiar-una-indicación) con el motivo (si cambia la frecuencia, lea [desde cuándo se cuentan las tomas](#si-cambia-la-frecuencia)). Si se equivocó de medicamento o de inicio, [finalícela](#suspender-reanudar-o-finalizar-una-indicación) con el motivo («cargada por error») y cargue la correcta.
 
-**¿Cómo indico algo «si dolor»?**
+**¿Cómo indico algo «si dolor» o una dosis única?**
 No se puede en el sistema. Ver [Indicaciones que no son cada tantas horas](#indicaciones-que-no-son-cada-tantas-horas).
 
 **¿Cuándo suspendo y cuándo finalizo?**
-Suspenda si piensa retomarla (por ejemplo, hasta ver un resultado): después se reanuda con su horario de siempre. Finalice si terminó: no se puede reanudar.
+Suspenda si piensa retomarla (por ejemplo, hasta ver un resultado): al reanudarla, las tomas vuelven a empezar desde ese momento. Finalice si terminó: no se puede reanudar.
 
 **Le di el alta a un paciente y vuelve. ¿Qué pasa con sus indicaciones?**
-Intérnelo con **Internar paciente** y su DNI: el sistema le ofrece **Registrar reingreso** en la misma ficha. Sus prescripciones quedaron suspendidas por el alta; en **Prescripciones**, elija **Mostrar: Todas**, revise cada una y reanude solo las que sigan correspondiendo, o cargue otras nuevas.
+Abra su ficha (en **Pacientes**, con **Estado: Todos**) y toque **Registrar reingreso**: se registra en la misma ficha, con sus datos ya cargados. Sus prescripciones quedaron suspendidas por el alta; en **Prescripciones**, elija **Mostrar: Todas**, revise cada una y reanude solo las que sigan correspondiendo, o cargue otras nuevas.
 
 **Di de alta al paciente equivocado.**
 Avise a enfermería y siga los pasos de [Si dio de alta por error](#si-dio-de-alta-por-error).
@@ -705,7 +722,7 @@ Por seguridad, la sesión se cierra sola después de un rato sin uso (en general
 | **Pantalla de Inicio**                    | La primera pantalla después de entrar, con las tareas del día.                                                                                                |
 | **Inicio** (de una prescripción)          | Fecha y hora de la primera toma que tiene que dar enfermería.                                                                                                 |
 | **Prescripción**                          | Indicación médica de un medicamento: dosis, frecuencia y vía.                                                                                                 |
-| **Toma**                                  | Cada momento en que corresponde dar un medicamento según la prescripción (Inicio + cada tantas horas).                                                        |
+| **Toma**                                  | Cada momento en que corresponde dar un medicamento según la prescripción: Inicio + cada tantas horas, o desde que se reanudó o se cambió la frecuencia.       |
 | **Administrar**                           | Dar un medicamento a un paciente y registrarlo (lo hace enfermería).                                                                                          |
 | **Insumo**                                | Material no medicinal: pañal, gasa, filtro…                                                                                                                   |
 | **Suministro**                            | Registro de una administración o de los insumos usados con un paciente.                                                                                       |
@@ -750,7 +767,7 @@ No hace falta para la recorrida. Sirve para ver cuánto se usó en un período: 
 1. **Pestaña Estadísticas**.
 2. **El mismo período y filtros** que en Suministros.
 3. **Indicadores del período**: Suministros, Con medicamentos, Con insumos, Pacientes atendidos, Recordatorios atendidos y Atendidos a tiempo.
-4. **Cómo se cuentan los recordatorios**: solo los que ya se atendieron o vencieron. «Atendidos» incluye los dados a tiempo o tarde y los no administrados con su motivo; «a tiempo», los dados antes de vencer.
+4. **Cómo se cuentan los recordatorios**: solo los que ya se atendieron o vencieron. Los que todavía estaban a tiempo de atenderse no cuentan («Del total, 7 todavía estaban a tiempo de atenderse: no cuentan para el porcentaje.»). «Atendidos» incluye los dados a tiempo o tarde y los no administrados con su motivo; «a tiempo», los dados antes de vencer.
 
 Más abajo hay cuatro gráficos (más usados, consumo por tipo, evolución diaria y recordatorios del período). Cada uno tiene **Ver como tabla**, para leer los números exactos.
 
