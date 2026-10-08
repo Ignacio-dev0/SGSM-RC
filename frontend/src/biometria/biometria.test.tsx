@@ -327,8 +327,10 @@ describe('validación facial reutilizable (T405 · CU10)', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Confirmar' }));
     await userEvent.click(screen.getByRole('button', { name: /Simular otro rostro/ }));
 
-    expect(await screen.findByRole('alert')).toHaveTextContent(/Se canceló la operación/);
-    expect(screen.getByRole('alert')).toHaveTextContent(/administrador/);
+    // F4: lo primero que se lee es que NO quedó registrada (no "se canceló", que se presta a duda).
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'No se registró la operación. Los tres intentos fallidos quedaron registrados y se avisó al administrador.',
+    );
     await userEvent.click(screen.getByRole('button', { name: 'Entendido' }));
     expect(await screen.findByText('Resultado: cancelada')).toBeInTheDocument();
   });

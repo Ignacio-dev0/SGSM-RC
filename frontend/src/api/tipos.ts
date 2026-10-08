@@ -112,6 +112,12 @@ export interface HistorialPaciente {
     fechaHora: string;
     accion: string;
     entidad: string;
+    /**
+     * Qué registro y su nombre legible, como en la auditoría (C2 · D114): "Paracetamol · Benítez,
+     * Rosa". Opcionales: el servidor puede no mandarlos todavía (queda el tipo solo).
+     */
+    entidadId?: string | null;
+    entidadEtiqueta?: string | null;
     usuario: string | null;
     valorAnterior: Record<string, unknown> | null;
     valorNuevo: Record<string, unknown> | null;
@@ -137,6 +143,8 @@ export interface Insumo {
   unidadMedida: string;
   presentacion: string;
   activo: boolean;
+  /** C4: lo usa alguna prescripción o algún suministro (no cambia de tipo ni de unidad). */
+  enUso?: boolean;
 }
 
 export type EstadoPrescripcion = 'VIGENTE' | 'SUSPENDIDA' | 'FINALIZADA';
@@ -172,11 +180,18 @@ export interface Prescripcion {
   ultimasAdministraciones: {
     id: number;
     fechaHora: string;
+    /** La toma a la que se atribuyó, guardada al registrarla (D121 del backend). */
+    tomaProgramada?: string | null;
     cantidad: number | null;
     usuario: string;
   }[];
   /** Solo en el detalle: tomas de las próximas 24 horas. */
   agenda?: string[];
+  /**
+   * C5: la toma 0 de la agenda vigente. Es la fecha de inicio hasta que se reanuda (ese momento) o
+   * cambia la frecuencia (la toma de la última dosis dada, o ese momento): D112 · D122.
+   */
+  agendaDesde?: string | null;
 }
 
 export interface Suministro {

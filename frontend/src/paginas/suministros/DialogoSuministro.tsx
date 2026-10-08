@@ -2,7 +2,7 @@ import { useEffect, useId, useState, type ReactNode } from 'react';
 import { Box, Dialog, DialogActions, DialogContent, DialogTitle, Typography } from '@mui/material';
 import FaceRetouchingNaturalIcon from '@mui/icons-material/FaceRetouchingNatural';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { mensajeDeError } from '../../api/cliente';
+import { ErrorApi, mensajeDeError } from '../../api/cliente';
 import { suministrosApi } from '../../api/suministros';
 import type { Suministro } from '../../api/tipos';
 import { useSesion } from '../../auth/useSesion';
@@ -12,6 +12,7 @@ import { Boton } from '../../componentes/Boton';
 import { CampoTexto } from '../../componentes/CampoTexto';
 import { soltarAlGirarLaRueda } from '../../utilidades/campoNumerico';
 import { formatearFechaHora } from '../../utilidades/formato';
+import { formatearCama } from '../pacientes/etiquetas';
 import { formatearDosis } from '../prescripciones/etiquetas';
 import { detalleDe } from './formato';
 import { ListaCantidades, type ItemCantidad } from './comunes';
@@ -27,6 +28,19 @@ function Dato({ etiqueta, children }: { etiqueta: string; children: ReactNode })
     </Box>
   );
 }
+
+/**
+ * Pasado el plazo nadie puede corregirlo, tampoco el administrador (F5 · D152): queda la
+ * constancia con la supervisora. El plazo lo configura el servidor
+ * (`SUMINISTRO_PLAZO_CORRECCION_HORAS`): sale de `corregibleHasta − fechaHora`.
+ */
+function plazoVencido(s: Pick<Suministro, 'fechaHora' | 'corregibleHasta'>) {
+  const horas = Math.round((Date.parse(s.corregibleHasta) - Date.parse(s.fechaHora)) / 3_600_000);
+  return `Pasaron más de ${horas} ${horas === 1 ? 'hora' : 'horas'}: ya no se puede corregir. Avise a su supervisora para dejar constancia.`;
+}
+
+/** El servidor rechazó la corrección porque el plazo terminó con el diálogo abierto. */
+const esPlazoVencido = (e: unknown) => e instanceof ErrorApi && e.codigo === 'FUERA_DE_PLAZO';
 
 /** "a", "a y b", "a, b y c" */
 const unir = (partes: string[]) =>
@@ -51,6 +65,7 @@ export function DialogoSuministro({
   const [cantidad, setCantidad] = useState('');
   const [items, setItems] = useState<ItemCantidad[]>([]);
   const [motivo, setMotivo] = useState('');
+  const [observaciones, setObservaciones] = useState('');
   const idFalta = useId();
 
   useEffect(() => setS(inicial), [inicial]);
@@ -66,8 +81,13 @@ export function DialogoSuministro({
       })),
     );
     setMotivo('');
+    setObservaciones(s.observaciones ?? '');
     setCorrigiendo(true);
   };
+
+  // Las observaciones viajan solo si cambiaron; vacías, se borran (null).
+  const observacionesNuevas = observaciones.trim();
+  const cambianObservaciones = observacionesNuevas !== (s.observaciones ?? '').trim();
 
   const corregir = useMutation({
     mutationFn: (validacionToken: string) =>
@@ -75,6 +95,7 @@ export function DialogoSuministro({
         ...(s.tipo === 'MEDICAMENTO'
           ? { cantidad: Number(cantidad) }
           : { items: items.map(({ insumoId, cantidad: c }) => ({ insumoId, cantidad: c })) }),
+        ...(cambianObservaciones ? { observaciones: observacionesNuevas || null } : {}),
         motivo: motivo.trim(),
         validacionToken,
       }),
@@ -82,6 +103,10 @@ export function DialogoSuministro({
       setS(nuevo);
       setCorrigiendo(false);
       void clienteQuery.invalidateQueries({ queryKey: ['suministros'] });
+    },
+    // Con el plazo vencido no hay nada que reintentar: se sale de la corrección.
+    onError: (e) => {
+      if (esPlazoVencido(e)) setCorrigiendo(false);
     },
   });
 
@@ -116,17 +141,25 @@ export function DialogoSuministro({
       <>
         <Typography sx={{ fontWeight: 700 }}>
           {s.paciente.apellido}, {s.paciente.nombre} · DNI {s.paciente.dni}
-          {s.paciente.cama ? ` · Cama ${s.paciente.cama}` : ''}
+          {s.paciente.cama ? ` · Cama ${formatearCama(s.paciente.cama)}` : ''}
         </Typography>
         <Typography>Antes: {detalleDe(s)}</Typography>
         <Typography sx={{ fontWeight: 700 }}>Después: {despues}</Typography>
+        {cambianObservaciones && (
+          <Typography sx={{ fontWeight: 700 }}>
+            Observaciones: {s.observaciones?.trim() || '—'} → {observacionesNuevas || '—'}
+          </Typography>
+        )}
         <Typography>Motivo: {motivo.trim()}</Typography>
       </>,
+      'No se guardó la corrección.',
     );
     if (token) corregir.mutate(token);
   };
 
-  const enPlazo = new Date(s.corregibleHasta) > new Date();
+  // El rechazo del servidor manda sobre el reloj de la tablet.
+  const rechazoPorPlazo = esPlazoVencido(corregir.error);
+  const enPlazo = !rechazoPorPlazo && new Date(s.corregibleHasta) > new Date();
   const puedeCorregir = tienePermiso('suministros.corregir') && enPlazo;
 
   return (
@@ -141,7 +174,12 @@ export function DialogoSuministro({
         Suministro del {formatearFechaHora(s.fechaHora)}
       </DialogTitle>
       <DialogContent>
-        {corregir.isError && <Alerta tipo="error">{mensajeDeError(corregir.error)}</Alerta>}
+        {corregir.isError &&
+          (rechazoPorPlazo ? (
+            <Alerta tipo="advertencia">{plazoVencido(s)}</Alerta>
+          ) : (
+            <Alerta tipo="error">{mensajeDeError(corregir.error)}</Alerta>
+          ))}
         {s.corregido && (
           <Alerta tipo="info">
             Corregido por {s.corregidoPor} el {formatearFechaHora(s.corregidoEn)}. Motivo:{' '}
@@ -153,7 +191,7 @@ export function DialogoSuministro({
         >
           <Dato etiqueta="Paciente">
             {s.paciente.apellido}, {s.paciente.nombre} · DNI {s.paciente.dni}
-            {s.paciente.cama ? ` · Cama ${s.paciente.cama}` : ''}
+            {s.paciente.cama ? ` · Cama ${formatearCama(s.paciente.cama)}` : ''}
           </Dato>
           <Dato etiqueta="Registró">
             {s.usuario.nombre} {s.validadoBiometricamente ? '(validado con el rostro)' : ''}
@@ -192,6 +230,14 @@ export function DialogoSuministro({
               <ListaCantidades titulo="Insumos corregidos" items={items} alCambiar={setItems} />
             )}
             <CampoTexto
+              etiqueta="Observaciones"
+              valor={observaciones}
+              alCambiar={setObservaciones}
+              ayuda="Déjelas vacías para borrarlas"
+              multiline
+              slotProps={{ htmlInput: { maxLength: 500 } }}
+            />
+            <CampoTexto
               etiqueta="Motivo de la corrección"
               valor={motivo}
               alCambiar={setMotivo}
@@ -202,13 +248,8 @@ export function DialogoSuministro({
             />
           </Box>
         ) : (
-          !puedeCorregir &&
-          !enPlazo && (
-            <Typography color="text.secondary">
-              El plazo de corrección venció (24 h desde el registro). Si hay un error, pídale la
-              corrección al administrador.
-            </Typography>
-          )
+          !enPlazo &&
+          !rechazoPorPlazo && <Typography color="text.secondary">{plazoVencido(s)}</Typography>
         )}
       </DialogContent>
       <DialogActions sx={{ px: 3, pb: 3, gap: 1, flexWrap: 'wrap' }}>

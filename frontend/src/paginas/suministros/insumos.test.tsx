@@ -254,7 +254,8 @@ describe('registro de insumos · estados y confirmación (UX-05 · UX-07 · UX-0
     expect(dialogo).toHaveTextContent(/Pañal talle M.*1/);
     expect(dialogo).toHaveTextContent('Benítez, Rosa');
     expect(dialogo).toHaveTextContent('DNI 30111222');
-    expect(dialogo).toHaveTextContent('Cama A-01');
+    // La cama con el guion que no corta (F3).
+    expect(dialogo).toHaveTextContent(`Cama A${String.fromCharCode(0x2011)}01`);
   });
 
   it('un error del registro no queda a la vista al cambiar de paciente', async () => {
@@ -411,5 +412,30 @@ describe('registro de insumos · botonera y campos numéricos (F31 · UX-19)', (
 
     expect(cantidad).not.toHaveFocus();
     expect(cantidad).toHaveValue(1);
+  });
+});
+
+describe('registro de insumos · tres validaciones fallidas (F4)', () => {
+  it('dice claramente que los insumos NO se registraron', async () => {
+    const registrar = vi.fn(() => HttpResponse.json({ data: suministro() }, { status: 201 }));
+    servidor.use(
+      http.post('*/api/biometria/validar', () =>
+        HttpResponse.json({ data: { valido: false, intentosRestantes: 0, cancelada: true } }),
+      ),
+      http.post('*/api/suministros/insumos', registrar),
+    );
+    renderizarApp('/suministros/insumos?pacienteId=7', ENFERMERO);
+
+    await userEvent.click(await screen.findByRole('button', { name: /Agregar Gasa estéril/ }));
+    await userEvent.click(screen.getByRole('button', { name: 'Confirmar con mi rostro' }));
+    await userEvent.click(
+      await screen.findByRole('button', { name: /Simular el rostro de enfermero/ }),
+    );
+
+    const rostro = screen.getByRole('dialog', { name: /Confirmar con su rostro/ });
+    expect(await within(rostro).findByRole('alert')).toHaveTextContent(
+      'No se registraron los insumos. Los tres intentos fallidos quedaron registrados y se avisó al administrador.',
+    );
+    expect(registrar).not.toHaveBeenCalled();
   });
 });

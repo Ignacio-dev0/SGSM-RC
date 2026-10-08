@@ -14,6 +14,7 @@ import {
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useParams } from 'react-router-dom';
 import { mensajeDeError } from '../../api/cliente';
+import { CLAVE_RECORDATORIOS } from '../../api/recordatorios';
 import { usePaciente } from '../../api/pacientes';
 import { prescripcionesApi, usePrescripcion } from '../../api/prescripciones';
 import type { EstadoPrescripcion, Prescripcion } from '../../api/tipos';
@@ -30,9 +31,11 @@ import { Selector } from '../../componentes/Selector';
 import { soltarAlGirarLaRueda } from '../../utilidades/campoNumerico';
 import { formatearFechaHora, formatearHora } from '../../utilidades/formato';
 import { useCambiosSinGuardar } from '../../utilidades/useCambiosSinGuardar';
+import { formatearCama } from '../pacientes/etiquetas';
 import {
   ACCIONES,
   cambiosDe,
+  desdeCuandoSeCuenta,
   desde,
   filasDeCambios,
   nombreConCama,
@@ -76,13 +79,20 @@ export function DetallePrescripcion() {
   const hayCambios = Boolean(p && edicion) && Object.keys(cambiosDe(p!, edicion!)).length > 0;
   const { dialogo } = useCambiosSinGuardar(editable && hayCambios);
 
-  /** Actualiza el caché conservando la agenda (que solo trae el detalle). */
+  /**
+   * Muestra enseguida lo que devolvió el servidor y vuelve a pedir el detalle: la agenda (que solo
+   * trae el detalle) cambia al reanudar o al cambiar la frecuencia (C5 · F6). También se renuevan
+   * las listas del paciente, su historial y los recordatorios.
+   */
   const actualizar = (nueva: Prescripcion) => {
     clienteQuery.setQueryData<Prescripcion>(['prescripcion', id], (vieja) => ({
       ...nueva,
-      agenda: nueva.estado === 'VIGENTE' ? (vieja?.agenda ?? []) : [],
+      agenda: nueva.estado === 'VIGENTE' ? (nueva.agenda ?? vieja?.agenda ?? []) : [],
     }));
+    void clienteQuery.invalidateQueries({ queryKey: ['prescripcion', id] });
     void clienteQuery.invalidateQueries({ queryKey: ['prescripciones', nueva.pacienteId] });
+    void clienteQuery.invalidateQueries({ queryKey: ['historial', nueva.pacienteId] });
+    void clienteQuery.invalidateQueries({ queryKey: [CLAVE_RECORDATORIOS] });
   };
 
   const modificar = useMutation({
@@ -318,7 +328,7 @@ export function DetallePrescripcion() {
               <>
                 {' · '}
                 <Box component="span" sx={{ whiteSpace: 'nowrap' }}>
-                  Cama {paciente.data.cama.numero}
+                  Cama {formatearCama(paciente.data.cama.numero)}
                 </Box>
               </>
             )}
@@ -354,6 +364,10 @@ export function DetallePrescripcion() {
             ))}
           </TableBody>
         </Table>
+        {cambiosDe(p, edicion).frecuenciaHoras !== undefined && (
+          // C5: la agenda se re-ancla; quien cambia la frecuencia tiene que saber desde cuándo.
+          <Typography sx={{ mt: 2 }}>{desdeCuandoSeCuenta(p)}</Typography>
+        )}
         {modificar.isError && <Alerta tipo="error">{mensajeDeError(modificar.error)}</Alerta>}
       </ModalConfirmacion>
       {dialogo}
@@ -364,6 +378,8 @@ export function DetallePrescripcion() {
           titulo={ACCIONES[cambioEstado as keyof typeof ACCIONES].titulo}
           mensaje={ACCIONES[cambioEstado as keyof typeof ACCIONES].mensaje(
             `${p.medicamento.nombre} ${resumenPrescripcion(p)} de ${nombreConCama(paciente.data)}`,
+            p,
+            new Date(),
           )}
           textoConfirmar={ACCIONES[cambioEstado as keyof typeof ACCIONES].boton}
           peligroso={cambioEstado === 'FINALIZADA'}

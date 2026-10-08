@@ -89,7 +89,13 @@ describe('historial y corrección de suministros (T415 · T416 · CU22 · CU23)'
     servidor.use(
       http.get('*/api/suministros', () =>
         HttpResponse.json({
-          data: [suministro({ corregibleHasta: new Date(Date.now() - 1000).toISOString() })],
+          // Registrado hace 25 h, con el plazo de 24 h del servidor.
+          data: [
+            suministro({
+              fechaHora: new Date(Date.now() - 25 * 3_600_000).toISOString(),
+              corregibleHasta: new Date(Date.now() - 3_600_000).toISOString(),
+            }),
+          ],
           meta: { pagina: 1, porPagina: 20, total: 1, totalPaginas: 1 },
         }),
       ),
@@ -99,7 +105,11 @@ describe('historial y corrección de suministros (T415 · T416 · CU22 · CU23)'
     await userEvent.click(await screen.findByText(/Paracetamol × 500 mg/));
     const dialogo = screen.getByRole('dialog', { name: /Suministro/ });
     expect(within(dialogo).queryByRole('button', { name: 'Corregir' })).not.toBeInTheDocument();
-    expect(within(dialogo).getByText(/plazo de corrección venció/)).toBeInTheDocument();
+    // F5: nadie puede corregirlo después de 24 h (tampoco el administrador).
+    expect(dialogo).toHaveTextContent(
+      'Pasaron más de 24 horas: ya no se puede corregir. Avise a su supervisora para dejar constancia.',
+    );
+    expect(dialogo).not.toHaveTextContent(/administrador/);
   });
 
   it('el médico consulta el historial pero no registra suministros', async () => {

@@ -25,6 +25,11 @@ interface Props {
   operacion: string;
   /** Lo que se está confirmando (paciente, medicamento…), visible junto a la cámara. */
   detalle?: ReactNode;
+  /**
+   * Primera oración del aviso tras tres fallos, que dice qué NO quedó registrado (F4): "No se
+   * registró la administración.". Por defecto, "No se registró la operación.".
+   */
+  noSeRegistro?: string | undefined;
   alValidar: (validacionToken: string) => void;
   alCancelar: () => void;
 }
@@ -48,7 +53,13 @@ const fallaDeConexion = (e: unknown) =>
  * tres intentos en segundos y se avisaría al administrador de un falso evento (UX-04). Se
  * muestra el motivo y un botón "Intentar de nuevo".
  */
-export function ModalValidacionFacial({ operacion, detalle, alValidar, alCancelar }: Props) {
+export function ModalValidacionFacial({
+  operacion,
+  detalle,
+  noSeRegistro = 'No se registró la operación.',
+  alValidar,
+  alCancelar,
+}: Props) {
   const usuario = useUsuario();
   const [intento, setIntento] = useState(0);
   const [enviando, setEnviando] = useState(false);
@@ -75,7 +86,7 @@ export function ModalValidacionFacial({ operacion, detalle, alValidar, alCancela
       }
       if (r.cancelada) {
         setFinal(
-          'Se canceló la operación por tres validaciones fallidas. Quedó registrado y se avisó al administrador.',
+          `${noSeRegistro} Los tres intentos fallidos quedaron registrados y se avisó al administrador.`,
         );
         return;
       }

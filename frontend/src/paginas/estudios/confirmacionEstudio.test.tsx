@@ -105,6 +105,33 @@ describe('confirmar un estudio desde otra pantalla (useConfirmacionEstudio)', ()
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
   });
 
+  it('tras tres validaciones fallidas dice que la confirmación NO se registró (F4)', async () => {
+    const confirmar = vi.fn(() => HttpResponse.json({ data: estudio() }));
+    servidor.use(
+      http.post('*/api/biometria/validar', () =>
+        HttpResponse.json({ data: { valido: false, intentosRestantes: 0, cancelada: true } }),
+      ),
+      http.post('*/api/estudios/60/confirmar', confirmar),
+    );
+    dibujar();
+
+    await userEvent.click(
+      await screen.findByRole('button', { name: 'Confirmar desde el recordatorio' }),
+    );
+    const d = await dialogo();
+    await within(d).findByText('Rx de tórax frente y perfil');
+    await userEvent.click(within(d).getByRole('button', { name: 'Confirmar con mi rostro' }));
+    await userEvent.click(
+      await screen.findByRole('button', { name: /Simular el rostro de enfermero/ }),
+    );
+
+    const rostro = screen.getByRole('dialog', { name: /Confirmar con su rostro/ });
+    expect(await within(rostro).findByRole('alert')).toHaveTextContent(
+      'No se registró la confirmación del estudio. Los tres intentos fallidos quedaron registrados y se avisó al administrador.',
+    );
+    expect(confirmar).not.toHaveBeenCalled();
+  });
+
   it('solo con el id también identifica al paciente (lo pide al servidor)', async () => {
     dibujar();
 

@@ -22,6 +22,8 @@ export const suministrosApi = {
     cantidad: number;
     observaciones: string;
     validacionToken: string;
+    /** C1: registrar aunque esa toma ya tenga una administración (la casilla de otra toma). */
+    otraToma?: boolean;
   }) => api.post<Suministro>('/api/suministros/medicamentos', d),
   registrarInsumos: (d: {
     pacienteId: number;
@@ -34,6 +36,13 @@ export const suministrosApi = {
   responsables: () => api.get<{ id: number; nombre: string }[]>('/api/suministros/responsables'),
   corregir: (
     id: number,
-    d: { motivo: string; cantidad?: number; items?: ItemInsumo[]; validacionToken: string },
+    d: {
+      motivo: string;
+      cantidad?: number;
+      items?: ItemInsumo[];
+      /** Si se omite quedan como estaban; null las borra. */
+      observaciones?: string | null;
+      validacionToken: string;
+    },
   ) => api.patch<Suministro>(`/api/suministros/${id}`, d),
 };

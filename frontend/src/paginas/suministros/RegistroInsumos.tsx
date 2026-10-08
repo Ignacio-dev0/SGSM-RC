@@ -19,6 +19,7 @@ import { EncabezadoPagina } from '../../componentes/EncabezadoPagina';
 import { Cargando, ErrorDeCarga } from '../../componentes/EstadoDeCarga';
 import { IdentidadPaciente } from '../pacientes/IdentidadPaciente';
 import { useCambiosSinGuardar } from '../../utilidades/useCambiosSinGuardar';
+import { formatearCama } from '../pacientes/etiquetas';
 import { formatearDosis } from '../prescripciones/etiquetas';
 import { ListaCantidades, SelectorPaciente, type ItemCantidad } from './comunes';
 
@@ -93,9 +94,10 @@ export function RegistroInsumos() {
         </Box>
         <Typography sx={{ mt: 1 }}>
           {p.apellido}, {p.nombre} · DNI {p.dni}
-          {p.cama ? ` · Cama ${p.cama.numero}` : ''}
+          {p.cama ? ` · Cama ${formatearCama(p.cama.numero)}` : ''}
         </Typography>
       </>,
+      'No se registraron los insumos.',
     );
     if (token) registrar.mutate(token);
   };

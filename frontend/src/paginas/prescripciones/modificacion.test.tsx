@@ -12,6 +12,9 @@ import {
 import { renderizarApp } from '../../pruebas/renderizar';
 import { servidor } from '../../pruebas/servidor';
 
+/** La cama con el guion que no corta (F3): "A-01" nunca queda partida en "A-" y "01". */
+const A01 = `A${String.fromCharCode(0x2011)}01`;
+
 beforeEach(prepararPrescripciones);
 afterEach(restaurarPruebas);
 
@@ -106,7 +109,7 @@ describe('modificación de prescripción (T306 · CU19)', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Guardar cambios' }));
 
     const dialogo = screen.getByRole('dialog', { name: /Guardar cambios/ });
-    expect(dialogo).toHaveTextContent(/Benítez, Rosa.*Cama A-01/);
+    expect(dialogo).toHaveTextContent(new RegExp(`Benítez, Rosa.*Cama ${A01}`));
     const tabla = within(dialogo).getByRole('table', { name: 'Cambios' });
     const filas = within(tabla).getAllByRole('row');
     expect(filas).toHaveLength(3);
@@ -134,22 +137,24 @@ describe('modificación de prescripción (T306 · CU19)', () => {
 
     await userEvent.click(await screen.findByRole('button', { name: 'Suspender' }));
     const dialogo = screen.getByRole('dialog', { name: /Suspender/ });
-    expect(dialogo).toHaveTextContent(/Paracetamol 500 mg cada 8 h de Benítez, Rosa \(cama A-01\)/);
+    expect(dialogo).toHaveTextContent(`Paracetamol 500 mg cada 8 h de Benítez, Rosa (cama ${A01})`);
   });
 
   it('suspende la prescripción con motivo', async () => {
     let enviado: unknown;
+    // Como el servidor real: después de suspenderla, el detalle ya la trae suspendida.
+    let actual = prescripcion();
     servidor.use(
-      http.get('*/api/prescripciones/40', () => HttpResponse.json({ data: prescripcion() })),
+      http.get('*/api/prescripciones/40', () => HttpResponse.json({ data: actual })),
       http.post('*/api/prescripciones/40/estado', async ({ request }) => {
         enviado = await request.json();
-        return HttpResponse.json({
-          data: prescripcion({
-            estado: 'SUSPENDIDA',
-            proximaToma: null,
-            motivoCambioEstado: 'Hipotensión',
-          }),
+        actual = prescripcion({
+          estado: 'SUSPENDIDA',
+          proximaToma: null,
+          motivoCambioEstado: 'Hipotensión',
+          agenda: [],
         });
+        return HttpResponse.json({ data: actual });
       }),
     );
     renderizarApp('/prescripciones/40', MEDICO);

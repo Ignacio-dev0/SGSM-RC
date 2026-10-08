@@ -91,6 +91,26 @@ function tomaDeLaDireccion(valor: string | null) {
   return Number.isFinite(ms) ? new Date(ms).toISOString() : null;
 }
 
+/** Cada cuánto se vuelven a pedir las prescripciones: otra persona pudo dar la toma (F1). */
+const RENOVAR_CADA_MS = 60_000;
+
+/** La administración que el servidor encontró en esa toma (409 TOMA_YA_DADA · C1), o null. */
+function tomaYaDadaEn(error: unknown) {
+  if (!(error instanceof ErrorApi) || error.codigo !== 'TOMA_YA_DADA') return null;
+  const d = (error.detalles ?? {}) as { fechaHora?: unknown; usuario?: unknown };
+  return {
+    fechaHora: typeof d.fechaHora === 'string' ? d.fechaHora : null,
+    usuario: typeof d.usuario === 'string' ? d.usuario : null,
+  };
+}
+
+/** "Esta toma ya se registró a las 08:05 (Acosta, Sofía). Si corresponde…" */
+function textoTomaYaDada({ fechaHora, usuario }: NonNullable<ReturnType<typeof tomaYaDadaEn>>) {
+  const cuando = fechaHora ? ` a las ${formatearHora(fechaHora)}` : '';
+  const quien = usuario ? ` (${usuario})` : '';
+  return `Esta toma ya se registró${cuando}${quien}. Si corresponde dar otra, márquelo y vuelva a confirmar.`;
+}
+
 /** A quién se intentó registrar: el aviso de un fallo habla de él aunque la pantalla ya muestre a otro. */
 interface Intento {
   pacienteId: number;
@@ -118,9 +138,14 @@ export function AdministracionMedicamento() {
     queryKey: ['prescripciones', pacienteId, 'VIGENTE'],
     queryFn: () => prescripcionesApi.dePaciente(pacienteId, 'VIGENTE'),
     enabled: pacienteId > 0,
+    // "Ya se dio" tiene que estar al día: otra persona pudo dar la toma desde otra tablet (F1).
+    refetchOnWindowFocus: true,
+    refetchInterval: RENOVAR_CADA_MS,
   });
   const { pedirValidacion, modalValidacion } = useValidacionFacial();
   const [elegidaId, setElegidaId] = useState<number | null>(null);
+  // El medicamento elegido, para nombrarlo si la prescripción deja de estar vigente.
+  const [nombreElegida, setNombreElegida] = useState('');
   const [cantidad, setCantidad] = useState('');
   const [observaciones, setObservaciones] = useState('');
   const [otraToma, setOtraToma] = useState(false);
@@ -130,6 +155,7 @@ export function AdministracionMedicamento() {
   const registrando = useRef(false);
   // Contenedor de los avisos del resultado: se lleva a la vista y recibe el foco al aparecer.
   const resultado = useRef<HTMLDivElement>(null);
+  const avisoNoVigente = useRef<HTMLDivElement>(null);
 
   const limpiarFormulario = () => {
     setCantidad('');
@@ -187,6 +213,7 @@ export function AdministracionMedicamento() {
     if (!pedida) return;
     yaPreelegida.current = true;
     setElegidaId(pedida.id);
+    setNombreElegida(pedida.medicamento.nombre);
     setCantidad(String(pedida.dosis));
   }, [prescripcionPedida, vigentes.data]);
 
@@ -201,6 +228,7 @@ export function AdministracionMedicamento() {
   const elegir = (x: Prescripcion) => {
     if (x.id === elegidaId) return;
     setElegidaId(x.id);
+    setNombreElegida(x.medicamento.nombre);
     limpiarFormulario();
     setCantidad(String(x.dosis));
     setRegistrado(null);
@@ -210,6 +238,8 @@ export function AdministracionMedicamento() {
   const p = paciente.data;
   const elegida = prescripciones.find((x) => x.id === elegidaId) ?? null;
   const esTomaDelRecordatorio = tomaRecordatorio !== null && elegidaId === prescripcionPedida;
+  // La lista renovada ya no la trae: la suspendieron o la finalizaron mientras tanto (F1).
+  const yaNoVigente = elegidaId !== null && vigentes.isSuccess && elegida === null;
   // Elegir el medicamento no es un cambio; sí lo son la cantidad distinta de la prescripta, una
   // nota o marcar otra toma. Registrar vacía todo eso, así que después de guardar no hay nada.
   const { dialogo } = useCambiosSinGuardar(
@@ -217,15 +247,23 @@ export function AdministracionMedicamento() {
       (cantidad !== String(elegida.dosis) || observaciones.trim() !== '' || otraToma),
   );
   const estado = elegida ? estadoToma(elegida, ahora) : null;
+  // El servidor encontró la toma ya dada (C1): aunque la tablet no lo supiera, pide la casilla.
+  const tomaYaDada = tomaYaDadaEn(registrar.error);
+  const yaDada = estado?.tipo === 'dada' || tomaYaDada !== null;
   const cantidadNumero = Number(cantidad);
   const cantidadValida = cantidadNumero > 0;
-  const puedeConfirmar = cantidadValida && (estado?.tipo !== 'dada' || otraToma);
+  const puedeConfirmar = cantidadValida && (!yaDada || otraToma);
   // Por qué no se puede confirmar (la cantidad inválida ya lo dice su propio campo).
   const ayudaConfirmar = !elegida
     ? 'Elija el medicamento que va a dar'
-    : estado?.tipo === 'dada' && !otraToma
+    : yaDada && !otraToma
       ? 'Marque «Corresponde dar otra toma» para continuar'
       : null;
+
+  // El formulario desaparece con el foco: el aviso lo recibe y dice por qué.
+  useEffect(() => {
+    if (yaNoVigente) avisoNoVigente.current?.focus();
+  }, [yaNoVigente]);
 
   const confirmar = async () => {
     if (!elegida || !p) return;
@@ -241,6 +279,7 @@ export function AdministracionMedicamento() {
           {p.cama ? ` · Cama ${formatearCama(p.cama.numero)}` : ''}
         </Typography>
       </>,
+      'No se registró la administración.',
     );
     if (!token) return;
     setIntento({
@@ -254,6 +293,8 @@ export function AdministracionMedicamento() {
       cantidad: cantidadNumero,
       observaciones,
       validacionToken: token,
+      // Solo si se marcó a propósito: si no, el servidor rechaza una toma ya dada (C1).
+      ...(yaDada && otraToma ? { otraToma: true } : {}),
     });
   };
 
@@ -318,8 +359,10 @@ export function AdministracionMedicamento() {
                   registrado.detalles[0]?.unidad ?? '',
                 )}{' '}
                 a {registrado.paciente.apellido}, {registrado.paciente.nombre}
-                {registrado.paciente.cama ? ` (cama ${registrado.paciente.cama})` : ''} a las{' '}
-                {conPunto(formatearHora(registrado.fechaHora))}
+                {registrado.paciente.cama
+                  ? ` (cama ${formatearCama(registrado.paciente.cama)})`
+                  : ''}{' '}
+                a las {conPunto(formatearHora(registrado.fechaHora))}
                 {desdeRecordatorios && (
                   // Lo esperable es seguir con el próximo recordatorio: es la acción principal, al
                   // final. El recordatorio de esta toma ya quedó atendido en el servidor.
@@ -352,6 +395,8 @@ export function AdministracionMedicamento() {
                   administración a {intento?.nombre ?? 'este paciente'}. Antes de volver a intentar,
                   revise el historial de ese paciente para no darla dos veces.
                 </Alerta>
+              ) : tomaYaDada ? (
+                <Alerta tipo="advertencia">{textoTomaYaDada(tomaYaDada)}</Alerta>
               ) : (
                 <Alerta tipo="error">{mensajeDeError(registrar.error)}</Alerta>
               ))}
@@ -382,6 +427,14 @@ export function AdministracionMedicamento() {
                 El paciente no tiene prescripciones vigentes. Los insumos no medicinales se
                 registran desde Registrar insumos.
               </Alerta>
+            )}
+            {yaNoVigente && (
+              <Box ref={avisoNoVigente} tabIndex={-1} sx={{ mb: 2 }}>
+                <Alerta tipo="advertencia" accion={irALaFicha}>
+                  La prescripción de {nombreElegida} ya no está vigente: la suspendieron o la
+                  finalizaron mientras tenía la pantalla abierta. No se registró nada.
+                </Alerta>
+              </Box>
             )}
             {hayTarjetas && (
               <Typography color="text.secondary" sx={{ mb: 1 }}>
@@ -448,12 +501,15 @@ export function AdministracionMedicamento() {
                 Verifique que corresponda adelantarla.
               </Alerta>
             )}
-            {estado.tipo === 'dada' && (
+            {yaDada && (
               <Box>
-                <Alerta tipo="advertencia">
-                  Esta toma ya se dio a las {formatearHora(estado.fechaHora)} ({estado.usuario}).
-                  Revise el historial antes de registrar otra.
-                </Alerta>
+                {/* Si lo dijo el servidor, el aviso de arriba (con el foco) ya lo cuenta. */}
+                {estado.tipo === 'dada' && !tomaYaDada && (
+                  <Alerta tipo="advertencia">
+                    Esta toma ya se dio a las {formatearHora(estado.fechaHora)} ({estado.usuario}).
+                    Revise el historial antes de registrar otra.
+                  </Alerta>
+                )}
                 <FormControlLabel
                   control={
                     <Checkbox checked={otraToma} onChange={(e) => setOtraToma(e.target.checked)} />

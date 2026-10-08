@@ -4,8 +4,10 @@
  */
 import type { CambiosPrescripcion } from '../../api/prescripciones';
 import type { Paciente, Prescripcion, Via } from '../../api/tipos';
-import { formatearFechaHora } from '../../utilidades/formato';
+import { formatearFechaHora, formatearFechaHoraCorta } from '../../utilidades/formato';
 import { campoFechaHora, isoDeCampoFechaHora } from '../../utilidades/campoFechaHora';
+import { formatearCama } from '../pacientes/etiquetas';
+import { anclaAlCambiarFrecuencia, anclaAlReanudar } from './agenda';
 import { etiquetaVia, formatearDosis, formatearFrecuencia } from './etiquetas';
 
 export interface Edicion {
@@ -38,6 +40,29 @@ export function cambiosDe(p: Prescripcion, e: Edicion): Omit<CambiosPrescripcion
   if (e.observaciones !== original.observaciones) c.observaciones = e.observaciones;
   return c;
 }
+
+/** "el inicio del tratamiento (08/10 08:00)": desde ahí se cuentan las tomas si no empezó. */
+const inicioDelTratamiento = (p: Prescripcion) =>
+  `el inicio del tratamiento (${formatearFechaHoraCorta(p.fechaInicio)})`;
+
+/**
+ * Qué pasa con la agenda al cambiar la frecuencia (C5), con la misma regla que el servidor
+ * (D122): desde la última dosis dada en la agenda vigente; si no hay, o quedó una toma sin dar
+ * después, desde ahora (o desde el inicio, si el tratamiento todavía no empezó).
+ */
+export function desdeCuandoSeCuenta(p: Prescripcion, ahora = new Date()) {
+  const ancla = anclaAlCambiarFrecuencia(p, ahora);
+  if (ancla.desde === 'dosis') return 'La próxima toma se cuenta desde la última dosis dada.';
+  if (ancla.desde === 'inicio')
+    return `La próxima toma se cuenta desde ${inicioDelTratamiento(p)}.`;
+  return 'La próxima toma se cuenta desde ahora.';
+}
+
+/** Al reanudar (C5 · D112): desde ahora, o desde el inicio si el tratamiento todavía no empezó. */
+const tomasAlReanudar = (p: Prescripcion, ahora: Date) =>
+  anclaAlReanudar(p, ahora).desde === 'inicio'
+    ? `Las tomas empiezan en ${inicioDelTratamiento(p)}, ${formatearFrecuencia(p.frecuenciaHoras)}.`
+    : `Las tomas vuelven a empezar desde ahora, ${formatearFrecuencia(p.frecuenciaHoras)}.`;
 
 const finTexto = (fin: string | null) => (fin ? formatearFechaHora(fin) : 'Sin fecha de fin');
 
@@ -75,14 +100,20 @@ export function filasDeCambios(p: Prescripcion, e: Edicion) {
   return filas;
 }
 
+/** "Benítez, Rosa (cama A-01)", con la cama que no se parte en dos renglones (F3). */
 export const nombreConCama = (pac: Paciente | undefined) =>
   pac
-    ? `${pac.apellido}, ${pac.nombre}${pac.cama ? ` (cama ${pac.cama.numero})` : ''}`
+    ? `${pac.apellido}, ${pac.nombre}${pac.cama ? ` (cama ${formatearCama(pac.cama.numero)})` : ''}`
     : 'el paciente';
 
 export const ACCIONES: Record<
   'SUSPENDIDA' | 'FINALIZADA' | 'VIGENTE',
-  { boton: string; titulo: string; aviso: string; mensaje: (descripcion: string) => string }
+  {
+    boton: string;
+    titulo: string;
+    aviso: string;
+    mensaje: (descripcion: string, p: Prescripcion, ahora: Date) => string;
+  }
 > = {
   SUSPENDIDA: {
     boton: 'Suspender',
@@ -102,6 +133,7 @@ export const ACCIONES: Record<
     boton: 'Reanudar',
     titulo: 'Reanudar la prescripción',
     aviso: 'La prescripción volvió a estar vigente',
-    mensaje: (d) => `Se reanuda ${d}: vuelve a generar tomas desde ahora.`,
+    // C5: la agenda se re-ancla en el momento de reanudar.
+    mensaje: (d, p, ahora) => `Se reanuda ${d}. ${tomasAlReanudar(p, ahora)}`,
   },
 };

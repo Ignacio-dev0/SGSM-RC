@@ -121,6 +121,7 @@ export function DialogoConfirmarEstudio({
     const token = await pedirValidacion(
       `Confirmar estudio ${e.nombre}${paciente ? ` de ${paciente.apellido}, ${paciente.nombre}` : ''}`,
       <Resumen e={e} paciente={paciente} />,
+      'No se registró la confirmación del estudio.',
     );
     if (token) confirmar.mutate(token);
   };

@@ -12,8 +12,11 @@ const en = (minutos: number) => new Date(AHORA.getTime() + minutos * 60_000).toI
 
 const prescripcion = (
   proximaToma: string | null,
-  ultimas: { fechaHora: string; usuario: string }[] = [],
+  ultimas: { fechaHora: string; usuario: string; tomaProgramada?: string }[] = [],
 ) => ({
+  // Empezó hace dos días, en la grilla de las 14:00 UTC: tomas a las 22:00, 06:00 y 14:00 UTC.
+  fechaInicio: en(-48 * 60 - 4 * 60),
+  fechaFin: null,
   frecuenciaHoras: 8,
   proximaToma,
   ultimasAdministraciones: ultimas.map((u, i) => ({ id: i + 1, cantidad: 1, ...u })),
@@ -67,6 +70,78 @@ describe('estado de la toma de una prescripción', () => {
 
   it('sin próxima toma (tratamiento terminado)', () => {
     expect(textoEstadoToma(estadoToma(prescripcion(null), AHORA))).toBe('Sin más tomas');
+  });
+
+  it('al reanudar, una dosis de hace menos de media frecuencia sigue contando como dada (D123)', () => {
+    // Se dio hace 1 h, se suspendió y se reanudó hace 10 min: el servidor pide confirmar otra.
+    const reanudada = {
+      ...prescripcion(en(0), [{ fechaHora: en(-60), usuario: 'Acosta, Sofía' }]),
+      agendaDesde: en(-10),
+    };
+    expect(estadoToma(reanudada, AHORA)).toMatchObject({ tipo: 'dada', minutos: 60 });
+  });
+
+  it('al reanudar, una dosis vieja de la agenda anterior no cuenta como dada', () => {
+    const reanudada = {
+      ...prescripcion(en(0), [
+        { fechaHora: en(-300), tomaProgramada: en(-300), usuario: 'Acosta, Sofía' },
+      ]),
+      agendaDesde: en(-10),
+    };
+    expect(estadoToma(reanudada, AHORA)).toMatchObject({ tipo: 'ahora' });
+  });
+
+  describe('la primera toma adelantada (RN07: hasta media frecuencia antes del inicio)', () => {
+    // Inicio a las 12:00, cada 8 h; la primera dosis se dio a las 10:00 y quedó en la toma de las 12:00.
+    const inicio = '2026-10-07T12:00:00.000Z';
+    const adelantada = {
+      fechaInicio: inicio,
+      agendaDesde: inicio,
+      fechaFin: null,
+      frecuenciaHoras: 8,
+      ultimasAdministraciones: [
+        {
+          id: 1,
+          fechaHora: '2026-10-07T10:00:00.000Z',
+          tomaProgramada: inicio,
+          cantidad: 1,
+          usuario: 'Acosta, Sofía',
+        },
+      ],
+    };
+
+    it('media hora después de darla, ya se dio (no "Faltan 1 h 30 min")', () => {
+      const e = estadoToma(
+        { ...adelantada, proximaToma: '2026-10-07T20:00:00.000Z' },
+        new Date('2026-10-07T10:30:00.000Z'),
+      );
+      expect(e).toMatchObject({ tipo: 'dada', minutos: 30, usuario: 'Acosta, Sofía' });
+    });
+
+    it('pasada media frecuencia de la dosis, su toma (la de ahora) sigue dada, como en el servidor', () => {
+      // 14:30: la toma más cercana es la de las 12:00, y esa dosis la cubrió.
+      const e = estadoToma(
+        { ...adelantada, proximaToma: '2026-10-07T20:00:00.000Z' },
+        new Date('2026-10-07T14:30:00.000Z'),
+      );
+      expect(e).toMatchObject({ tipo: 'dada', fechaHora: '2026-10-07T10:00:00.000Z' });
+    });
+
+    it('cuando la más cercana ya es la siguiente, deja de estar dada', () => {
+      const e = estadoToma(
+        { ...adelantada, proximaToma: '2026-10-07T20:00:00.000Z' },
+        new Date('2026-10-07T16:30:00.000Z'),
+      );
+      expect(e).toMatchObject({ tipo: 'falta', minutos: 210 });
+    });
+  });
+
+  it('al cambiar la frecuencia, la última dosis es el ancla: sigue contando como dada (C5)', () => {
+    const cambiada = {
+      ...prescripcion(en(710), [{ fechaHora: en(-10), usuario: 'Acosta, Sofía' }]),
+      agendaDesde: en(-10),
+    };
+    expect(estadoToma(cambiada, AHORA)).toMatchObject({ tipo: 'dada', minutos: 10 });
   });
 });
 

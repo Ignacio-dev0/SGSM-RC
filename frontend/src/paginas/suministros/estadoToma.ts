@@ -1,12 +1,14 @@
 import type { Prescripcion } from '../../api/tipos';
 import { formatearHora } from '../../utilidades/formato';
+import { tomaMasCercana } from '../prescripciones/agenda';
 
 /**
  * En qué punto está la toma de una prescripción respecto de ahora, para que quien administra lo
  * vea antes de elegir (CU20 · RN07). Usa los mismos criterios que el servidor:
  * - la próxima toma pendiente sigue siéndolo hasta 30 minutos después de su hora;
- * - una administración corresponde a la toma más cercana, así que si la última fue hace menos
- *   de media frecuencia, la toma de ahora ya se dio.
+ * - ya se dio si alguna administración quedó en la toma de ahora (la más cercana, D121) o si la
+ *   última fue hace menos de media frecuencia, aunque sea de antes de reanudar (D123): son los
+ *   dos casos en que el servidor responde `TOMA_YA_DADA`.
  * Solo avisa: no impide registrar (la decisión clínica es de quien administra).
  */
 
@@ -30,16 +32,33 @@ export function duracion(minutos: number) {
   return m === 0 ? `${h} h` : `${h} h ${m} min`;
 }
 
-export function estadoToma(
-  p: Pick<Prescripcion, 'frecuenciaHoras' | 'proximaToma' | 'ultimasAdministraciones'>,
-  ahora = new Date(),
-): EstadoToma {
+type DatosEstado = Pick<
+  Prescripcion,
+  'fechaInicio' | 'fechaFin' | 'frecuenciaHoras' | 'proximaToma' | 'ultimasAdministraciones'
+> &
+  Partial<Pick<Prescripcion, 'agendaDesde'>>;
+
+/** La administración por la que el servidor rechazaría otra ahora (D113 · D123), o undefined. */
+function administracionPrevia(p: DatosEstado, ahora: Date) {
+  const toma = tomaMasCercana(p, ahora);
+  const deLaToma = p.ultimasAdministraciones.find(
+    (a) =>
+      toma !== null &&
+      typeof a.tomaProgramada === 'string' &&
+      Date.parse(a.tomaProgramada) === toma,
+  );
+  if (deLaToma) return deLaToma;
   const ultima = p.ultimasAdministraciones[0];
-  if (ultima) {
-    const hace = Math.round((ahora.getTime() - new Date(ultima.fechaHora).getTime()) / MINUTO);
-    if (hace >= 0 && hace < (p.frecuenciaHoras * 60) / 2) {
-      return { tipo: 'dada', minutos: hace, fechaHora: ultima.fechaHora, usuario: ultima.usuario };
-    }
+  if (!ultima) return undefined;
+  const hace = ahora.getTime() - Date.parse(ultima.fechaHora);
+  return hace >= 0 && hace < (p.frecuenciaHoras * 60 * MINUTO) / 2 ? ultima : undefined;
+}
+
+export function estadoToma(p: DatosEstado, ahora = new Date()): EstadoToma {
+  const previa = administracionPrevia(p, ahora);
+  if (previa) {
+    const minutos = Math.round((ahora.getTime() - Date.parse(previa.fechaHora)) / MINUTO);
+    return { tipo: 'dada', minutos, fechaHora: previa.fechaHora, usuario: previa.usuario };
   }
   if (!p.proximaToma) return { tipo: 'sin-tomas' };
   const faltan = Math.round((new Date(p.proximaToma).getTime() - ahora.getTime()) / MINUTO);
