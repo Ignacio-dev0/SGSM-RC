@@ -79,7 +79,12 @@ export function PermisosUsuario() {
         volverA={`/usuarios/${usuarioId}`}
       />
       {aviso && <Alerta tipo="exito">{aviso}</Alerta>}
-      {guardar.isError && <Alerta tipo="error">{mensajeDeError(guardar.error)}</Alerta>}
+      {/* Arriba de la lista, lejos de Guardar permisos (PRIVILEGIO_AJENO): a la vista y con el foco. */}
+      {guardar.isError && (
+        <Alerta tipo="error" enfocar>
+          {mensajeDeError(guardar.error)}
+        </Alerta>
+      )}
 
       {usuario.isError || permisos.isError ? (
         // Un fallo de carga no se lee como "no hay permisos": sin lista ni botón de guardar.

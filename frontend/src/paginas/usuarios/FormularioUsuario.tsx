@@ -229,7 +229,13 @@ export function FormularioUsuario() {
           {aviso}
         </Alerta>
       )}
-      {errorGeneral && <Alerta tipo="error">{errorGeneral}</Alerta>}
+      {/* Un rechazo sin campo (PRIVILEGIO_AJENO, ULTIMO_ADMINISTRADOR): arriba, lejos de Guardar,
+          así que se lleva a la vista con el foco. */}
+      {errorGeneral && (
+        <Alerta tipo="error" enfocar>
+          {errorGeneral}
+        </Alerta>
+      )}
 
       {!esAlta && existente.isError ? (
         <ErrorDeCarga
