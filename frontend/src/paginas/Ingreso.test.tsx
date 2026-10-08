@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { servidor } from '../pruebas/servidor';
 import { renderizarApp } from '../pruebas/renderizar';
-import { ENFERMERO, MEDICO } from '../pruebas/datos';
+import { ADMIN, ENFERMERO, MEDICO } from '../pruebas/datos';
 
 const responderLogin = (respuesta: () => Response) =>
   servidor.use(http.post('*/api/auth/login', respuesta));
@@ -31,6 +31,26 @@ describe('pantalla de inicio de sesión (T107 · CU06)', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Ingresar' }));
 
     expect(await screen.findByRole('heading', { name: /Hola, Sofía/ })).toBeInTheDocument();
+    expect(enviado).toEqual({ nombreUsuario: 'enfermero', contrasena: 'Enfermero2026' });
+    expect(localStorage.getItem('sgsm.usuarioRecordado')).toBe('enfermero');
+  });
+
+  it('manda el usuario sin espacios alrededor y en minúsculas (el teclado de la tablet pone mayúscula)', async () => {
+    let enviado: unknown;
+    servidor.use(
+      http.post('*/api/auth/login', async ({ request }) => {
+        enviado = await request.json();
+        return HttpResponse.json({ data: ENFERMERO });
+      }),
+    );
+    renderizarApp('/', null);
+
+    await userEvent.type(await screen.findByLabelText('Usuario'), '  Enfermero ');
+    await userEvent.type(screen.getByLabelText('Contraseña'), 'Enfermero2026');
+    await userEvent.click(screen.getByLabelText(/Recordar mi usuario/));
+    await userEvent.click(screen.getByRole('button', { name: 'Ingresar' }));
+
+    await screen.findByRole('heading', { name: /Hola, Sofía/ });
     expect(enviado).toEqual({ nombreUsuario: 'enfermero', contrasena: 'Enfermero2026' });
     expect(localStorage.getItem('sgsm.usuarioRecordado')).toBe('enfermero');
   });
@@ -148,5 +168,14 @@ describe('después del cierre por inactividad (ESC1)', () => {
       'Se cerró la sesión por inactividad. Vuelva a ingresar.',
     );
     expect(screen.getByRole('status')).not.toHaveTextContent('recordatorios');
+  });
+
+  it('al administrador (no es personal de sala) tampoco le habla de los avisos (F8)', async () => {
+    cerrarPorInactividad(ADMIN);
+
+    expect(await screen.findByRole('heading', { name: /Ingresar/ })).toBeInTheDocument();
+    expect(screen.getByRole('status')).toHaveTextContent(
+      'Se cerró la sesión por inactividad. Vuelva a ingresar.',
+    );
   });
 });

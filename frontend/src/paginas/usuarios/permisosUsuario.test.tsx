@@ -49,3 +49,25 @@ describe('permisos adicionales: cada módulo con su nombre legible', () => {
     }
   });
 });
+
+describe('permisos adicionales propios (D110 del servidor)', () => {
+  it('se ven pero no se cambian: dice por qué y no ofrece guardar', async () => {
+    servidor.use(
+      http.get('*/api/permisos', () => HttpResponse.json({ data: PERMISOS })),
+      http.get('*/api/usuarios/1', () =>
+        HttpResponse.json({
+          data: { ...usuario, id: 1, nombre: 'Laura', apellido: 'Méndez' },
+        }),
+      ),
+    );
+    renderizarApp('/usuarios/1/permisos', ADMIN);
+
+    expect(
+      await screen.findByText(
+        'Nadie puede cambiar sus propios permisos adicionales: se los cambia otro administrador.',
+      ),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Guardar permisos' })).not.toBeInTheDocument();
+    expect(screen.getByRole('checkbox', { name: /Ver los recordatorios/ })).toBeDisabled();
+  });
+});

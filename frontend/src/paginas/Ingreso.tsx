@@ -1,21 +1,12 @@
 import { useRef, useState, type FormEvent } from 'react';
-import {
-  Box,
-  Checkbox,
-  FormControlLabel,
-  IconButton,
-  InputAdornment,
-  Paper,
-  Typography,
-} from '@mui/material';
-import VisibilityIcon from '@mui/icons-material/Visibility';
-import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
+import { Box, Checkbox, FormControlLabel, Paper, Typography } from '@mui/material';
 import LocalHospitalOutlinedIcon from '@mui/icons-material/LocalHospitalOutlined';
 import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { mensajeDeError } from '../api/cliente';
 import { useSesion } from '../auth/useSesion';
 import { Alerta } from '../componentes/Alerta';
 import { Boton } from '../componentes/Boton';
+import { CampoContrasena } from '../componentes/CampoContrasena';
 import { CampoTexto } from '../componentes/CampoTexto';
 import { SelectorTema } from '../componentes/SelectorTema';
 import { useFocoEnPrimerError } from '../utilidades/useFocoEnPrimerError';
@@ -50,7 +41,6 @@ export function Ingreso() {
   const [contrasena, setContrasena] = useState('');
   // Las tablets son compartidas: recordar el usuario es una elección, salvo que ya se haya elegido.
   const [recordar, setRecordar] = useState(Boolean(recordado));
-  const [verContrasena, setVerContrasena] = useState(false);
   const [errores, setErrores] = useState<{ usuario?: string; contrasena?: string }>({});
   const [error, setError] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
@@ -73,9 +63,11 @@ export function Ingreso() {
 
     setEnviando(true);
     setError(null);
+    // Los usuarios se guardan en minúsculas y el teclado de la tablet suele empezar en mayúscula.
+    const usuarioNormalizado = nombreUsuario.trim().toLowerCase();
     try {
-      await iniciarSesion(nombreUsuario.trim(), contrasena);
-      guardarRecordado(recordar ? nombreUsuario.trim() : null);
+      await iniciarSesion(usuarioNormalizado, contrasena);
+      guardarRecordado(recordar ? usuarioNormalizado : null);
       const desde = (ubicacion.state as { desde?: string } | null)?.desde;
       navegar(desde && desde !== '/ingresar' ? desde : '/', { replace: true });
     } catch (err) {
@@ -132,30 +124,14 @@ export function Ingreso() {
           autoCapitalize="none"
           autoFocus={!recordado}
         />
-        <CampoTexto
+        <CampoContrasena
           etiqueta="Contraseña"
           valor={contrasena}
           alCambiar={setContrasena}
           error={errores.contrasena}
-          type={verContrasena ? 'text' : 'password'}
           autoComplete="current-password"
           autoFocus={Boolean(recordado)}
           inputRef={refContrasena}
-          slotProps={{
-            input: {
-              endAdornment: (
-                <InputAdornment position="end">
-                  <IconButton
-                    aria-label={verContrasena ? 'Ocultar contraseña' : 'Mostrar contraseña'}
-                    onClick={() => setVerContrasena((v) => !v)}
-                    edge="end"
-                  >
-                    {verContrasena ? <VisibilityOffIcon /> : <VisibilityIcon />}
-                  </IconButton>
-                </InputAdornment>
-              ),
-            },
-          }}
         />
         <FormControlLabel
           control={<Checkbox checked={recordar} onChange={(e) => setRecordar(e.target.checked)} />}

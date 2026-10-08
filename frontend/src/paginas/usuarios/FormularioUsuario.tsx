@@ -11,6 +11,7 @@ import { useSesion, useUsuario } from '../../auth/useSesion';
 import { AccionesFormulario } from '../../componentes/AccionesFormulario';
 import { Alerta } from '../../componentes/Alerta';
 import { Boton } from '../../componentes/Boton';
+import { CampoContrasena } from '../../componentes/CampoContrasena';
 import { CampoTexto } from '../../componentes/CampoTexto';
 import { ChipEstado } from '../../componentes/ChipEstado';
 import { EncabezadoPagina } from '../../componentes/EncabezadoPagina';
@@ -20,6 +21,7 @@ import { Selector } from '../../componentes/Selector';
 import { formatearFechaHora } from '../../utilidades/formato';
 import { hayDiferencias, useCambiosSinGuardar } from '../../utilidades/useCambiosSinGuardar';
 import { useFocoEnPrimerError } from '../../utilidades/useFocoEnPrimerError';
+import { AYUDA_NOMBRE_USUARIO, errorNombreUsuario } from './validacion';
 
 const VACIO: DatosUsuario = {
   nombre: '',
@@ -43,6 +45,9 @@ const desdeUsuario = (u: Usuario): DatosUsuario => ({
   contrasena: '',
 });
 
+/** D110 del servidor: el rol propio no se cambia (responde 403 CAMBIO_PROPIO). */
+const AYUDA_ROL_PROPIO = 'Nadie puede cambiar su propio rol: se lo cambia otro administrador.';
+
 /** Campo al que corresponde cada error de conflicto del backend. */
 const CAMPO_DEL_CONFLICTO: Record<string, keyof DatosUsuario> = {
   DNI_DUPLICADO: 'dni',
@@ -55,7 +60,8 @@ function validar(d: DatosUsuario, esAlta: boolean) {
   if (!d.apellido.trim()) e.apellido = 'Ingrese el apellido';
   if (!d.dni.trim()) e.dni = 'Ingrese el DNI';
   else if (!/^\d{7,8}$/.test(d.dni.trim())) e.dni = 'El DNI debe tener 7 u 8 dígitos, sin puntos';
-  if (!d.nombreUsuario.trim()) e.nombreUsuario = 'Ingrese el nombre de usuario';
+  const usuario = errorNombreUsuario(d.nombreUsuario);
+  if (usuario) e.nombreUsuario = usuario;
   if (!d.rol) e.rol = 'Elija el rol';
   if (esAlta && !d.contrasena) e.contrasena = 'Ingrese una contraseña';
   return e;
@@ -67,6 +73,7 @@ export function FormularioUsuario() {
   const esAlta = id === undefined;
   const usuarioId = Number(id);
   const yo = useUsuario();
+  const esUnoMismo = !esAlta && usuarioId === yo.id;
   const { tienePermiso } = useSesion();
   const navegar = useNavigate();
   const clienteQuery = useQueryClient();
@@ -112,7 +119,10 @@ export function FormularioUsuario() {
     mutationFn: () => {
       const { contrasena, ...resto } = datos;
       const cuerpo = contrasena ? { ...resto, contrasena } : resto;
-      return esAlta ? usuariosApi.crear(cuerpo) : usuariosApi.modificar(usuarioId, cuerpo);
+      if (esAlta) return usuariosApi.crear(cuerpo);
+      // El rol propio no viaja: no se puede cambiar (D110 del servidor · D167).
+      const { rol: _rol, ...sinRol } = cuerpo;
+      return usuariosApi.modificar(usuarioId, esUnoMismo ? sinRol : cuerpo);
     },
     onSuccess: async (u) => {
       await clienteQuery.invalidateQueries({ queryKey: ['usuarios'] });
@@ -292,23 +302,34 @@ export function FormularioUsuario() {
               error={errores.nombreUsuario}
               required
               autoCapitalize="none"
+              ayuda={AYUDA_NOMBRE_USUARIO}
             />
-            <Selector
-              etiqueta="Rol"
-              valor={datos.rol}
-              alCambiar={actualizar('rol')}
-              error={errores.rol}
-              required
-              textoVacio="Elegir…"
-              opciones={(roles.data ?? []).map((r) => ({ valor: r.codigo, etiqueta: r.nombre }))}
-            />
-            <CampoTexto
+            {esUnoMismo && u ? (
+              // Solo lectura (no deshabilitado): se llega con el teclado y se lee por qué.
+              <CampoTexto
+                etiqueta="Rol"
+                valor={u.rol.nombre}
+                alCambiar={() => {}}
+                ayuda={AYUDA_ROL_PROPIO}
+                slotProps={{ htmlInput: { readOnly: true } }}
+              />
+            ) : (
+              <Selector
+                etiqueta="Rol"
+                valor={datos.rol}
+                alCambiar={actualizar('rol')}
+                error={errores.rol}
+                required
+                textoVacio="Elegir…"
+                opciones={(roles.data ?? []).map((r) => ({ valor: r.codigo, etiqueta: r.nombre }))}
+              />
+            )}
+            <CampoContrasena
               etiqueta={esAlta ? 'Contraseña' : 'Contraseña nueva'}
               valor={datos.contrasena ?? ''}
               alCambiar={actualizar('contrasena')}
               error={errores.contrasena}
               required={esAlta}
-              type="password"
               autoComplete="new-password"
               ayuda={
                 esAlta

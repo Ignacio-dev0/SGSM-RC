@@ -5,6 +5,7 @@ import { useParams } from 'react-router-dom';
 import { mensajeDeError } from '../../api/cliente';
 import type { Permiso } from '../../api/tipos';
 import { usePermisos, usuariosApi } from '../../api/usuarios';
+import { useUsuario } from '../../auth/useSesion';
 import { Alerta } from '../../componentes/Alerta';
 import { Boton } from '../../componentes/Boton';
 import { EncabezadoPagina } from '../../componentes/EncabezadoPagina';
@@ -29,6 +30,8 @@ const NOMBRE_MODULO: Record<string, string> = {
  */
 export function PermisosUsuario() {
   const usuarioId = Number(useParams().id);
+  // D110 del servidor: nadie cambia sus propios permisos (403 CAMBIO_PROPIO); se ven, nada más.
+  const esUnoMismo = useUsuario().id === usuarioId;
   const clienteQuery = useQueryClient();
   const permisos = usePermisos();
   const usuario = useQuery({
@@ -105,10 +108,17 @@ export function PermisosUsuario() {
         </Alerta>
       ) : (
         <>
-          <Typography color="text.secondary" sx={{ mb: 2 }}>
-            Los permisos que trae el rol aparecen marcados y no se pueden quitar desde acá. Marque
-            los permisos extra que necesita este usuario.
-          </Typography>
+          {esUnoMismo ? (
+            <Alerta tipo="info">
+              Nadie puede cambiar sus propios permisos adicionales: se los cambia otro
+              administrador.
+            </Alerta>
+          ) : (
+            <Typography color="text.secondary" sx={{ mb: 2 }}>
+              Los permisos que trae el rol aparecen marcados y no se pueden quitar desde acá. Marque
+              los permisos extra que necesita este usuario.
+            </Typography>
+          )}
 
           <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr', lg: '1fr 1fr' } }}>
             {[...porModulo.entries()].map(([modulo, lista]) => (
@@ -123,7 +133,7 @@ export function PermisosUsuario() {
                     control={
                       <Checkbox
                         checked={delRol.has(p.codigo) || adicionales.has(p.codigo)}
-                        disabled={delRol.has(p.codigo)}
+                        disabled={esUnoMismo || delRol.has(p.codigo)}
                         onChange={() => alternar(p.codigo)}
                       />
                     }
@@ -143,11 +153,13 @@ export function PermisosUsuario() {
             ))}
           </Box>
 
-          <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 3 }}>
-            <Boton onClick={() => guardar.mutate()} cargando={guardar.isPending}>
-              Guardar permisos
-            </Boton>
-          </Box>
+          {!esUnoMismo && (
+            <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 3 }}>
+              <Boton onClick={() => guardar.mutate()} cargando={guardar.isPending}>
+                Guardar permisos
+              </Boton>
+            </Box>
+          )}
         </>
       )}
     </>
