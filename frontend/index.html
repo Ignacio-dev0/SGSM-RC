@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#0b5d6b" />
+    <!-- Ícono propio y manifest: el acceso directo en la tablet abre como app (F19). -->
+    <link rel="icon" href="/icono.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <meta
+      name="description"
+      content="Sistema interno de suministros médicos y recordatorios clínicos del Hospital El Dique."
+    />
+    <!-- Sistema interno con datos clínicos: que ningún buscador lo indexe. -->
+    <meta name="robots" content="noindex, nofollow" />
+    <title>SGSM-RC · Hospital El Dique</title>
+    <script>
+      // Aplica el tema guardado antes de dibujar, para que no destelle el tema equivocado.
+      (function () {
+        try {
+          var modo = localStorage.getItem('sgsm.tema') || 'system';
+          var oscuro =
+            modo === 'dark' ||
+            (modo === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+          document.documentElement.setAttribute('data-tema', oscuro ? 'dark' : 'light');
+        } catch (e) {}
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

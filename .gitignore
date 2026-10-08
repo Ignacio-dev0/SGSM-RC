@@ -11,7 +11,12 @@ coverage/
 .env
 .env.*
 !.env.example
+!.env.ejemplo
 !.env.test
+
+# Datos reales del hospital para el instalador y las contraseñas temporales (T803 · docs/despliegue.md)
+/instalacion/
+credenciales-iniciales*.csv
 
 # Modelos de reconocimiento facial copiados desde node_modules
 frontend/public/models/
@@ -26,3 +31,20 @@ Thumbs.db
 # Logs
 *.log
 npm-debug.log*
+
+# Configuración local de herramientas
+.claude/
+
+# Servidor MCP local de Playwright (herramienta de revisión de UI, no del sistema)
+.mcp.json
+
+# Resultados de Playwright
+test-results/
+playwright-report/
+
+# Informes locales de UX-Pilot
+ux-pilot/
+
+# Respaldos de la base (datos de pacientes: nunca al repositorio). Ver docs/despliegue.md.
+respaldos/
+*.dump

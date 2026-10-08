@@ -1,0 +1,20 @@
+**/node_modules
+**/dist
+**/coverage
+.git
+.github
+.claude
+frontend/public/models
+**/.env
+**/.env.*
+!**/.env.example
+# Datos y secretos del despliegue: nunca dentro de una imagen.
+respaldos
+**/*.dump
+docker/certificados
+# Lo que no usa ninguna imagen.
+e2e
+test-results
+playwright-report
+ux-pilot
+.ux-governance

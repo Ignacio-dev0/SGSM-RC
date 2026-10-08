@@ -1,0 +1,518 @@
+# Recordatorios de tomas y tiempo real
+
+> E5 · T501–T508 · CU24–CU28 (casos de uso inferidos). Diseño aprobado en
+> [diseno-e5.md](diseno-e5.md). Este documento es el **contrato** entre el backend y el frontend:
+> forma de las respuestas, mensajes del tiempo real, códigos de cierre y errores. Los recordatorios
+> de **estudios** (T504) tienen la misma forma; el contrato de los estudios está en
+> [estudios.md](estudios.md).
+>
+> Código: [`modulos/recordatorios/`](../backend/src/modulos/recordatorios/) (prioridad, generación,
+> ciclo, temporizador, API y atención) y [`modulos/tiempo-real/`](../backend/src/modulos/tiempo-real/)
+> (bus y WebSocket); arranque en [`servidor.ts`](../backend/src/servidor.ts).
+
+## Cómo funciona
+
+- **Temporizador** (T501): corre al iniciar el servidor y cada `RECORDATORIOS_INTERVALO_SEG`
+  (60 s), sin superponerse y con un candado de PostgreSQL para que dos procesos no hagan el mismo
+  ciclo. En cada ciclo: vence los atrasados, genera los nuevos y recalcula la prioridad de los
+  pendientes; avisa al tiempo real **después** de confirmar la transacción.
+- **Generación** (T502 · S9): un recordatorio por toma, `RECORDATORIO_ANTICIPACION_MIN` (30) antes
+  de la hora, para las tomas de prescripciones vigentes de pacientes internados entre 30 min antes
+  y 30 min después de ahora que todavía no tengan una administración (cada administración guarda
+  su toma al registrarse, la más cercana de la agenda de ese momento: D121 de
+  [suministros.md](suministros.md#decisiones)). Las tomas se cuentan desde `agendaDesde` de la
+  prescripción (D112); lo dado antes de volver a anclar es de otras tomas. Nunca hay dos
+  recordatorios activos de la misma toma (índice único parcial). Tras una caída del servidor solo
+  se recuperan las tomas de los últimos 30 min.
+- **Prioridad** (T503 · S10): `BAJA` con más de 15 min hasta la toma, `MEDIA` entre 5 y 15, `ALTA`
+  con 5 o menos o atrasada. Los de estudio, siempre `MEDIA`. Se recalcula en cada ciclo y no se
+  audita (D12).
+- **Vencimiento** (T503 · T508 · S11): a los `RECORDATORIO_VENCIMIENTO_MIN` (60) de generado sin
+  atenderse pasa a `VENCIDO` (unos 30 min después de la toma), guarda `vencidoEn` y avisa a cada
+  administrador activo con una notificación. Sigue en el panel `RECORDATORIO_VENCIDOS_VISIBLES_HORAS`
+  (12 h) y se puede atender tarde. La notificación (`tipo: RECORDATORIO_VENCIDO`) dice qué, a qué
+  hora de Argentina, el paciente y dónde está: "Recordatorio vencido sin atender: Paracetamol de
+  las 05:00 · Benítez, Rosa (Sala A – Neurorrehabilitación, cama A-01)"; `datos` trae
+  `recordatorioId`, `pacienteId` y `fechaHoraObjetivo`. Hay una por recordatorio y por
+  administrador; la campana las marca como leídas de a una o todas juntas
+  (`POST /api/notificaciones/leer-todas`, D115).
+- **Atender** (T507 · S12): registrar la administración de esa toma (el recordatorio pasa a
+  `ATENDIDO` con `suministroId` dentro de la misma transacción del suministro) o indicar **"No se
+  administró"** con el motivo. No se pide el rostro para el motivo: queda auditado con el usuario.
+- **Cancelar**: suspender, finalizar o modificar la frecuencia o el fin de una prescripción, o
+  egresar al paciente, cancela sus recordatorios `PENDIENTE`. Si después se reanuda o cambia la
+  frecuencia, la agenda se vuelve a anclar (D112), los `VENCIDO` de tomas que ya no están en la
+  agenda nueva se cancelan (conservan `vencidoEn`, D122) y el temporizador genera los de las tomas
+  nuevas: al reanudar, la de ese momento; al cambiar la frecuencia, la siguiente a la última
+  dosis dada (o la de ese momento, si quedó una toma sin dar). Esos cambios esperan el candado
+  del ciclo dentro de su transacción (D30 de [estudios.md](estudios.md)), así una cancelación no
+  se cruza con un ciclo que está generando el recordatorio de la misma toma.
+- **Estudios** (T504): un recordatorio por estudio `PROGRAMADO` de un paciente internado, en la
+  misma ventana que las tomas, siempre con prioridad `MEDIA`. Se atiende confirmando el estudio con
+  el rostro (`POST /api/estudios/:id/confirmar`); reprogramarlo o cancelarlo cancela sus
+  recordatorios sin atender, también el vencido (D28 de [estudios.md](estudios.md)).
+
+```
+PENDIENTE ─ administración de esa toma ─────────────► ATENDIDO (suministroId)
+PENDIENTE ─ "No se administró" con motivo ──────────► ATENDIDO (motivoNoAdministrado)
+PENDIENTE ─ estudio confirmado ─────────────────────► ATENDIDO
+PENDIENTE ─ 60 min sin atención ────────────────────► VENCIDO (vencidoEn; avisa al administrador)
+VENCIDO   ─ administración tardía o motivo ─────────► ATENDIDO (conserva vencidoEn)
+PENDIENTE ─ suspender/finalizar/modificar/egresar ──► CANCELADO
+PENDIENTE ─ estudio reprogramado o cancelado ───────► CANCELADO
+VENCIDO   ─ estudio confirmado ─────────────────────► ATENDIDO (conserva vencidoEn)
+VENCIDO   ─ estudio reprogramado o cancelado ───────► CANCELADO (conserva vencidoEn, D28)
+VENCIDO   ─ reanudar o cambiar la frecuencia ───────► CANCELADO (si su toma ya no está, D122)
+```
+
+La base garantiza la coherencia ([modelo-de-datos.md](modelo-de-datos.md)): un recordatorio
+atendido tiene `atendidoEn` y **una** resolución (la administración o el motivo; en un estudio, su
+confirmación), uno vencido tiene `vencidoEn`, y el origen coincide con el tipo.
+
+## API
+
+Endpoints y permisos en [endpoints.md](endpoints.md). Esquemas
+de entrada (zod, compartidos con el frontend):
+[`recordatorios.esquemas.ts`](../backend/src/modulos/recordatorios/recordatorios.esquemas.ts).
+
+### `GET /api/recordatorios?tipo&salaId` — `recordatorios.ver`
+
+Los recordatorios **para atender** de todo el hospital (S13): los `PENDIENTE` y los `VENCIDO` de
+las últimas 12 h, de pacientes internados. Filtros opcionales: `tipo` (`MEDICAMENTO` o `ESTUDIO`) y
+`salaId` (sala de la cama actual). Orden por urgencia: prioridad (`ALTA`, `MEDIA`, `BAJA`), después
+la hora de la toma (la más antigua primero).
+
+```json
+{
+  "data": [
+    { "id": 12, "tipo": "MEDICAMENTO", "estado": "PENDIENTE", "prioridad": "ALTA", "…": "…" }
+  ],
+  "meta": { "total": 7, "urgentes": 2, "ahora": "2026-10-07T12:00:00.000Z" }
+}
+```
+
+- `meta.total`: cuántos hay para atender (con los filtros aplicados).
+- `meta.urgentes`: cuántos tienen prioridad `ALTA` o están `VENCIDO`. La insignia de la barra
+  muestra "Recordatorios: _total_ para atender, _urgentes_ urgentes".
+- `meta.ahora`: la hora del servidor. El frontend calcula "Faltan 12 min" / "Atrasada 8 min" con
+  la diferencia entre esta hora y la de la tablet, para no depender de su reloj (riesgo R6).
+
+### `POST /api/recordatorios/:id/no-administrar` — `recordatorios.atender`
+
+Cuerpo `{ "motivo": "Paciente en ayunas para un estudio" }` (3 a 255 caracteres, se recortan los
+espacios). Pasa un recordatorio de toma `PENDIENTE` o `VENCIDO` a `ATENDIDO` con el motivo, el
+usuario y la hora; un vencido conserva `vencidoEn`. Responde `200 { data: Recordatorio }` y avisa al
+tiempo real.
+
+### Forma de un recordatorio
+
+```ts
+interface Recordatorio {
+  id: number;
+  tipo: 'MEDICAMENTO' | 'ESTUDIO';
+  /** El panel solo recibe PENDIENTE y VENCIDO; "No se administró" devuelve el ATENDIDO. */
+  estado: 'PENDIENTE' | 'VENCIDO' | 'ATENDIDO' | 'CANCELADO';
+  prioridad: 'ALTA' | 'MEDIA' | 'BAJA';
+  /** Hora de la toma o del estudio (ISO 8601 en UTC, como todas las fechas de la API). */
+  fechaHoraObjetivo: string;
+  generadoEn: string;
+  /** Cuándo venció; se conserva si después se atendió tarde. */
+  vencidoEn: string | null;
+  paciente: { id: number; apellido: string; nombre: string; dni: string };
+  /** Cama actual del paciente (null si no tiene asignación activa). */
+  cama: { numero: string; sala: { id: number; nombre: string } } | null;
+  /** Solo en los de MEDICAMENTO: lo necesario para la tarjeta y para "Administrar". */
+  prescripcion: {
+    id: number;
+    medicamento: string;
+    presentacion: string;
+    dosis: number;
+    unidadDosis: string;
+    via: string; // ViaAdministracion: ORAL, INTRAVENOSA…
+    frecuenciaHoras: number;
+    /** Las de la prescripción ("Si fiebre"), para la tarjeta (F7); null si no tiene. */
+    observaciones: string | null;
+  } | null;
+  /** Solo en los de ESTUDIO (ver estudios.md). */
+  estudio: { id: number; nombre: string; tipoEstudio: string; preparacion: string | null } | null;
+  /** Atención: quién, cuándo y cómo (null mientras no se atendió). */
+  atendidoEn: string | null;
+  atendidoPor: { id: number; nombre: string } | null; // nombre: "Apellido, Nombre"
+  suministroId: number | null;
+  motivoNoAdministrado: string | null;
+}
+```
+
+**Administrar** desde el panel abre la pantalla de administración con `paciente.id` y
+`prescripcion.id` elegidos; al registrarse el suministro (`POST /api/suministros/medicamentos`, sin
+cambios en su contrato) el recordatorio se atiende solo.
+
+### Errores
+
+| HTTP | `codigo`                    | Cuándo                                                                                                     |
+| ---- | --------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| 400  | `VALIDACION`                | Filtro inválido o motivo vacío, de menos de 3 o de más de 255 caracteres                                   |
+| 401  | `NO_AUTENTICADO`            | Sin sesión o sesión vencida                                                                                |
+| 403  | `SIN_PERMISO`               | Sin `recordatorios.ver` (listar) o sin `recordatorios.atender` ("No se administró")                        |
+| 404  | `NO_ENCONTRADO`             | El recordatorio no existe                                                                                  |
+| 409  | `RECORDATORIO_NO_PENDIENTE` | Ya estaba atendido o cancelado (`detalles.estado`): el frontend vuelve a pedir la lista                    |
+| 422  | `NO_ES_TOMA`                | Es un recordatorio de estudio: se atiende [confirmando el estudio](estudios.md), no con "No se administró" |
+
+### Auditoría
+
+| Acción           | Entidad      | Cuándo                                                                                                                           |
+| ---------------- | ------------ | -------------------------------------------------------------------------------------------------------------------------------- |
+| `GENERAR`        | Recordatorio | El temporizador lo crea (sin usuario; con el paciente)                                                                           |
+| `VENCER`         | Recordatorio | Pasó el tiempo sin atenderse (sin usuario; con el paciente)                                                                      |
+| `ATENDER`        | Recordatorio | Se registró la administración de su toma o se confirmó su estudio (usuario que lo hizo, dentro de la misma transacción)          |
+| `NO_ADMINISTRAR` | Recordatorio | "No se administró", con el motivo en `detalle`                                                                                   |
+| `CANCELAR`       | Recordatorio | Suspender, finalizar, modificar o egresar (una entrada por grupo); reprogramar o cancelar un estudio (una por recordatorio, D34) |
+
+El cambio de prioridad no se audita (D12). El volumen de `GENERAR`/`VENCER` es el riesgo R8.
+
+## Tiempo real (T505)
+
+`ws://<host>/api/tiempo-real` (`wss://` con HTTPS): mismo origen que la interfaz, para que viaje la
+cookie de sesión (`path: /api`). En desarrollo Vite reenvía `/api` al backend (necesita
+`ws: true`); en Docker, nginx necesita los encabezados `Upgrade` y `Connection` (riesgo R4).
+
+**Los mensajes solo avisan que algo cambió** (D10): no llevan datos clínicos. Al recibir uno, el
+cliente vuelve a pedir `GET /api/recordatorios`, que es la fuente de verdad; lo que se haya
+perdido durante un corte se recupera igual.
+
+### Conexión
+
+1. **Origen**: el encabezado `Origin` tiene que coincidir con el `Host` del pedido (mismo origen)
+   o estar en `TIEMPO_REAL_ORIGENES`. Si no, el servidor rechaza el pedido con **HTTP 403** y no
+   abre la conexión.
+2. **Sesión y permiso**: se leen de la cookie `sgsm_sesion` al conectar. Sin sesión válida la
+   conexión se abre y se cierra enseguida con **4001**; sin `recordatorios.ver`, con **4003** (un
+   navegador no puede leer el estado HTTP de un WebSocket rechazado, el código de cierre sí).
+3. Al quedar abierta, el servidor manda `{ "tipo": "conectado", "momento": "…" }`. El cliente
+   vuelve a pedir la lista (resincroniza) cada vez que lo recibe.
+
+Mientras el servidor se apaga, un pedido de conexión nuevo recibe HTTP 503.
+
+### Mensajes del servidor
+
+Texto JSON. El cliente no manda nada (lo que mande se ignora).
+
+```ts
+type MensajeTiempoReal =
+  | { tipo: 'conectado'; momento: string }
+  | {
+      tipo: 'recordatorios';
+      /** Recordatorios que aparecieron con este cambio: tono y vibración para quien atiende (S16). */
+      nuevos: number;
+      /** Recordatorios que vencieron con este cambio: un administrador vuelve a pedir sus notificaciones. */
+      vencidos: number;
+      momento: string;
+    };
+```
+
+`momento` es la hora del servidor (sirve para corregir el reloj de la tablet, R6). Un mismo ciclo
+del temporizador manda **un** mensaje; atender, "No se administró", las cancelaciones y
+confirmar, reprogramar o cancelar un estudio mandan uno con `nuevos: 0` y `vencidos: 0`. Lo reciben todas las conexiones de usuarios con
+`recordatorios.ver`; los filtros (tipo, sala) los aplica el cliente al volver a pedir la lista.
+
+### Latido y cierre
+
+Cada `TIEMPO_REAL_LATIDO_SEG` (30 s) el servidor revisa cada conexión: primero vuelve a validar
+el token de la conexión y a leer al usuario de la base (4001 o 4003 si no corresponde seguir);
+después, si la conexión no contestó el _ping_ anterior la termina, y si contestó le manda otro (el
+navegador contesta solo).
+
+| Código | Quién          | Cuándo                                                                                                        | Qué hace el cliente                                                                                                                                 |
+| ------ | -------------- | ------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1000   | cliente        | Cierre normal (salir, cerrar sesión)                                                                          | Nada                                                                                                                                                |
+| 1001   | servidor       | El servidor se apaga o se reinicia                                                                            | Reconecta con espera creciente                                                                                                                      |
+| 1006   | (nadie: corte) | Se cortó la red, o el cliente no contestó el latido y el servidor terminó la conexión                         | Reconecta con espera creciente (1 s a 30 s) y, mientras tanto, consulta la lista cada 30 s                                                          |
+| 4001   | servidor       | La sesión de la conexión venció (inactividad o 12 h), el usuario se dio de baja o no había sesión al conectar | Reconecta una vez: la cookie pudo haberse renovado con otros pedidos. Si la nueva conexión también cierra con 4001, la sesión terminó (como un 401) |
+| 4003   | servidor       | El usuario no tiene (o perdió) `recordatorios.ver`                                                            | No reconecta; vuelve a pedir la sesión (`GET /api/auth/sesion`) para actualizar los permisos                                                        |
+
+### Qué hace el cliente ante un 4001
+
+**La conexión no renueva la sesión** (D14): la sesión se mantiene viva solo con pedidos HTTP, y el
+cierre por inactividad de la tablet sigue igual (riesgo R1). El token de la conexión es el de la
+cookie en el momento de conectar, así que vence a los 15 min de abierta **aunque la persona siga
+usando la tablet**, y el latido la cierra con 4001. Por eso:
+
+1. Si la conexión ya había recibido `conectado` y se cierra con 4001, el cliente **reconecta
+   enseguida, una sola vez**: el navegador manda la cookie que renovaron los últimos pedidos.
+2. Si esa nueva conexión se cierra con 4001 **sin haber recibido `conectado`**, la sesión terminó:
+   el cliente hace lo mismo que con un 401 (por ejemplo, vuelve a pedir `GET /api/auth/sesion` y,
+   si responde 401, va al ingreso). No sigue reconectando.
+3. Si la nueva conexión recibe `conectado`, vuelve a pedir la lista y sigue normal.
+
+### Proxys
+
+El navegador abre el WebSocket contra el mismo origen de la interfaz; el proxy tiene que dejar
+pasar el _upgrade_ (riesgo R4):
+
+- **Vite** (`frontend/vite.config.ts`): `proxy: { '/api': { target: 'http://localhost:3000', ws: true } }`.
+  Vite conserva el `Host` (`localhost:5173`), que coincide con el `Origin`: no hace falta
+  `TIEMPO_REAL_ORIGENES`.
+- **nginx** (`frontend/nginx.conf`), en `location /api/`: `proxy_http_version 1.1;`,
+  `proxy_set_header Upgrade $http_upgrade;` y `proxy_set_header Connection $connection_upgrade;`
+  (con `map $http_upgrade $connection_upgrade { default upgrade; '' close; }` fuera del bloque
+  `server`). Además, `proxy_set_header Host $http_host;` en lugar de `$host` para conservar el
+  puerto (`localhost:8080`) y que coincida con el `Origin`; si no, hay que poner
+  `TIEMPO_REAL_ORIGENES=http://localhost:8080` en el servicio `backend` de `docker-compose.yml`.
+  El latido manda tráfico cada 30 s, así que alcanza el `proxy_read_timeout` por defecto (60 s).
+
+## Interfaz (fase 2)
+
+Código: [`api/recordatorios.ts`](../frontend/src/api/recordatorios.ts) (tipos y API),
+[`tiempoReal/`](../frontend/src/tiempoReal/) (conexión, proveedor y avisos),
+[`paginas/recordatorios/`](../frontend/src/paginas/recordatorios/) (pantalla) e
+[`InsigniaRecordatorios.tsx`](../frontend/src/navegacion/InsigniaRecordatorios.tsx).
+
+### Pantalla Recordatorios (`/recordatorios`, `recordatorios.ver`)
+
+Se llega desde el menú (después de Inicio), la insignia de la barra y, para quien atiende, la
+primera tarea del inicio ("Tomas y estudios para atender").
+
+- **Tarjetas en el orden del servidor** (ya vienen por urgencia), tomas y estudios mezclados: una
+  columna en teléfono; en tablet y PC, tantas columnas de al menos 300 px como entren. La lista es
+  un `ul` con `role="list"` (sin viñetas, Safari deja de anunciarla como lista, E5-12). Cada una:
+  chip de urgencia, **hora grande** (24 h), "Faltan 12 min" / "Atrasada 8 min" / "Toca ahora" y,
+  si venció, "Hace 45 min" (con la hora del servidor, se recalcula sola cada 30 s), paciente
+  "Apellido, Nombre" con DNI, cama y sala, y qué se hace, con su ícono:
+  - **Toma** (ícono de medicamento): medicamento con dosis, vía y presentación (número y unidad
+    sin cortes). La tarjeta se nombra "Toma de las 11:52 · Benítez, Rosa".
+  - **Estudio** (ícono de microscopio, distinto del de medicamento): nombre del estudio, tipo (si
+    el nombre lo precisa) y "Preparación: …" si tiene. Se nombra "Estudio de las 12:05 · Benítez,
+    Rosa" y concuerda en masculino: "Atrasado 8 min", "Vencido", "Programado".
+- **Chip de urgencia** (ícono y texto, nunca verde ni rojo); las tarjetas urgentes y vencidas
+  llevan además el borde de advertencia:
+
+  | Recordatorio                          | Chip (toma / estudio)   | Aspecto            |
+  | ------------------------------------- | ----------------------- | ------------------ |
+  | `VENCIDO`                             | Vencida / Vencido       | Relleno `warning`  |
+  | `PENDIENTE` `ALTA`, o ya pasó su hora | Urgente                 | Relleno `warning`  |
+  | `PENDIENTE` `MEDIA`                   | Pronto                  | Contorno `primary` |
+  | `PENDIENTE` `BAJA`                    | Programada / Programado | Contorno neutro    |
+
+  **Lo atrasado es urgente aunque el servidor no lo diga** (E5-02): un estudio siempre llega con
+  prioridad `MEDIA`, y la de una toma se recalcula una vez por minuto. Por eso la tablet, con la
+  hora del servidor, pinta "Urgente" (relleno, ícono y borde) a todo pendiente que ya pasó su hora,
+  toma o estudio, y lo cuenta: el resumen del panel ("4 para atender · 2 urgentes") y la insignia
+  cuentan en el cliente los vencidos, los `ALTA` y los atrasados (`contarUrgentes`), no
+  `meta.urgentes` (que no cuenta un estudio atrasado). Sin la lista completa (la API la manda
+  entera) no podría hacerse; con ella, el número coincide siempre con lo que se ve.
+
+  **Vencida dice "Hace 45 min", no "Atrasada"** (E5-11): el chip ya dice el estado; el texto dice
+  cuánto hace de la hora, sin parecer un segundo estado. Es neutro en género ("Hace" sirve para la
+  toma y el estudio).
+
+- **Acciones de una toma**, solo con `recordatorios.atender`: **No se administró** (texto) abre la
+  confirmación con motivo obligatorio (3 a 255; el campo no deja escribir más) y hace el `POST`;
+  **Administrar** (con contorno, pide además `suministros.registrar`) abre
+  `/suministros/medicamento?pacienteId=…&prescripcionId=…&desde=recordatorios&toma=<fechaHoraObjetivo>`,
+  que deja elegidos el paciente y la prescripción, y lleva en el estado de la navegación
+  (`volverA`) los filtros del panel. Un 409 cierra el diálogo, avisa "Ya estaba atendido (por
+  usted o por otra persona). Revise el historial." (pudo ser la misma persona desde otra tablet,
+  E5-14; si `detalles.estado` es `CANCELADO`, que se canceló) y vuelve a pedir la lista; un 422
+  explica que un estudio se atiende confirmándolo; cualquier otro error queda dentro del diálogo,
+  sin perder el motivo escrito. El diálogo no corta el medicamento entre número y unidad.
+- **La toma del recordatorio** (E5-01): con `toma`, la administración habla de esa toma aunque
+  esté atrasada o vencida. Sin esto, pasados 30 min el servidor ya da como próxima la siguiente, y
+  la pantalla decía "Faltan 7 h… para la toma de las 16:00. Verifique que corresponda adelantarla".
+  Con `toma`, la tarjeta y el resumen dicen "Toma de las 08:00 · atrasada 1 h 15 min
+  (recordatorio)" y no aparece el aviso de adelantar. El aviso de "ya se dio" sigue igual (lo
+  decide la última administración). Solo vale para la prescripción del recordatorio; si se elige
+  otra, o se cambia de paciente, vuelve a ser la toma que calcula el servidor. El servidor no
+  cambia: el suministro atiende el recordatorio de la toma más cercana (D23).
+- **Acción de un estudio**, solo con `estudios.confirmar`: **Confirmar que se realizó** (con
+  contorno, ícono del rostro) abre `useConfirmacionEstudio` con `estudio.id` y el paciente del
+  recordatorio (nombre, DNI y cama); se confirma con el rostro. Al terminar, el hook renueva
+  `['recordatorios']` (el estudio sale de la lista) y el panel muestra su aviso: el éxito nombra al
+  paciente ("Se confirmó que se realizó Rx de tórax a Benítez, Rosa (…)", la tarjeta ya no está
+  para recordarlo) y el 409 dice "Este estudio ya estaba confirmado o cancelado (por usted o por
+  otra persona). Revise el historial." (E5-14). Un estudio no ofrece "No se administró" ni
+  "Administrar".
+- **Volver al panel después de administrar** (`desde=recordatorios` en la administración): la flecha
+  Volver lleva a `/recordatorios` con los filtros que tenía ("Volver a Recordatorios"); al registrar
+  con éxito, el aviso ofrece **Volver a Recordatorios** como acción principal, al final, junto a
+  "Ir a la ficha". Con algo cargado sin registrar, la flecha pregunta antes (`useCambiosSinGuardar`);
+  cambiar de paciente conserva el camino de vuelta. El recordatorio de la toma lo atiende el
+  servidor al registrar el suministro; la pantalla solo renueva `['recordatorios']` (la insignia se
+  actualiza aunque no haya tiempo real).
+- **Foco del resultado**: el aviso de "No se administró" o de la confirmación del estudio (también el
+  409/422) usa `Alerta` con `enfocar`. Al cerrarse el diálogo MUI devuelve el foco al botón de la
+  tarjeta, que desaparece al recargarse la lista: sin esto el foco caería en la página.
+- **Estados**: cargando; error con Reintentar (si ya había una lista, queda a la vista con su
+  hora); vacío según el filtro ("No hay tomas ni estudios para atender ahora", "No hay tomas…" o
+  "No hay estudios…", con "en _sala_" si se filtró, y a qué hora se actualizó) y, si hay algún
+  filtro, **"Quitar filtros"** como en los otros listados (E5-17); franja "Sin conexión en tiempo
+  real: la lista y los avisos se actualizan cada 30 s." (a quien no atiende: "la lista se
+  actualiza cada 30 s."). La lista se nombra "Recordatorios para atender" ("Tomas para atender" o
+  "Estudios para atender" con el filtro).
+- **Filtros en la URL**: **Tipo** (`?tipo=MEDICAMENTO|ESTUDIO`: Todos, Tomas, Estudios; un valor
+  desconocido se ignora y no se manda) para todos, y **Sala** (`?salaId=2`) solo con `pacientes.ver`
+  (las salas salen de `GET /api/salas`). Van juntos, de a dos desde tablet. Una sala que no está en
+  la lista se ignora como el tipo: no se manda ni se nombra (E5-17); sin `pacientes.ver`, la sala
+  de la dirección no se usa. Si la lista de salas no carga, el filtro lo dice y ofrece Reintentar
+  (E5-08).
+- **La tablet recuerda la última sala** (ESC5): elegir una sala la guarda (`localStorage`
+  `sgsm.salaRecordatorios`; "Todas" y "Quitar filtros" la olvidan). Al abrir el panel sin sala en
+  la dirección (desde el menú, la insignia o el inicio) se usa la recordada, y queda en la
+  dirección (volver desde Administrar trae la misma vista); si ya no existe, se ignora. La sala de
+  la dirección manda sobre la recordada. Sin almacenamiento, el filtro funciona igual.
+- **Interruptor "Sonido de avisos"** (solo quien atiende): **prendido por defecto solo para el
+  personal de sala** (`esPersonalDeSala`: atiende recordatorios y no administra usuarios); el
+  administrador lo ve apagado y lo puede prender (D153). La tablet guarda solo lo que se aparta del
+  valor de quien la usa (`localStorage` `sgsm.sonidoAvisos = 'no' | 'si'`; sin almacenamiento,
+  vale mientras la pantalla esté abierta). Al prenderlo suena una vez, con el toque, para comprobar
+  el audio.
+- **Interruptor "Mantener la pantalla encendida"** (ESC2), para dejar el panel a la vista en el
+  office: con la Screen Wake Lock API pide que la tablet no apague la pantalla mientras el panel
+  está abierto. Apagado por defecto; se recuerda en la tablet (`sgsm.pantallaEncendida = 'si'`,
+  con try/catch). El navegador lo suelta cuando la pantalla deja de verse (bloqueo, otra app): al
+  volver se pide de nuevo. Al salir del panel o apagarlo se suelta. Si el navegador no tiene la API
+  (o la niega, por ejemplo con batería baja), el interruptor no aparece o no hace nada. Hook:
+  [`useMantenerPantalla`](../frontend/src/paginas/recordatorios/useMantenerPantalla.ts).
+- **Insignia** de la barra: la misma consulta que la lista sin filtros (`['recordatorios', {}]`),
+  con `aria-label` "Recordatorios: N para atender, M urgentes" (o "1 urgente"); los urgentes se
+  cuentan en el cliente (ver el chip). La cantidad va rellena de advertencia solo si hay urgentes;
+  si no, con contorno neutro. **Sin tiempo real** lleva abajo a la izquierda el ícono de sin señal
+  y el `aria-label` suma "; sin avisos en tiempo real" (E5-03): se nota en cualquier pantalla, no
+  solo en el panel.
+
+### Cliente de tiempo real
+
+- [`conexion.ts`](../frontend/src/tiempoReal/conexion.ts): sin React, con la fábrica del socket
+  y el reloj inyectables. Valida cada mensaje (lo que no entiende lo ignora) y expone el estado
+  (`conectando`, `conectado`, `sin-conexion`). Cierres: 1001, 1006 y cualquier otro inesperado
+  reconectan con espera de 1, 2, 4… hasta 30 s (vuelve a 1 s con cada `conectado`); 4001
+  reconecta enseguida una vez y, si la nueva conexión vuelve a cerrar con 4001 sin `conectado`,
+  avisa que la sesión terminó; 4003 no reconecta y avisa; 1000, nada. Si está esperando para
+  reconectar y vuelve la red (`online`) o la pantalla (`visibilitychange`), reconecta ya.
+- [`ProveedorTiempoReal`](../frontend/src/tiempoReal/ProveedorTiempoReal.tsx), montado en
+  `Disposicion` (la plantilla de toda pantalla con sesión): se conecta solo con
+  `recordatorios.ver`. Cada mensaje (también `conectado`) invalida `['recordatorios']`; si
+  `vencidos > 0`, también `['notificaciones']`. Ante 4001 dos veces o 4003 vuelve a pedir la
+  sesión (`refrescarSesion`): un 401 lleva al ingreso y un permiso perdido saca el menú, la
+  insignia y la conexión.
+- **La lista no depende solo del socket** (E5-04): sin conexión se vuelve a pedir cada 30 s y, con
+  la conexión abierta, cada 90 s (un aviso perdido no deja la lista vieja más de 90 s). Al volver
+  la pantalla (`visibilitychange`) o la red (`online`) se pide enseguida, además de reconectar si
+  estaba esperando.
+- **Nuevos sin socket** (E5-03): el proveedor observa la lista de todo el hospital (la misma
+  consulta que la insignia) y compara sus ids con la anterior. Si no hubo socket desde la última
+  vez (sin conexión, o la primera lista después de un corte), los ids nuevos se avisan con el mismo
+  agrupador (`avisos.sumar`): texto, tono y vibración, como mucho cada 10 s. Con la conexión
+  abierta los avisa el socket (`nuevos`) y no se cuentan dos veces. La primera carga no avisa.
+- **Tono repetido** (ESC3): mientras haya urgentes o vencidos sin atender (la misma cuenta que la
+  insignia) y el sonido esté prendido, a quien atiende le vuelve a sonar el tono cada 5 min
+  ([`useTonoRepetido`](../frontend/src/tiempoReal/useTonoRepetido.ts), con el reloj inyectable
+  para las pruebas). Al primero lo hace el aviso de nuevos.
+- **Reloj (R6)**: desfase = hora del servidor − hora de la tablet, con `meta.ahora` de cada
+  respuesta de la lista y `momento` de cada mensaje (diferencias de menos de 1 s se ignoran).
+- **Avisos de nuevos (S16)**, solo a quien tiene `recordatorios.atender`: texto ("2 recordatorios
+  nuevos") con "Ver recordatorios" y Cerrar, **en la franja fija bajo la barra superior** (la del
+  modo demostración, E5-05): ahí no tapa los botones de abajo, y los diálogos quedan por encima.
+  Tono corto de dos notas (Web Audio) y vibración si la tablet no los apagó. Como mucho un aviso
+  cada 10 s: lo que llega antes se suma al siguiente. El audio se habilita con el primer toque en
+  la pantalla (R7); sin Web Audio o sin vibración (iOS) queda solo el texto.
+- **Cuánto queda a la vista** (E5-06): 15 s, pero el tiempo no corre mientras el puntero o el foco
+  están adentro ni mientras un diálogo lo tapa (al volver cuenta 15 s de nuevo); con urgentes o
+  vencidos sin atender queda hasta que se lo cierre.
+- **Lo que oye el lector de pantalla** (E5-05): una región `aria-live="polite"` aparte
+  (`RegionAvisos`), siempre presente y fuera de la aplicación: MUI marca `aria-hidden` todo lo que
+  está al lado de un diálogo o del menú en cajón, y desde ahí no se oiría. Se monta en el `body`
+  y, con un diálogo abierto, adentro de él (lo de afuera de un diálogo modal puede no leerse); si
+  algo le pone `aria-hidden`, se lo quita.
+- **Cierre por inactividad** (ESC1): sin sesión no hay conexión ni avisos. El ingreso lo explica:
+  "Se cerró la sesión por inactividad. Los avisos de recordatorios quedan apagados hasta que vuelva
+  a ingresar." (a quien no atiende recordatorios, solo "… Vuelva a ingresar."). El motivo llega por
+  el `aviso` del contexto de sesión, que sigue montado al pasar al ingreso.
+
+### Pruebas
+
+- [`pruebas/servidor.ts`](../frontend/src/pruebas/servidor.ts) trae respuestas por defecto para
+  lo que monta la plantilla: `GET */api/recordatorios` vacío con su `meta` y el WebSocket simulado
+  con `ws.link('*/api/tiempo-real')` de MSW (funciona en jsdom), que acepta y manda `conectado`.
+  Datos y ayudas en [`datosRecordatorios.ts`](../frontend/src/pruebas/datosRecordatorios.ts)
+  (`simularRecordatorios`, `avisarCambio`, `registrarConexiones`, `fijarHoraTablet`).
+- Unitarias: `tiempoReal/conexion.test.ts` (cada código de cierre con un socket falso),
+  `tiempoReal/avisos.test.ts`, `tiempoReal/useTonoRepetido.test.ts` (reloj falso),
+  `tiempoReal/avisoNuevos.test.tsx` (cierre automático y pausas con temporizadores falsos, región
+  dentro de un diálogo de MUI) y `paginas/recordatorios/urgencia.test.ts` (también las etiquetas en
+  masculino, lo atrasado como urgente y "Hace 45 min"). De pantalla:
+  `paginas/recordatorios/panel.test.tsx` (tomas y estudios, confirmar un estudio con el rostro y su
+  409, filtro por tipo, foco del resultado y volver con los filtros),
+  `paginas/recordatorios/panelFiltros.test.tsx` (sala: error con Reintentar, sala inexistente,
+  Quitar filtros, sala recordada; pantalla encendida con una Wake Lock falsa),
+  `paginas/suministros/administracion.test.tsx` ("volver al panel de recordatorios" y "la toma
+  del recordatorio"), `tiempoReal/tiempoReal.test.tsx` (también E5-03, E5-04, E5-05 y ESC3),
+  `navegacion/insignia.test.tsx` y `paginas/Ingreso.test.tsx` (cierre por inactividad).
+  `recordatorioDeEstudio()` (en `datosRecordatorios.ts`) es el del estudio 60 de
+  `datosEstudios.ts`.
+- Mientras se hace la primera carga de la lista, React Query reutiliza ese pedido si llega
+  `conectado` (no pide dos veces); las pruebas que cuentan pedidos esperan a que la lista esté
+  cargada antes de mandar avisos.
+
+## Decisiones
+
+Tomadas al bajar el diseño al código; complementan D9–D14 de [diseno-e5.md](diseno-e5.md). D15–D19
+son del contrato (fase 0); D20–D25, de la implementación del backend (fase 1). Siguen D26–D35 en
+[estudios.md](estudios.md#decisiones).
+
+| #   | Decisión                                                                                                                                                                                                                                              | Por qué                                                                                                                                                                               |
+| --- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| D15 | Atendido = `atendidoEn` + **exactamente una** resolución en una toma (administración o motivo); ninguna en un estudio (CHECK).                                                                                                                        | El recordatorio dice cómo se resolvió sin ambigüedad; la confirmación del estudio vive en `estudios`.                                                                                 |
+| D16 | Sin sesión o sin permiso, el WebSocket se abre y se cierra con 4001/4003; un origen ajeno se rechaza con HTTP 403.                                                                                                                                    | El navegador no ve el estado HTTP de un WebSocket rechazado; el código de cierre le dice si reconectar o no.                                                                          |
+| D17 | Origen aceptado: el mismo `Host` del pedido o la lista `TIEMPO_REAL_ORIGENES`.                                                                                                                                                                        | Funciona detrás de Vite sin configurar nada; detrás de un proxy que cambia el `Host` (nginx) se agrega el origen a la lista.                                                          |
+| D18 | Los mensajes llevan cantidades (`nuevos`, `vencidos`) y la hora del servidor, nunca datos del paciente.                                                                                                                                               | Alcanza para decidir el tono, la vibración y si recargar notificaciones; la hora corrige el reloj de la tablet (R6).                                                                  |
+| D19 | El panel muestra solo pacientes internados; un vencido de un paciente egresado deja de verse.                                                                                                                                                         | El egreso cancela los pendientes pero no los vencidos (diagrama de estados); no tiene sentido atenderlos tras el alta.                                                                |
+| D20 | Un pedido de conexión sin `Origin` se acepta.                                                                                                                                                                                                         | Los navegadores siempre lo mandan (el control de origen protege de páginas ajenas abiertas en el navegador); un cliente que no es navegador igual necesita una cookie válida.         |
+| D21 | El latido revisa primero la sesión y el permiso, y después si la conexión contestó el _ping_.                                                                                                                                                         | El cliente recibe el código que le dice qué hacer (4001/4003) en lugar de un corte (1006).                                                                                            |
+| D22 | `GENERAR` y `VENCER` se auditan uno por recordatorio, sin usuario y con el paciente; la notificación de vencido es una por recordatorio y por administrador activo.                                                                                   | La auditoría por paciente queda completa (RN06) y el aviso dice exactamente qué toma se perdió; el volumen es el riesgo R8.                                                           |
+| D23 | La atención por administración toma como `atendidoEn` la hora del suministro y solo atiende el pendiente o vencido de su toma más cercana; uno ya atendido con motivo no cambia. Toda actualización de estado lleva el estado esperado en el `WHERE`. | Misma regla que el historial (`tomaMasCercana`). Una atención, un vencimiento y un "No se administró" simultáneos no se pisan: el segundo no encuentra la fila en el estado esperado. |
+| D24 | "No se administró" se puede registrar antes de la hora de la toma.                                                                                                                                                                                    | Enfermería puede saber de antemano que una toma no se va a dar (ayuno, estudio, rechazo).                                                                                             |
+| D25 | El temporizador y el tiempo real los arranca `levantarServidor()` en `servidor.ts`; `server.ts` solo la llama y apaga ordenado con SIGTERM o SIGINT (las conexiones cierran con 1001).                                                                | `crearApp()` sigue sin efectos: las pruebas de la API no corren el temporizador.                                                                                                      |
+
+### Decisiones de la revisión (agenda y avisos)
+
+| #    | Decisión                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    | Por qué                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| D112 | Cada prescripción guarda el ancla de su agenda (`agendaDesde`, la toma 0). Es la fecha de inicio; al **reanudar** pasa a ese momento y al **cambiar la frecuencia**, a la toma de la última dosis dada de la agenda vigente, que queda como toma 0 ya dada (si no hay dosis, o quedó una toma sin dar después, a ese momento: D122); ninguno de los dos adelanta un tratamiento que todavía no empezó. Las tomas se cuentan desde el ancla con la frecuencia vigente; lo dado antes conserva la toma que guardó (D121) y no cuenta para las tomas nuevas (en la agenda original se sigue admitiendo adelantar la primera toma hasta media frecuencia). La ficha, la agenda de 24 h (que empieza por la próxima toma), la generación de recordatorios, la atención por administración y `TOMA_YA_DADA` usan la misma regla ([`agenda.ts`](../backend/src/modulos/prescripciones/agenda.ts)). | Con la agenda contada siempre desde el inicio, pasar de cada 6 h a cada 12 h a las 13:00 con dosis a las 06:00 y 12:00 dejaba la próxima en las 12:00 de la grilla vieja (o salteaba una) y la agenda de 24 h no coincidía con la próxima; reanudar a las 15:00 una de cada 8 h esperaba a la toma de la grilla original y contaba una dosis de antes de suspender. Ahora: próxima 00:00 en el primer caso; 15:00 (toca ahora) y 23:00 en el segundo.             |
+| D115 | `POST /api/notificaciones/leer-todas` marca como leídas todas las del usuario de la sesión, con el mismo permiso que marcar una (tener sesión), y responde cuántas marcó.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   | Con muchos vencidos en un turno, el administrador tenía que abrir y marcar cada aviso.                                                                                                                                                                                                                                                                                                                                                                            |
+| D122 | Al volver a anclar: (1) si después de la toma de la última dosis quedó alguna toma de la agenda vieja sin dar hasta ese momento, el ancla del cambio de frecuencia es ese momento y no la última dosis; (2) al cambiar la frecuencia o reanudar, los `VENCIDO` de tomas que no están en la agenda nueva pasan a `CANCELADO` (conservan `vencidoEn`), con una entrada `CANCELAR` por cada uno en la auditoría, como D28 de los estudios. Una toma marcada "No se administró" también cuenta como sin dar.                                                                                                                                                                                                                                                                                                                                                                                    | Con cada 6 h, dosis a las 00:00 y 06:00 y la de las 12:00 vencida, pasar a cada 12 h a las 13:00 anclaba en las 06:00: la dosis tardía de las 13:10 se atribuía a la toma de las 18:00, esa toma se salteaba y a las 18:00 respondía `TOMA_YA_DADA`; el vencido de las 12:00 quedaba abierto sin que ninguna administración lo pudiera atender. Ahora: próxima toma 13:00, la dosis de las 13:10 es de esa toma, la siguiente a la 01:00 y el vencido se cancela. |
+
+Pruebas de D112 y D122: [`agenda.test.ts`](../backend/src/modulos/prescripciones/agenda.test.ts) (los
+casos con la agenda pura), [`agenda-reanclada.test.ts`](../backend/src/modulos/prescripciones/agenda-reanclada.test.ts)
+(por la API: próxima toma, agenda de 24 h, recordatorios cancelados y generados, el vencido y la
+dosis tardía, un cambio de frecuencia con una administración en curso, auditoría),
+[`cancelacion.test.ts`](../backend/src/modulos/recordatorios/cancelacion.test.ts) (reanudar cancela
+el vencido) y
+[`generacion.test.ts`](../backend/src/modulos/recordatorios/generacion.test.ts). De D115:
+[`notificaciones.test.ts`](../backend/src/modulos/notificaciones/notificaciones.test.ts).
+
+### Decisiones de la interfaz (revisión E5)
+
+| Hallazgo  | Decisión                                                                                                                                                                                                                    | Por qué                                                                                                                                                |
+| --------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| E5-02     | La tablet cuenta como urgente todo pendiente que ya pasó su hora y no usa `meta.urgentes` para mostrar (cuenta con la lista).                                                                                               | El servidor deja el estudio en `MEDIA` y recalcula la toma por minuto; la insignia, el resumen y los chips dicen lo mismo.                             |
+| E5-03     | Sin tiempo real la franja dice "la lista y los avisos se actualizan cada 30 s" y no "no suenan avisos".                                                                                                                     | Con la comparación de ids los nuevos sí se avisan (con tono) en cada consulta: "no suenan" sería falso.                                                |
+| E5-03     | Se avisan por comparación también los nuevos de la primera lista después de un corte.                                                                                                                                       | Lo que el temporizador generó durante el corte nunca llegó por el socket.                                                                              |
+| E5-05     | El aviso de nuevos va en la franja fija bajo la barra (no abajo), y su región `aria-live` en el `body` o dentro del diálogo abierto.                                                                                        | Arriba no tapa botones y los diálogos quedan encima; MUI oculta lo que está al lado de un diálogo, y lo de afuera de un diálogo modal puede no leerse. |
+| E5-11     | Vencida: chip "Vencida" y "Hace 45 min".                                                                                                                                                                                    | "Atrasada" al lado de "Vencida" se leía como dos estados; "Hace" es neutro y sirve para la toma y el estudio.                                          |
+| E5-01     | La toma del recordatorio viaja en la URL (`toma`) y reemplaza la próxima toma solo de esa prescripción.                                                                                                                     | El servidor no cambia (D23); "Faltan 7 h… adelantarla" para una toma vencida era un aviso equivocado.                                                  |
+| ESC1–ESC5 | Inactividad: el motivo por el `aviso` de la sesión (lo de los avisos apagados, solo al personal de sala, D153). Pantalla encendida y sala: preferencias por tablet en `localStorage` con try/catch. Tono cada 5 min (ESC3). | Ya existía el `aviso` de la sesión; las preferencias son de la tablet (compartida), no de la persona.                                                  |
+
+### Decisiones de la interfaz (revisión F1–F20)
+
+| #    | Decisión                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    | Por qué                                                                                                                                                                                                                                  |
+| ---- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| D153 | Un solo criterio, `esPersonalDeSala(usuario)` ([`auth/personalDeSala.ts`](../frontend/src/auth/personalDeSala.ts)): tiene `recordatorios.atender` y no tiene `usuarios.gestionar`. Para él el sonido y el tono repetido empiezan prendidos y, al cerrarse la sesión por inactividad, se le dice que los avisos quedan apagados. Para el resto (el administrador), el sonido empieza apagado.                                                                                                                | El administrador también atiende, pero no está junto a la cama: con el sonido prendido por defecto, su PC sonaba cada 5 min por los urgentes de todo el hospital.                                                                        |
+| D154 | En la tarjeta, "No se administró" (texto) y Administrar (contorno) quedan a 16 px, también apilados, y los dos con 56 px de alto.                                                                                                                                                                                                                                                                                                                                                                           | Con guantes, a 8 px se tocaba uno por el otro; "No se administró" no se deshace.                                                                                                                                                         |
+| D163 | Reanudar y cambiar la frecuencia dicen desde cuándo se cuentan las tomas con la misma regla que el servidor (D112 · D122, en [`prescripciones/agenda.ts`](../frontend/src/paginas/prescripciones/agenda.ts) de la interfaz): "desde la última dosis dada" solo si hay una de la agenda vigente (su `tomaProgramada` ≥ `agendaDesde`) y ninguna toma quedó sin dar después; si no, "desde ahora"; si el tratamiento todavía no empezó, "desde el inicio del tratamiento (08/10 08:00)", también al reanudar. | Decía "desde la última dosis dada" con cualquier dosis: reanudada a las 15:00 y con la última dosis de las 06:00, el servidor anclaba en ahora; y "desde ahora" en un tratamiento que empieza mañana, cuando el servidor no lo adelanta. |
+| D166 | "Marcar todas como leídas" dice cuántas marcó (`role="status"`: "Se marcaron 2 como leídas.") y lleva el foco a **Cerrar**, porque el botón desaparece cuando ya no quedan sin leer.                                                                                                                                                                                                                                                                                                                        | El foco caía al contenedor del diálogo y nada anunciaba el resultado.                                                                                                                                                                    |
+
+La tarjeta muestra las **Observaciones** de la prescripción ("Observaciones: Si fiebre") que el
+recordatorio trae en `prescripcion.observaciones` (F7); si son `null`, no muestra nada.
+
+Cómo se cuentan los recordatorios en las estadísticas (a tiempo, tarde, no administrados, vencidos
+sin atender): [reportes.md](reportes.md), D45 y supuesto S20.

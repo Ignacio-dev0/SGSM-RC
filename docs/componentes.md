@@ -1,0 +1,393 @@
+# Guía de componentes
+
+> Tarea T010 · Cubre RNF01. Código en [`frontend/src/componentes/`](../frontend/src/componentes/).
+> Pruebas: [`componentes.test.tsx`](../frontend/src/componentes/componentes.test.tsx),
+> [`Tabla.test.tsx`](../frontend/src/componentes/Tabla.test.tsx),
+> [`ChipEstado.test.tsx`](../frontend/src/componentes/ChipEstado.test.tsx) y
+> [`AccionesFormulario.test.tsx`](../frontend/src/componentes/AccionesFormulario.test.tsx).
+
+Todas las pantallas usan estos componentes en lugar de los de MUI directamente, para que el
+tamaño táctil, los textos y la accesibilidad sean iguales en todo el sistema.
+
+| Componente           | Para qué                                                    | Props principales                                                                                                                                           |
+| -------------------- | ----------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Boton`              | Cualquier acción                                            | `variante` (`principal`, `secundario`, `peligro`, `peligroConfirmar`, `texto`), `cargando`                                                                  |
+| `CampoTexto`         | Entrada de texto con error en línea                         | `etiqueta`, `valor`, `alCambiar`, `error`, `ayuda` (texto, o texto con un contador)                                                                         |
+| `CampoContrasena`    | Contraseña con el botón para mostrarla u ocultarla          | Las de `CampoTexto` (sin `type`): Ingreso y formulario de usuario (F17)                                                                                     |
+| `Selector`           | Elegir una opción (usa el selector nativo de la tablet)     | `etiqueta`, `valor`, `opciones`, `alCambiar`, `ayuda`, `textoVacio`, `alReintentar`, `errorDeCarga`, `reintentando`                                         |
+| `Tabla`              | Listados con estado vacío, carga y paginación               | `titulo`, `columnas`, `filas`, `claveFila`, `alTocarFila`, `paginacion`, `paginacionArriba`, `tituloVisible`                                                |
+| `ModalConfirmacion`  | Confirmar acciones que modifican o eliminan                 | `abierto`, `titulo`, `mensaje`, `textoConfirmar`, `textoCancelar`, `peligroso`, `pedirMotivo`, `ayudaMotivo`, `maxMotivo`, `confirmarDeshabilitado`         |
+| `Alerta`             | Cartel de error, advertencia, éxito o info                  | `tipo`, `titulo`, `alCerrar`, `accion`, `enfocar`                                                                                                           |
+| `ChipEstado`         | Estado de un registro (Vigente, Suspendida, Egresado…)      | `estado` (una de las claves de `ESTADOS_CHIP`)                                                                                                              |
+| `AccionesFormulario` | Botonera al pie de un formulario                            | `children` (los botones; la acción principal al final)                                                                                                      |
+| `Cargando`           | Mientras llegan los datos (nunca pantalla en blanco)        | `texto`                                                                                                                                                     |
+| `ErrorDeCarga`       | Los datos no llegaron: qué faltó, por qué y Reintentar      | `que` (con artículo), `error`, `alReintentar`                                                                                                               |
+| `IdentidadPaciente`  | Nombre, DNI, edad y cama del paciente sobre el que se actúa | `paciente` (en `paginas/pacientes/`)                                                                                                                        |
+| `PlantillaTablet`    | Estructura de toda pantalla autenticada                     | `opciones` (con `exacta`: se resalta solo en su ruta, F10), `resaltada` (D161), `acciones`, `aviso` (franja fija), `pieDelCajon` (tema en el teléfono, R10) |
+
+## Reglas de uso
+
+- **Una acción principal por pantalla** (`variante="principal"`); el resto, `secundario` o `texto`.
+- **Mientras se guarda**, el botón va con `cargando`: se deshabilita y evita el doble toque.
+- **Errores de validación** en el campo (`error`), no en un cartel general.
+- **Errores de la API** en una `Alerta tipo="error"` arriba del formulario, con el mensaje que
+  devuelve el backend.
+- **Toda baja, cancelación o corrección** pasa por `ModalConfirmacion`; si el caso de uso exige
+  motivo, con `pedirMotivo` (pide al menos 3 letras, como el servidor). El mensaje **nombra el
+  objeto** (paciente con DNI y cama, medicamento) y dice **si se puede deshacer**.
+- **El mínimo del motivo se dice desde el principio** (F52): con `pedirMotivo` el campo ya muestra
+  "Escriba el motivo (mínimo 3 letras)"; si se pasa `ayudaMotivo`, el modal le agrega
+  "(mínimo 3 letras)". El error "Escriba al menos 3 letras" sigue apareciendo si se escribe de menos.
+- **El máximo del motivo es el del servidor**: `maxMotivo` (por defecto 255, el `.max(255)` de todos
+  los esquemas de motivos) va como `maxLength` del campo, así que no se puede escribir de más. Desde
+  el 80 % del máximo, la ayuda muestra a la derecha el contador "N/255" (en negrita al llegar al
+  máximo, donde el campo deja de aceptar letras); va dentro de la ayuda, así que el lector de
+  pantalla también lo oye. Antes no aparece, para no distraer en un motivo corto.
+- `ModalConfirmacion` **no se cierra tocando afuera** (se perdería el motivo escrito): se sale
+  con Cancelar o Escape.
+- **El mensaje describe el diálogo** (E5-13): `ModalConfirmacion` lo enlaza con `aria-describedby`
+  (sea texto o varios párrafos), así el lector de pantalla lee sobre qué se actúa y si se puede
+  deshacer al abrirse, no solo el título.
+- **Ninguna pantalla en blanco**: mientras carga, `Cargando`; si falla, `ErrorDeCarga` (un
+  error nunca se muestra como "no hay datos"). Los selectores que dependen de una lista dicen
+  en su texto de ayuda si la lista no se pudo cargar o está vacía.
+- **Una lista que no carga se puede reintentar ahí mismo** (F60): los selectores que dependen de
+  una lista del servidor (pacientes, medicamentos, camas, tipos de estudio, salas) reciben
+  `alReintentar` (y `reintentando`). Si la lista no cargó, aparece "Reintentar" al lado del
+  selector y el error dice la causa (`No se pudo cargar la lista de X. {mensajeDeError(error)}`).
+  Nunca "vuelva a entrar a esta pantalla".
+- **Reintentar solo cuando el error es de la carga** (E5-07): si el mismo selector puede mostrar
+  un error de validación ("Elija la cama"), se le pasa `errorDeCarga={consulta.isError}`: con un
+  error de validación no aparece Reintentar (la lista sí está). Sin `errorDeCarga`, Reintentar
+  acompaña a cualquier `error` (para los selectores cuyo único error es el de la carga). La
+  estructura no cambia con o sin el botón: el campo no se vuelve a montar ni pierde el foco.
+- **Los errores del servidor dicen qué hacer** (F60): un error interno o una respuesta sin el formato
+  de la API se muestra como "El servidor tuvo un problema. Intente de nuevo en unos minutos; si
+  sigue, avise al área de sistemas." (lo arma `api/cliente.ts`; las pantallas solo muestran
+  `mensajeDeError`). El resto de los errores conserva el mensaje del servidor, que dice qué corregir.
+- Donde se actúa sobre un paciente (administrar, prescribir, egresar, trasladar) se lo
+  identifica con `IdentidadPaciente` o con nombre, DNI y cama en el diálogo.
+- **La acción de peligro no es la más llamativa** (F25). `variante="peligro"` es rojo **con
+  contorno** y es la que abre la confirmación (Finalizar, Dar de alta, Dar de baja): la pantalla
+  conserva una sola acción llena, la principal. El rojo **relleno** (`peligroConfirmar`) aparece
+  recién dentro de `ModalConfirmacion` con `peligroso`, cuando ya se decidió seguir. Las pantallas
+  usan `peligro`; `peligroConfirmar` lo pone el modal y no se usa suelto.
+- **Un aviso que pide una decisión** (reingreso, prescripción duplicada) va con `enfocar` (UX-12):
+  al aparecer se lleva a la vista (centrado) y toma el foco, porque suele mostrarse arriba, lejos
+  del botón que se acaba de tocar. Los avisos que solo informan no lo usan: no deben robar el
+  foco de lo que se está haciendo. La excepción es cuando el control que tenía el foco desaparece:
+  en el panel de recordatorios, el aviso del resultado lo toma porque la tarjeta del botón que abrió
+  el diálogo sale de la lista al recargarse, y el foco caería en la página.
+- **Estados con `ChipEstado`, no con `Chip` suelto** (F30). Ver la tabla más abajo.
+- **El botón principal de un formulario va siempre al final** y dentro de `AccionesFormulario`
+  (F31): en teléfono ocupa el ancho completo, apilado debajo de los secundarios; desde tablet va
+  en fila alineada a la derecha. Primero se escriben los botones secundarios y, último, el
+  principal.
+- `Alerta` usa `role="alert"` para errores y advertencias (interrumpe al lector de pantalla) y
+  `role="status"` para éxito e información.
+
+## Revisión de la interfaz (F1–F20)
+
+- **Un campo que no se puede cambiar es de solo lectura, no deshabilitado, y dice por qué** (F16 ·
+  D165 · D167): `CampoTexto` con `slotProps={{ htmlInput: { readOnly: true } }}` (un `Selector`
+  se reemplaza por un `CampoTexto` con la etiqueta de la opción) y la razón en `ayuda` ("Ya se usó
+  en prescripciones o registros: no se puede cambiar"). Así se llega con Tab, el lector de
+  pantalla lee la razón como descripción del campo y la ayuda no queda en el gris de lo
+  deshabilitado.
+- **Validación facial que falla tres veces** (F4): `pedirValidacion(operacion, detalle, noSeRegistro)`
+  recibe la primera oración del aviso final, que dice qué NO quedó registrado ("No se registró la
+  administración."). Le sigue siempre "Los tres intentos fallidos quedaron registrados y se avisó al
+  administrador.". Sin ella dice "No se registró la operación.".
+- **Ver la contraseña** (F17): `CampoContrasena` en lugar de un `CampoTexto` con `type="password"`.
+- **La opción del menú que corresponde** (F10): una opción con `exacta` se resalta solo en su ruta;
+  así Suministros (el historial) no se resalta en Administrar medicamento ni en Registrar insumos.
+  **D161**: en esas dos pantallas se resalta la sección desde la que se trabaja, la misma a la que
+  lleva "Volver" (`rutaResaltada` en [`navegacion/menu.tsx`](../frontend/src/navegacion/menu.tsx),
+  que `Disposicion` pasa como `resaltada`): Recordatorios con `desde=recordatorios`, Pacientes con
+  un paciente elegido, ninguna sin paciente (se llegó desde Inicio o el historial). La sección
+  lleva `aria-current="true"`; la opción de la pantalla misma, `aria-current="page"`.
+- **La cama nunca se parte** (F3): todo texto que la nombra (diálogos con motivo, avisos de
+  administración, traslado, internación y reingreso, lo que se ve junto a la cámara, el valor
+  `cama` de la auditoría y de las modificaciones del paciente) usa `formatearCama`, `nombreConCama`
+  o `laCama` ("la cama A‑01 (Sala A – …)"). Las opciones de un `Selector` siguen con el guion
+  común.
+- **Las pruebas pueden mirar la caché**: `renderizarApp` devuelve también el `cliente` de
+  TanStack Query, para comprobar que un cambio deja invalidadas las consultas de otras pantallas
+  que no están a la vista (por ejemplo, las prescripciones y el historial del paciente al
+  reanudar).
+
+## Paginación de `Tabla` (E6-10)
+
+Con `paginacion` (`pagina`, `porPagina`, `total`, `alCambiarPagina`) la tabla lleva al pie:
+
+- **Primera, anterior, siguiente y última página**, con esos nombres ("Primera página"…) y de
+  56 px.
+- **"Página 2 de 3 · 51–100 de 120"** en un `role="status"`: se anuncia al cambiar.
+- `paginacionArriba`: la misma barra también arriba de las filas, para listas largas (el estado se
+  anuncia una sola vez).
+- Al cambiar de página, la vista y el foco van **al título**: con `tituloVisible="h2"` (o `h3`) la
+  tabla muestra su título arriba, la nombra (`aria-labelledby`) y es adonde va el foco; sin él, va
+  a la tabla misma, que lleva el título como nombre.
+
+```tsx
+<Tabla
+  titulo="Movimientos"
+  tituloVisible="h2"
+  paginacionArriba
+  paginacion={{ ...consulta.data.meta, alCambiarPagina: filtros.irAPagina }}
+  …
+/>
+```
+
+## Formularios con datos sin guardar
+
+Toda pantalla donde se carga o edita algo **protege lo escrito** (UX-11): con la tablet puesta y
+guantes, un toque accidental en Cancelar, en la flecha Volver o en el menú no puede tirar el
+trabajo. Se usa el hook [`useCambiosSinGuardar`](../frontend/src/utilidades/useCambiosSinGuardar.tsx):
+
+```tsx
+const { dialogo, permitirSalida } = useCambiosSinGuardar(hayDiferencias(datos, VACIO));
+
+onSuccess: () => {
+  permitirSalida(); // justo antes de navegar: el estado todavía no se actualizó
+  navegar('/pacientes');
+};
+
+return <>…{dialogo}</>;
+```
+
+- Mientras `hayCambios` es verdadero, **cualquier salida** (Cancelar, Volver, ítems del menú, el
+  botón Atrás de la tablet y cambiar la dirección de la misma pantalla, por ejemplo el paciente
+  elegido) frena y pregunta **"¿Descartar lo cargado?"** con "Seguir editando" y "Descartar"
+  (peligroso). Cerrar o recargar la pestaña pide la confirmación del navegador (`beforeunload`).
+- **Ir a `/ingresar`** (cerrar sesión o sesión vencida) **nunca se frena**.
+- `hayCambios` compara con **lo que había al abrir**: el formulario vacío en un alta, lo cargado
+  en una edición (volver al valor original deja de contar como cambio). El ayudante
+  `hayDiferencias(actual, original)` lo resuelve para los formularios planos. Elegir algo que viene
+  con valor propuesto (el medicamento y su dosis prescripta) todavía no es un cambio.
+- Al **guardar con éxito y salir**, se llama `permitirSalida()` antes de `navegar(...)`. Donde la
+  pantalla se queda después de guardar (editar un usuario, modificar una prescripción), el
+  formulario vuelve a coincidir con lo guardado y no hace falta.
+- Necesita un **router de datos** (`createBrowserRouter`, como en `App.tsx`; en las pruebas,
+  `renderizarApp` ya lo usa y devuelve `router` para probar el botón Atrás con `router.navigate(-1)`).
+- Lo aplican `RegistroPaciente`, `EdicionPaciente`, `CargaPrescripcion`, `DetallePrescripcion`,
+  `FormularioUsuario`, `RegistroInsumos` y `AdministracionMedicamento`. Una pantalla nueva con
+  formulario lo suma y agrega su caso a
+  [`cambiosSinGuardar.test.tsx`](../frontend/src/paginas/cambiosSinGuardar.test.tsx).
+
+## Chips de estado
+
+`ChipEstado` tiene **una sola tabla** (`ESTADOS_CHIP`, en [`estadosChip.ts`](../frontend/src/componentes/estadosChip.ts))
+de estado → etiqueta, color y variante. El énfasis sube con lo que hay que hacer, así lo que llama
+la vista en un listado es lo que pide atención y no lo normal:
+
+| Nivel                                  | Aspecto               | Estados                                          |
+| -------------------------------------- | --------------------- | ------------------------------------------------ |
+| Esperable                              | Contorno, neutro      | Vigente, Internado, Activo, Validado, Registrado |
+| Hecho a tener en cuenta (no es un mal) | Contorno, `info`      | Corregido                                        |
+| Pide atención                          | Relleno, `warning`    | Suspendida, Bloqueado, Sin registrar             |
+| Cerrado (ya no está en curso)          | Relleno suave, neutro | Finalizada, Egresado, Dado de baja               |
+
+- Solo colores de la paleta (`default`, `info`, `warning`); el rojo (`error`) queda para
+  acciones de peligro y errores, nunca para un estado.
+- El estado nunca se dice solo con el color: la etiqueta siempre dice de qué se trata.
+- Mide **28 px de alto con texto de 0.875rem**; no se usa `size="small"` de MUI (24 px, 13 px).
+- Para sumar un estado se agrega una fila a `ESTADOS_CHIP` y su caso en `ChipEstado.test.tsx`
+  (la prueba falla si la tabla y los casos no coinciden).
+
+## Botonera de formularios
+
+```tsx
+<AccionesFormulario>
+  <Boton variante="texto" onClick={cancelar}>
+    Cancelar
+  </Boton>
+  <Boton cargando={guardando} onClick={guardar}>
+    Registrar
+  </Boton>
+</AccionesFormulario>
+```
+
+Los hijos directos son los botones. En teléfono el contenedor ocupa el ancho completo y cada botón
+también, apilados con 8 px entre sí (el principal abajo, donde llega el pulgar); desde tablet
+(`sm`, 600 px) van en fila, alineados a la derecha y con su ancho natural. Los diálogos
+(`ModalConfirmacion`) tienen su propia botonera y no la usan.
+
+## Ejemplo
+
+```tsx
+<ModalConfirmacion
+  abierto={confirmando}
+  titulo="Dar de alta al paciente"
+  mensaje="Se da de alta a Benítez, Rosa (DNI 30111222, cama A-01). La cama quedará libre."
+  textoConfirmar="Dar de alta"
+  peligroso
+  pedirMotivo
+  etiquetaMotivo="Motivo del egreso"
+  ayudaMotivo="Por ejemplo: alta médica, derivación a otro hospital"
+  confirmarDeshabilitado={Boolean(errorDeFecha)}
+  alConfirmar={(motivo) => egresar.mutate({ motivo })}
+  alCancelar={() => setConfirmando(false)}
+/>
+```
+
+## Campos de fecha y hora
+
+Los campos `datetime-local` muestran y devuelven "AAAA-MM-DDTHH:mm" sin zona. Se leen y se
+escriben **en hora de Argentina**, como todas las horas de la app (E5-16), con
+[`utilidades/campoFechaHora.ts`](../frontend/src/utilidades/campoFechaHora.ts):
+
+```ts
+campoFechaHora(e.fechaHora); // ISO → "2026-10-08T10:00" para el campo
+isoDeCampoFechaHora(valor); // lo elegido → ISO en UTC para la API ('' si no es una fecha)
+msDeCampoFechaHora(valor); // para comparar o validar (NaN si no es una fecha)
+```
+
+- Nunca `new Date(valor)` con el valor del campo: lo leería con la zona de la tablet.
+- Donde se programa o cambia una hora que importa (programar y reprogramar un estudio), la ayuda
+  del campo repite lo elegido con el formato de la app: "Quedará para el 08/10/2026 10:00".
+- Lo usan la carga y la edición de prescripciones y los diálogos de estudios. El egreso del
+  paciente (`DialogosPaciente`) todavía arma su valor inicial con la zona de la tablet.
+
+## Confirmar un estudio con el rostro
+
+[`useConfirmacionEstudio`](../frontend/src/paginas/estudios/ConfirmacionEstudio.tsx) confirma que
+un estudio se realizó desde cualquier pantalla, solo con su id (la ficha del paciente lo usa; el
+panel de recordatorios lo usa para los recordatorios de `ESTUDIO`):
+
+```tsx
+const { abrirConfirmacion, dialogoConfirmacion } = useConfirmacionEstudio({
+  alTerminar: (r) => setAviso(r), // { tipo: 'exito' | 'advertencia', texto, estudio? }
+});
+
+abrirConfirmacion(r.estudio.id, {
+  paciente: { apellido, nombre, dni, cama: r.cama?.numero ?? null }, // si falta, lo pide
+});
+
+return <>…{dialogoConfirmacion}</>;
+```
+
+- El diálogo pide el estudio por id (`GET /api/estudios/:id`) y muestra qué se confirma y a qué
+  paciente (nombre, DNI y cama), también dentro de la validación facial (`useValidacionFacial`,
+  el mismo flujo que en suministros). Si ya no está programado, lo dice y solo ofrece Cerrar.
+- Con el estudio a mano (`abrirConfirmacion(id, { estudio, paciente })`) se muestra enseguida
+  mientras llega el estado actual.
+- `403 VALIDACION_FACIAL_REQUERIDA` queda en el diálogo para volver a validar (el aviso toma el
+  foco); `409 ESTUDIO_NO_PROGRAMADO` cierra y llega a `alTerminar` como advertencia ("Este estudio
+  ya estaba confirmado o cancelado (por usted o por otra persona). Revise el historial.").
+- El aviso de éxito nombra el estudio y al paciente ("Se confirmó que se realizó Rx de tórax a
+  Benítez, Rosa (07/10/2026 12:00).").
+- Al terminar renueva solo las consultas de estudios, del historial del paciente y
+  `['recordatorios']`: la pantalla que lo usa no tiene que invalidar nada.
+- El estado del estudio se muestra con `ChipEstadoEstudio` (`paginas/estudios/TarjetasEstudios.tsx`),
+  con la misma regla que `ChipEstado` (Programado con contorno neutro; Realizado y Cancelado con
+  relleno neutro) pero fuera de `ESTADOS_CHIP`, porque es propio de los estudios.
+
+## Gráficos con "Ver como tabla" y descargas de archivos (E6)
+
+Nacieron en Reportes ([docs/reportes.md](reportes.md#interfaz-t605t607)) y viven en
+[`paginas/reportes/`](../frontend/src/paginas/reportes/); cualquier pantalla con un gráfico o un
+archivo para bajar los reutiliza.
+
+### `GraficoConTabla`
+
+```tsx
+<GraficoConTabla
+  titulo="Medicamentos e insumos más usados" // h2 (o `nivel="h3"`); nombra la sección y la tabla
+  descripcion="Los 10 medicamentos o insumos que se usaron en más suministros del período, de más a menos."
+  columnas={COLUMNAS} // las de `Tabla`
+  filas={insumos}
+  claveFila={(i) => i.insumoId}
+  tablaAbierta={telefono} // la tabla empieza abierta (cuando el gráfico no alcanza)
+>
+  <BarChart {...props} height={300} xAxis={[{ label: 'Suministros (cantidad)' }]} … />
+</GraficoConTabla>
+```
+
+- Es una `<section>` con borde y título; abajo, "Ver como tabla" (botón `texto` con
+  `aria-expanded`/`aria-controls`) despliega los **mismos datos** en una `Tabla` llamada
+  "{titulo} (tabla)" (tarjetas en teléfono) y pasa a decir "Ocultar la tabla".
+- La descripción es obligatoria: la sección se describe con ella (`aria-describedby`) y
+  `GraficoConTabla` le agrega "Los mismos números están en Ver como tabla." (E6-18).
+- El gráfico va **sin ancho fijo** (toma el del contenedor: nada de scroll horizontal) y con un
+  `height`.
+- Reglas de los gráficos (las de color y forma, en [DESIGN.md](../DESIGN.md#gráficos)): ejes con su
+  unidad ("Suministros (cantidad)", "Día"); letra de los ejes de 14 px (`EJE`) y el eje de abajo
+  con `height: 56` (`EJE_X`; si no, la biblioteca oculta las marcas); barras con el nombre en el
+  eje y el número al final (`barLabel`), sin leyenda; un nombre largo en dos renglones (la
+  biblioteca mide el texto del eje como un solo renglón y lo corta: el eje recibe una clave corta
+  en `location === 'tick'` y un rótulo propio, `axisTickLabel`, pone los renglones); el ancho del
+  eje con `anchoDelEje(renglones, ancho)` y el lugar para el número de la barra más larga
+  estirando el eje con `maximoConLugar(...)` (la biblioteca recorta lo que sale del área de las
+  barras; si ni así entra, `etiquetasQueEntran` deja la corta)
+  ([`medidas.ts`](../frontend/src/paginas/reportes/medidas.ts)); en las líneas, forma del punto,
+  trazo y una marca de leyenda que dibuja los dos (`labelMarkType`, en
+  [`evolucion.tsx`](../frontend/src/paginas/reportes/evolucion.tsx)); números con
+  `numero()` (hasta 3 decimales) y `porcentaje()` (1 decimal) de `paginas/reportes/formato.ts`
+  (coma decimal, sin separador de miles).
+- Colores: `useColoresGrafico()` ([`usarGraficos.ts`](../frontend/src/paginas/reportes/usarGraficos.ts))
+  devuelve un color **por serie**, el mismo en toda la pantalla: `suministros`, `medicamentos`,
+  `insumos`, `recordatorios` (neutro) y `vencidos` (aviso), **del esquema activo** (claro u
+  oscuro), ya resueltos, porque `@mui/x-charts` pinta con atributos SVG. Varias barras de colores
+  distintos en un gráfico van con `colorMap` ordinal en el eje de los nombres.
+- `useComunes()` junta el teléfono, los colores y las props de todos (`skipAnimation` con
+  `prefers-reduced-motion`, textos en castellano); `useAncho()` mide el ancho del gráfico.
+- En las pruebas, `simularAnchoDeGraficos()` ([`datosReportes.ts`](../frontend/src/pruebas/datosReportes.ts))
+  hace que jsdom le dé 800 px al gráfico (si no, la biblioteca cree que mide 100 px y no dibuja
+  las barras).
+
+### Descargar un archivo de la API
+
+```tsx
+// api: el archivo con el nombre de Content-Disposition, o ErrorApi como cualquier pedido
+const archivo = await descargar(
+  '/api/reportes/suministros/exportar',
+  { formato: 'pdf', ...p },
+  'reporte.pdf',
+  senal, // opcional: AbortSignal para cancelar
+);
+
+// pantalla: botones, el aviso de cómo terminó (o de que sigue) y si hay una en curso
+const descarga = useDescarga(
+  (formato, senal) => reportesApi.exportarSuministros(formato, p, senal),
+  { periodo: p, clave: JSON.stringify(p) }, // el período para el aviso; la clave cambia con los filtros
+);
+return (
+  <>
+    <AccionesDeDescarga
+      puedeExportar={tienePermiso('reportes.exportar')}
+      hayDatos={filas.length > 0}
+      actualizando={consulta.isPlaceholderData}
+      descarga={descarga}
+    />
+    {descarga.aviso}
+  </>
+);
+```
+
+- [`descargar`](../frontend/src/api/cliente.ts) usa la cookie de sesión y el mismo manejo de errores
+  que `api.get` (403, error interno explicado, sesión vencida); toda falla de red, también
+  mientras llega el archivo, es `SIN_CONEXION`, y una cancelada, `CANCELADO`. El nombre sale de
+  `filename*` o `filename`, y si no viene, del de respaldo.
+- [`useDescarga`](../frontend/src/paginas/reportes/Descargas.tsx): botones `secundario` (la descarga
+  no es la acción llena), "Preparando el archivo…" con `cargando` mientras el servidor lo arma (y
+  anunciado a los lectores de pantalla), uno a la vez; a los 10 s, "Sigue preparándose…" con
+  Cancelar; después `Alerta` de éxito con el período ("Se descargó … (01/10 al 07/10).") o de error
+  ("No se pudo descargar el PDF. {motivo}"), que se va al cambiar la `clave`.
+- [`AccionesDeDescarga`](../frontend/src/paginas/reportes/comunes.tsx): los botones si hay datos (o
+  si una descarga sigue en curso aunque cambien los filtros); si no hay, "No hay datos para
+  descargar en este período"; sin `reportes.exportar`, "Para descargar el archivo, pídaselo a un
+  administrador.".
+- `bajarArchivo(archivo)` lo entrega con un enlace temporal (`URL.createObjectURL`) y libera la
+  memoria a los 10 s.
+- En las pruebas, `simularDescargas()` ([`datosReportes.ts`](../frontend/src/pruebas/datosReportes.ts))
+  anota los enlaces que se tocan (`href` y `download`) en lugar de bajar nada.
+
+### Buscar en el servidor mientras se escribe
+
+[`BuscadorEnServidor`](../frontend/src/paginas/auditoria/BuscadorEnServidor.tsx) (filtros de
+Usuario y Paciente de la auditoría, E6-09): un `Autocomplete` que pide al servidor lo que coincide
+con lo escrito (con `useRetardo`) y muestra las primeras sugerencias; la ayuda dice con qué se
+busca y "Se muestran 10 de N" si hay más. Lo elegido se borra con la cruz ("Borrar Usuario") para
+volver a "todos"; uno que llega por un enlace se nombra con `etiquetaDelValor`. Para una lista que
+puede tener cientos de opciones, en lugar de un `Selector` con las primeras 100.

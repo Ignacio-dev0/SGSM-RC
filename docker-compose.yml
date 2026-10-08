@@ -1,0 +1,151 @@
+# SGSM-RC con Docker Compose, todo local (T005, T007, T801, T802 · docs/despliegue.md).
+#
+# - Desarrollo: `npm run db:up` levanta solo la base (servicio db) en el puerto 5432.
+# - Servidor del hospital, perfil "completo": API, interfaz por HTTPS y respaldo diario. Se
+#   configura con un .env en esta carpeta (plantilla: .env.ejemplo), que activa el perfil con
+#   COMPOSE_PROFILES=completo; se levanta con `docker compose up -d --build --wait`.
+#
+# Secretos: ${COMPOSE_PROFILES:+${X:?…}} vuelve obligatoria la variable X solo cuando el .env
+# activa el perfil; sin .env (desarrollo) compose no pide nada. Y si alguien levanta el perfil a
+# mano sin .env, la API igual se niega a arrancar sin JWT_SECRETO ni BIOMETRIA_CLAVE.
+name: sgsm-rc
+
+# Rotación de los registros de cada contenedor: hasta 5 archivos de 10 MB.
+x-registros: &registros
+  driver: json-file
+  options:
+    max-size: '10m'
+    max-file: '5'
+
+# Contraseña de PostgreSQL: la del .env (obligatoria con el perfil) o, sin .env, la de desarrollo.
+# Solo letras y números: va dentro de DATABASE_URL.
+x-clave-db: &clave-db ${POSTGRES_CLAVE:-${COMPOSE_PROFILES:+${POSTGRES_CLAVE:?Falta POSTGRES_CLAVE en .env (generala con openssl rand -hex 24)}}sgsm}
+
+services:
+  db:
+    image: postgres:17-alpine
+    container_name: ${DB_CONTENEDOR:-sgsm-db}
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: sgsm
+      POSTGRES_PASSWORD: *clave-db
+      POSTGRES_DB: sgsm
+      TZ: America/Argentina/Buenos_Aires
+    ports:
+      # En el servidor, DB_PUERTO=127.0.0.1:5432: la base solo se alcanza desde esa misma PC.
+      - '${DB_PUERTO:-5432}:5432'
+    volumes:
+      - sgsm-db-datos:/var/lib/postgresql/data
+      # Crea también la base sgsm_test que usan las pruebas automáticas.
+      - ./docker/postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U sgsm -d sgsm']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # API. Aplica las migraciones pendientes al arrancar (backend/Dockerfile).
+  backend:
+    profiles: [completo]
+    image: sgsm-rc-backend
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    restart: unless-stopped
+    init: true
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      TZ: America/Argentina/Buenos_Aires
+      DATABASE_URL: postgresql://sgsm:${POSTGRES_CLAVE:-${COMPOSE_PROFILES:+${POSTGRES_CLAVE:?Falta POSTGRES_CLAVE en .env (generala con openssl rand -hex 24)}}sgsm}@db:5432/sgsm?schema=public
+      JWT_SECRETO: ${COMPOSE_PROFILES:+${JWT_SECRETO:?Falta JWT_SECRETO en .env (generalo con openssl rand -base64 48)}}
+      BIOMETRIA_CLAVE: ${COMPOSE_PROFILES:+${BIOMETRIA_CLAVE:?Falta BIOMETRIA_CLAVE en .env (generala con openssl rand -base64 32)}}
+      # Solo durante una rotación de la clave biométrica (docs/seguridad.md).
+      BIOMETRIA_CLAVE_ANTERIOR: ${BIOMETRIA_CLAVE_ANTERIOR:-}
+      # Siempre detrás de nginx con HTTPS: la cookie de sesión solo viaja cifrada.
+      COOKIE_SEGURA: 'true'
+      # nginx conserva el Host con el puerto, que coincide con el Origin: no hace falta salvo
+      # que se entre al sistema por otro proxy.
+      TIEMPO_REAL_ORIGENES: ${TIEMPO_REAL_ORIGENES:-}
+      # Un solo proxy (nginx) delante: la IP del cliente sale de X-Forwarded-For.
+      CONFIAR_PROXY: ${CONFIAR_PROXY:-1}
+      # Límite de fallidos por IP del login. Con Docker Desktop todas las tablets llegan con la
+      # misma IP (ver .env.ejemplo): vacío usa el valor por defecto de la API.
+      LOGIN_IP_MAX_FALLIDOS: ${LOGIN_IP_MAX_FALLIDOS:-}
+      LOGIN_IP_VENTANA_MIN: ${LOGIN_IP_VENTANA_MIN:-}
+    healthcheck:
+      test: ['CMD', 'wget', '-q', '-O', '/dev/null', 'http://127.0.0.1:3000/api/salud']
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 2m
+      start_interval: 3s
+    logging: *registros
+
+  # Interfaz por HTTPS (T802). HTTP solo redirige a HTTPS y entrega la CA para las tablets.
+  frontend:
+    profiles: [completo]
+    image: sgsm-rc-frontend
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+      args:
+        VITE_BIOMETRIA_MODO: ${VITE_BIOMETRIA_MODO:-camara}
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    environment:
+      # El puerto que ve el navegador, para redirigir de HTTP a HTTPS.
+      HTTPS_PUERTO: ${HTTPS_PUERTO:-8443}
+      TZ: America/Argentina/Buenos_Aires
+    ports:
+      - '${HTTP_PUERTO:-8080}:80'
+      - '${HTTPS_PUERTO:-8443}:443'
+    volumes:
+      # Solo lo que usa nginx (docker/certificados/nginx); la clave de la CA queda afuera.
+      - ./docker/certificados/nginx:/etc/nginx/certificados:ro
+    healthcheck:
+      test: ['CMD', 'curl', '-fsk', '-o', '/dev/null', 'https://127.0.0.1/']
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+      start_interval: 2s
+    logging: *registros
+
+  # Respaldo diario de la base (T801): pg_dump -Fc a RESPALDO_CARPETA, con retención.
+  respaldo:
+    profiles: [completo]
+    image: postgres:17-alpine
+    restart: unless-stopped
+    init: true
+    depends_on:
+      db:
+        condition: service_healthy
+    entrypoint: ['sh', '/respaldo/programar.sh']
+    environment:
+      PGHOST: db
+      PGUSER: sgsm
+      PGPASSWORD: *clave-db
+      PGDATABASE: sgsm
+      RESPALDO_HORA: ${RESPALDO_HORA:-03:00}
+      RESPALDO_RETENCION: ${RESPALDO_RETENCION:-14}
+      TZ: America/Argentina/Buenos_Aires
+    volumes:
+      - ${RESPALDO_CARPETA:-./respaldos}:/respaldos
+      - ./docker/respaldo:/respaldo:ro
+    healthcheck:
+      test: ['CMD', 'sh', '/respaldo/salud.sh']
+      interval: 10m
+      timeout: 10s
+      retries: 1
+      start_period: 30m
+      start_interval: 10s
+    logging: *registros
+
+volumes:
+  sgsm-db-datos:

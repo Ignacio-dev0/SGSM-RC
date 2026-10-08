@@ -1,0 +1,10 @@
+tipo,nombre,presentacion,unidad
+Medicamento,Ficticina,Comprimidos 10 mg,mg
+Medicamento,Ficticina,"Gotas 2,5 mg/ml",ml
+Medicamento,Inventamol,Comprimidos 500 mg,comprimido
+Medicamento,Ejemplocilina,Frasco ampolla 1 g,g
+Medicamento,Solución de ejemplo,Sachet 500 ml,ml
+Insumo,Gasa de ejemplo,Sobre x 1,unidad
+Insumo,Guante de ejemplo,Caja x 50 pares,par
+Insumo,Pañal de ejemplo talle M,Paquete x 10,unidad
+Insumo,Jeringa de ejemplo,,unidad

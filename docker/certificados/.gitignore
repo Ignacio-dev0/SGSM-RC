@@ -1,0 +1,5 @@
+# CA local y certificados HTTPS del servidor (scripts/certificado.sh · docs/despliegue.md).
+# Contiene claves privadas: nada de esta carpeta se versiona. La clave de la CA (ca/sgsm-ca.key)
+# se guarda además en un lugar seguro fuera de la PC servidor.
+*
+!.gitignore
