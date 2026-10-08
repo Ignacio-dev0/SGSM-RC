@@ -47,3 +47,22 @@ Las decisiones técnicas de cada etapa siguiente están junto a su diseño: D9�
 [diseno-e5.md](diseno-e5.md), D15–D25 en [recordatorios.md](recordatorios.md#decisiones), las de
 reportes y auditoría en [diseno-e6.md](diseno-e6.md) y las de la revisión de seguridad (D50–D62)
 en [seguridad.md](seguridad.md#decisiones).
+
+## Limitaciones conocidas del prototipo
+
+Lo que el prototipo no resuelve y conviene definir con el hospital antes de usarlo con pacientes.
+Surgió de las revisiones de interfaz y de la lectura de los manuales por usuarios simulados.
+
+| Tema                                  | Hoy                                                                                                                           | Qué haría falta                                                                   |
+| ------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| Alergias e interacciones              | No hay campo de alergias ni controles de interacción o dosis máxima; se anotan en las Observaciones del paciente.             | Campo estructurado, aviso al indicar y al administrar (modelo de la Actividad 6). |
+| Indicaciones especiales               | No hay SOS, dosis única, infusión continua ni horarios desiguales; sin prescripción vigente no se registra la administración. | Tipos de indicación en el modelo y en la agenda.                                  |
+| Atribución de una toma muy atrasada   | Una administración cuenta para la toma más cercana a la hora en que se confirma (D23); muy tarde, cuenta como la siguiente.   | Registrar la toma elegida (o la hora real) en el suministro.                      |
+| Anular una administración             | No se puede: se corrige la cantidad dentro de las 24 h; pasado ese plazo nadie puede corregirla.                              | Anulación con motivo y doble control.                                             |
+| Estudio no realizado                  | Enfermería no puede marcarlo; lo reprograma o lo cancela el médico.                                                           | Estado "no realizado" con motivo.                                                 |
+| Avisos al médico                      | Las notificaciones (vencidos, bloqueos) van solo a los administradores.                                                       | Destinatarios por rol o por paciente.                                             |
+| Identificación sin DNI                | El DNI es obligatorio (7 u 8 dígitos); no hay número provisorio ni pasaporte.                                                 | Identificador provisorio.                                                         |
+| Roles                                 | Tres roles fijos; farmacia, kinesiología y otras profesiones se cubren con permisos adicionales.                              | Rol de solo consulta.                                                             |
+| Contraseña olvidada                   | La cambia el administrador; si el único administrador la olvidó, el área de sistemas usa el instalador.                       | Recuperación con validación de identidad.                                         |
+| Avisos con la tablet quieta           | El cierre por inactividad (15 min) apaga los avisos aunque el panel esté a la vista (R1); sin notificaciones del sistema.     | Tablet "tablero" con sesión de solo lectura y notificaciones con HTTPS.           |
+| Pruebas con personas y equipos reales | No se hicieron T703 (tablets y navegadores reales), T706 (usabilidad con enfermería), T805 (sala piloto) ni T808.             | Hacerlas antes del uso real; los manuales están listos para la capacitación.      |
