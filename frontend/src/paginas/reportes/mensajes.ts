@@ -2,6 +2,7 @@ import { erroresPorCampo } from '../../api/cliente';
 import type { PedidoPeriodo } from '../../api/reportes';
 import { formatearFechaSinZona } from '../../utilidades/formato';
 import { oracionDe, pasosParaProbar } from '../../utilidades/sinResultados';
+import { numero } from './formato';
 
 // Textos de los reportes que dependen del período y de los filtros usados.
 
@@ -32,4 +33,22 @@ export function mensajeSinSuministros(p: PedidoPeriodo, sala: string) {
     p.salaId && 'elija otra sala',
   ]);
   return `${causa} ${pasos}`;
+}
+
+/**
+ * Los recordatorios que todavía no tenían que atenderse (pendientes), sin nombrar el estado
+ * (F13 · D156), con la misma frase en el resumen y en el gráfico; cada uno dice lo suyo: el
+ * porcentaje no los cuenta y el gráfico no les dedica una barra. "" si no hay.
+ */
+export function pendientesEnPalabras(n: number, donde: 'porcentaje' | 'grafico') {
+  if (n === 0) return '';
+  const uno = n === 1;
+  const cuantos = uno
+    ? '1 todavía estaba a tiempo de atenderse'
+    : `${numero(n)} todavía estaban a tiempo de atenderse`;
+  const que =
+    donde === 'porcentaje'
+      ? `no ${uno ? 'cuenta' : 'cuentan'} para el porcentaje`
+      : `no ${uno ? 'aparece' : 'aparecen'} en el gráfico`;
+  return `Del total, ${cuantos}: ${que}.`;
 }

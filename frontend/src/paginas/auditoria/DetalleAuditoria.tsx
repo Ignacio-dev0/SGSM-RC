@@ -22,7 +22,7 @@ import { Boton } from '../../componentes/Boton';
 import { tinte } from '../../tema';
 import { formatearFechaHora } from '../../utilidades/formato';
 import { compararValores, textoDeValor, type FilaComparacion } from './comparacion';
-import { accionEnPalabras, entidadConId, nombreDeCampo, pacienteConDni } from './palabras';
+import { accionSobre, nombreDeCampo, pacienteConDni, sobreQue } from './palabras';
 
 /**
  * Un valor guardado, legible: simple en una línea (con el campo, los códigos en palabras); un
@@ -207,7 +207,8 @@ export function DetalleAuditoria({
   const filas = compararValores(e.valorAnterior, e.valorNuevo);
   const datos = [
     { titulo: 'Fecha y hora', valor: formatearFechaHora(e.fechaHora) },
-    { titulo: 'Usuario', valor: e.usuario.nombre },
+    { titulo: 'Quién lo hizo', valor: e.usuario.nombre },
+    { titulo: 'Sobre qué', valor: sobreQue(e) },
     { titulo: 'Paciente', valor: e.paciente && pacienteConDni(e.paciente) },
     { titulo: 'Detalle', valor: e.detalle },
   ].filter((d): d is { titulo: string; valor: string } => Boolean(d.valor));
@@ -222,7 +223,7 @@ export function DetalleAuditoria({
       aria-labelledby={idTitulo}
     >
       <DialogTitle id={idTitulo}>
-        {`${accionEnPalabras(e.accion)} · ${entidadConId(e.entidad, e.entidadId)}`}
+        {`${accionSobre(e.accion, e.entidad)} · ${sobreQue(e)}`}
       </DialogTitle>
       <DialogContent>
         <Box

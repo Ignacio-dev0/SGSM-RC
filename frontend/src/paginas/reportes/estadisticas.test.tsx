@@ -63,9 +63,12 @@ describe('estadísticas del período (T606 · CU33)', () => {
     // ESC3: a tiempo / (total sin pendientes) = 2 / 5, con los conteos que manda el servidor.
     expect(indicador('Atendidos a tiempo')).toHaveTextContent(/^40\s%/);
     expect(indicador('Atendidos a tiempo')).toHaveTextContent(/2 de 5/);
-    expect(screen.getByLabelText('Indicadores del período')).toHaveAccessibleDescription(
-      /Sobre los 5 recordatorios que ya se atendieron o vencieron \(el pendiente todavía no cuenta\)/,
+    // F13: dicho para quien no conoce los estados del sistema (sin "pendiente").
+    const explicacion = screen.getByLabelText('Indicadores del período');
+    expect(explicacion).toHaveAccessibleDescription(
+      /Porcentajes sobre los 5 recordatorios que ya se atendieron o vencieron\. Del total, 1 todavía estaba a tiempo de atenderse: no cuenta para el porcentaje\./,
     );
+    expect(explicacion).not.toHaveAccessibleDescription(/pendiente/);
     expect(screen.getByText(/Del 01\/10\/2026 al 07\/10\/2026 \(7 días\)/)).toBeInTheDocument();
   });
 
@@ -108,6 +111,12 @@ describe('estadísticas del período (T606 · CU33)', () => {
     // Los días en cero también están (D40: un punto por día).
     expect(evolucion[2]).toHaveTextContent(/03\/10\/2026.*0.*0.*0/);
 
+    // F13: el que todavía estaba a tiempo no tiene barra, y el texto lo dice sin "pendiente".
+    expect(grafico('Recordatorios del período')).toHaveTextContent(
+      // La misma frase que el resumen de arriba (F13): solo cambia qué no los muestra.
+      /Del total, 1 todavía estaba a tiempo de atenderse: no aparece en el gráfico\./,
+    );
+    expect(grafico('Recordatorios del período')).not.toHaveTextContent(/pendiente/);
     const recordatorios = await verComoTabla('Recordatorios del período');
     expect(recordatorios.map((f) => f.textContent)).toEqual([
       expect.stringMatching(/A tiempo.*2/),

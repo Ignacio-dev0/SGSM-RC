@@ -1,4 +1,5 @@
 import type { EntradaAuditoria } from '../../api/auditoria';
+import { formatearCama } from '../pacientes/etiquetas';
 import { VIAS } from '../prescripciones/etiquetas';
 
 /**
@@ -60,6 +61,13 @@ const ENTIDADES: Record<string, string> = {
 
 export const accionEnPalabras = (codigo: string) => ACCIONES[codigo] ?? codigo;
 
+/**
+ * La acción según sobre qué se hizo: crear un paciente es internarlo (PRODUCT.md, glosario), no
+ * "darlo de alta" ni "crearlo". El resto, como `accionEnPalabras`.
+ */
+export const accionSobre = (codigo: string, entidad: string) =>
+  codigo === 'CREAR' && entidad === 'Paciente' ? 'Internó' : accionEnPalabras(codigo);
+
 export const entidadEnPalabras = (codigo: string) => ENTIDADES[codigo] ?? codigo;
 
 /** "Paciente n.º 12"; un id que no es un número va después de dos puntos ("Reporte: suministros"). */
@@ -68,6 +76,15 @@ export function entidadConId(entidad: string, id: string | null) {
   if (!id) return nombre;
   return /^\d+$/.test(id) ? `${nombre} n.º ${id}` : `${nombre}: ${id}`;
 }
+
+/**
+ * A quién o a qué se le hizo (C2 · F14): "Usuario: Pérez, Ana" si el servidor manda el nombre;
+ * si no, "Usuario n.º 4". Nunca se confunde con quién lo hizo, que va en su propia columna.
+ */
+export const sobreQue = (e: Pick<EntradaAuditoria, 'entidad' | 'entidadId' | 'entidadEtiqueta'>) =>
+  e.entidadEtiqueta
+    ? `${entidadEnPalabras(e.entidad)}: ${e.entidadEtiqueta}`
+    : entidadConId(e.entidad, e.entidadId);
 
 /** "Alvarez, Ana · DNI 30111222". */
 export const pacienteConDni = (p: NonNullable<EntradaAuditoria['paciente']>) =>
@@ -80,6 +97,8 @@ export const pacienteConDni = (p: NonNullable<EntradaAuditoria['paciente']>) =>
  */
 const CAMPOS: Record<string, string> = {
   activo: 'Activo',
+  // C5: desde cuándo se cuentan las tomas (al reanudar, ese momento).
+  agendaDesde: 'Tomas contadas desde',
   agruparPor: 'Agrupado por',
   apellido: 'Apellido',
   bloqueadoHasta: 'Bloqueado hasta',
@@ -242,6 +261,8 @@ export function valorEnPalabras(clave: string, valor: unknown): unknown {
   if (valor === null && SIN_FILTRO[clave]) return SIN_FILTRO[clave];
   if (IDS.has(clave) && typeof valor === 'number') return `n.º ${valor}`;
   if (clave === 'frecuenciaHoras' && typeof valor === 'number') return `cada ${valor}${NBSP}h`;
+  // "Sala A – … · A-01": la cama no se parte en "A-" y "01" (F3).
+  if (clave === 'cama' && typeof valor === 'string') return formatearCama(valor);
   if (clave === 'permisosAdicionales' && Array.isArray(valor)) {
     return valor.map((p) => (typeof p === 'string' ? (PERMISOS[p] ?? p) : p));
   }

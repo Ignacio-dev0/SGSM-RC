@@ -9,6 +9,7 @@ import { ColumnaPrincipal } from '../../utilidades/listado';
 import { TIPO_EN_SINGULAR } from './etiquetas';
 import { numero, porcentaje } from './formato';
 import { GraficoConTabla } from './GraficoConTabla';
+import { pendientesEnPalabras } from './mensajes';
 import {
   anchoDelEje,
   etiquetasQueEntran,
@@ -289,12 +290,8 @@ export function GraficoRecordatorios({
     categorias.map((c) => c.valor),
     etiquetas,
   );
-  const pendientes =
-    r.pendientes === 1
-      ? ' 1 sigue pendiente y no cuenta.'
-      : r.pendientes > 1
-        ? ` ${numero(r.pendientes)} siguen pendientes y no cuentan.`
-        : '';
+  // Los pendientes no tienen barra; se dicen como en el resumen, sin nombrar el estado (F13).
+  const pendientes = r.pendientes > 0 ? ` ${pendientesEnPalabras(r.pendientes, 'grafico')}` : '';
   return (
     <GraficoConTabla
       titulo="Recordatorios del período"

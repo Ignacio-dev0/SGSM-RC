@@ -18,17 +18,26 @@ import { oracionDe, pasosParaProbar } from '../../utilidades/sinResultados';
 import { useFiltrosEnUrl } from '../../utilidades/useFiltrosEnUrl';
 import { DetalleAuditoria } from './DetalleAuditoria';
 import { FiltrosAuditoria, type ValoresFiltros } from './FiltrosAuditoria';
-import { accionEnPalabras, entidadConId, entidadEnPalabras, pacienteConDni } from './palabras';
+import {
+  accionEnPalabras,
+  accionSobre,
+  entidadEnPalabras,
+  pacienteConDni,
+  sobreQue,
+} from './palabras';
 
 const COLUMNAS: Columna<EntradaAuditoria>[] = [
   { titulo: 'Fecha y hora', valor: (e) => formatearFechaHora(e.fechaHora), ancho: 170 },
-  { titulo: 'Usuario', valor: (e) => e.usuario.nombre },
+  // F14: quién lo hizo, para no confundirlo con un usuario sobre el que se hizo algo.
+  { titulo: 'Quién lo hizo', valor: (e) => e.usuario.nombre },
   {
     titulo: 'Acción',
-    valor: (e) => <ColumnaPrincipal ancho={130}>{accionEnPalabras(e.accion)}</ColumnaPrincipal>,
+    valor: (e) => (
+      <ColumnaPrincipal ancho={130}>{accionSobre(e.accion, e.entidad)}</ColumnaPrincipal>
+    ),
   },
   // E6-08: la misma palabra que el filtro.
-  { titulo: 'Sobre qué', valor: (e) => entidadConId(e.entidad, e.entidadId) },
+  { titulo: 'Sobre qué', valor: sobreQue },
   { titulo: 'Paciente', valor: (e) => (e.paciente ? pacienteConDni(e.paciente) : null) },
 ];
 
@@ -81,7 +90,7 @@ function mensajeSinMovimientos(
   ]);
   const pasos = pasosParaProbar([
     f.origen === 'sistema' && 'cambie Origen a Todos',
-    f.usuarioId && 'elija otro usuario',
+    f.usuarioId && 'elija a otra persona en Quién lo hizo',
     f.pacienteId && 'elija otro paciente',
     f.accion && 'cambie Acción a Todas',
     f.entidad && 'cambie Sobre qué a Todo',
@@ -166,7 +175,7 @@ export function Auditoria() {
             mensajeVacio={mensajeSinMovimientos(valores, conFiltros, entradas)}
             alTocarFila={setAbierta}
             etiquetaFila={(e) =>
-              `Ver el detalle: ${accionEnPalabras(e.accion)} · ${entidadConId(e.entidad, e.entidadId)}, ${formatearFechaHoraCorta(e.fechaHora)}`
+              `Ver el detalle: ${accionSobre(e.accion, e.entidad)} · ${sobreQue(e)}, ${formatearFechaHoraCorta(e.fechaHora)}`
             }
             paginacionArriba
             {...(consulta.data && {

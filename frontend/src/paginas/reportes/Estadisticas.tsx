@@ -13,7 +13,12 @@ import {
   QuitarFiltros,
   ResumenYDescargas,
 } from './comunes';
-import { erroresDeFecha, mensajeSinSuministros, periodoEnFrase } from './mensajes';
+import {
+  erroresDeFecha,
+  mensajeSinSuministros,
+  pendientesEnPalabras,
+  periodoEnFrase,
+} from './mensajes';
 import { useDescarga } from './Descargas';
 import { salaDelResumen, tipoDelResumen } from './etiquetas';
 import { FiltrosReporte } from './FiltrosReporte';
@@ -28,15 +33,13 @@ type Datos = DatosEstadisticas['data'];
 /** Parte de un total en porcentaje con un decimal; null si no hay sobre qué medir. */
 const parte = (n: number, de: number) => (de > 0 ? Math.round((n / de) * 1000) / 10 : null);
 
-/** Sobre qué se miden los porcentajes de los recordatorios, y qué cuenta como atendido. */
+/**
+ * Sobre qué se miden los porcentajes de los recordatorios, y qué cuenta como atendido. Los
+ * pendientes se explican sin nombrar el estado (F13): quien lee no conoce los estados del sistema.
+ */
 function explicacionRecordatorios(medidos: number, pendientes: number) {
-  const sinPendientes =
-    pendientes === 0
-      ? ''
-      : pendientes === 1
-        ? ' (el pendiente todavía no cuenta)'
-        : ` (los ${numero(pendientes)} pendientes todavía no cuentan)`;
-  return `Sobre los ${numero(medidos)} recordatorios que ya se atendieron o vencieron${sinPendientes}. Atendidos: dados a tiempo o tarde, o no administrados con su motivo. A tiempo: dados antes de vencer.`;
+  const sinPendientes = pendientes > 0 ? ` ${pendientesEnPalabras(pendientes, 'porcentaje')}` : '';
+  return `Porcentajes sobre los ${numero(medidos)} recordatorios que ya se atendieron o vencieron.${sinPendientes} Atendidos: dados a tiempo o tarde, o no administrados con su motivo. A tiempo: dados antes de vencer.`;
 }
 
 /**

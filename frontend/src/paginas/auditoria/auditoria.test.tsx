@@ -36,7 +36,7 @@ describe('consulta de la auditoría (T607 · CU35)', () => {
       'columnheader',
     );
     expect(cabecera.map((c) => c.textContent)).toEqual(
-      expect.arrayContaining(['Fecha y hora', 'Usuario', 'Acción', 'Sobre qué', 'Paciente']),
+      expect.arrayContaining(['Fecha y hora', 'Quién lo hizo', 'Acción', 'Sobre qué', 'Paciente']),
     );
     // 02:30 UTC es 23:30 del día anterior en Argentina.
     expect(traslado).toHaveTextContent(
@@ -210,7 +210,7 @@ describe('buscar al paciente y al usuario', () => {
     const app = renderizarApp('/auditoria', ADMIN);
     await filasDeLaTabla();
 
-    const usuario = screen.getByRole('combobox', { name: 'Usuario' });
+    const usuario = screen.getByRole('combobox', { name: 'Quién lo hizo' });
     await userEvent.type(usuario, 'lóp');
     await waitFor(() => expect(pedidos.personal.at(-1)?.get('texto')).toBe('lóp'));
     await waitFor(() =>
@@ -220,7 +220,7 @@ describe('buscar al paciente y al usuario', () => {
 
     await waitFor(() => expect(pedidos.at(-1)?.get('usuarioId')).toBe('4'));
 
-    await userEvent.click(screen.getByRole('button', { name: 'Borrar Usuario' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Borrar Quién lo hizo' }));
     await waitFor(() => expect(pedidos.at(-1)?.has('usuarioId')).toBe(false));
     expect(busqueda(app).has('usuarioId')).toBe(false);
   });
@@ -324,7 +324,7 @@ describe('permisos de la auditoría (S17)', () => {
     renderizarApp('/auditoria', soloAuditoria);
     await filasDeLaTabla();
 
-    expect(screen.queryByRole('combobox', { name: 'Usuario' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('combobox', { name: 'Quién lo hizo' })).not.toBeInTheDocument();
     expect(pedidos.personal).toHaveLength(0);
   });
 });

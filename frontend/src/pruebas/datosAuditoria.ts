@@ -11,6 +11,7 @@ export const entrada = (extra: Partial<EntradaAuditoria> = {}): EntradaAuditoria
   accion: 'TRASLADAR',
   entidad: 'Paciente',
   entidadId: '12',
+  entidadEtiqueta: null,
   usuario: { id: 4, nombre: 'López, Lucas' },
   paciente: { id: 12, nombre: 'Alvarez, Ana', dni: '30111222' },
   valorAnterior: { cama: 'Sala A · A-01' },

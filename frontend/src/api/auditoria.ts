@@ -9,6 +9,11 @@ export interface EntradaAuditoria {
   accion: string;
   entidad: string;
   entidadId: string | null;
+  /**
+   * C2: nombre legible del registro afectado ("Pérez, Ana", "Paracetamol · Benítez, Rosa"),
+   * cuando el servidor lo puede resolver; si no, null.
+   */
+  entidadEtiqueta: string | null;
   /** "Apellido, Nombre"; { id: null, nombre: 'Sistema' } si no hubo usuario (temporizador). */
   usuario: { id: number | null; nombre: string };
   /** Paciente afectado, si corresponde. */

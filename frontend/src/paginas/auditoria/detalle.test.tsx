@@ -44,7 +44,9 @@ describe('detalle de un movimiento: antes y después', () => {
     expect(dialogo).toHaveTextContent('Cambiaron 2 de 3 campos.');
     expect(cabecera).toHaveTextContent(/Campo.*Antes.*Después/);
 
-    expect(filaDe('Cama')).toHaveTextContent(/Sala A · A-01.*Sala A · A-02/);
+    // La cama con el guion que no la deja partir (F3).
+    const g = String.fromCharCode(0x2011);
+    expect(filaDe('Cama')).toHaveTextContent(new RegExp(`Sala A · A${g}01.*Sala A · A${g}02`));
     expect(within(filaDe('Cama')).getByText('Cambió')).toBeInTheDocument();
     // Los estados con las palabras de los chips, no con el código (E6-07).
     expect(filaDe('Estado')).toHaveTextContent(/Internado.*Internado/);

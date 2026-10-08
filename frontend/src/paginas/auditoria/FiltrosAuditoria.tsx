@@ -113,10 +113,10 @@ export function FiltrosAuditoria({ valores, alCambiar, errores, entradas }: Prop
       />
       {verPersonal && (
         <BuscadorEnServidor
-          etiqueta="Usuario"
+          etiqueta="Quién lo hizo"
           clave="personal"
           valor={valores.usuarioId}
-          etiquetaDelValor={usuarioVisto?.nombre ?? `Usuario n.º ${valores.usuarioId}`}
+          etiquetaDelValor={usuarioVisto?.nombre ?? `Persona n.º ${valores.usuarioId}`}
           buscar={async (texto) => {
             const r = await auditoriaApi.personal(texto);
             return {

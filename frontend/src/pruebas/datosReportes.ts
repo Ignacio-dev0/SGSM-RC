@@ -227,7 +227,9 @@ export function simularDescargas() {
     liberar,
     restaurar: () => {
       URL.createObjectURL = originales.crear;
-      URL.revokeObjectURL = originales.liberar;
+      // jsdom no tiene revokeObjectURL y una descarga de la prueba libera su archivo 10 s después
+      // (setTimeout), cuando la prueba ya terminó: queda una función que no hace nada.
+      URL.revokeObjectURL = originales.liberar ?? (() => {});
       clic.mockRestore();
     },
   };

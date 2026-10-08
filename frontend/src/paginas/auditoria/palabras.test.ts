@@ -14,6 +14,8 @@ import {
  */
 const CLAVES_DEL_SERVIDOR = [
   'activo',
+  // C5: al reanudar, el ancla de la agenda antes y después.
+  'agendaDesde',
   'agruparPor',
   'apellido',
   'bloqueadoHasta',
