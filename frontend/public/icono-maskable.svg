@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="SGSM-RC">
+  <!-- Para el acceso directo de Android: fondo de borde a borde y la cruz dentro de la zona segura. -->
+  <rect width="64" height="64" fill="#0b5d6b"/>
+  <path d="M28.5 18h7v10.5H46v7H35.5V46h-7V35.5H18v-7h10.5z" fill="#ffffff"/>
+</svg>

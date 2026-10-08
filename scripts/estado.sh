@@ -45,6 +45,15 @@ if respuesta="$(curl -fsS --max-time 10 --ssl-no-revoke --cacert "$ca" "$url" 2>
 else
   mal "$url no responde: $respuesta"
 fi
+# El manifest (ícono del acceso directo en la tablet) con su tipo: sin él, el navegador lo ignora.
+manifest="https://localhost:$https_puerto/manifest.webmanifest"
+tipo="$(curl -fsSI --max-time 10 --ssl-no-revoke --cacert "$ca" "$manifest" 2>/dev/null |
+  tr -d '\r' | awk -F': ' 'tolower($1) == "content-type" { print $2 }')"
+if [ "$tipo" = application/manifest+json ]; then
+  bien "$manifest -> $tipo"
+else
+  mal "$manifest sale como '${tipo:-sin respuesta}' (debe ser application/manifest+json)"
+fi
 
 titulo "Certificado HTTPS"
 certificado=docker/certificados/nginx/servidor.crt
