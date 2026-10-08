@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { ADMIN, ENFERMERO, MEDICO } from '../pruebas/datos';
 import { renderizarApp } from '../pruebas/renderizar';
+import { prepararSuministros } from '../pruebas/datosSuministros';
 import { servidor } from '../pruebas/servidor';
 import { opcionesDelMenu } from './menu';
 
@@ -121,5 +122,61 @@ describe('menú principal por rol (T108 · CU06 · RF15)', () => {
     await userEvent.click(await screen.findByRole('button', { name: /Salir/ }));
 
     expect(await screen.findByRole('heading', { name: /Ingresar/ })).toBeInTheDocument();
+  });
+});
+
+describe('la opción resaltada es la de la pantalla (F10)', () => {
+  beforeEach(() => {
+    prepararSuministros();
+    servidor.use(
+      http.get('*/api/suministros', () =>
+        HttpResponse.json({
+          data: [],
+          meta: { pagina: 1, porPagina: 20, total: 0, totalPaginas: 1 },
+        }),
+      ),
+    );
+  });
+  afterEach(() => vi.unstubAllEnvs());
+
+  const resaltadas = async () => {
+    const menu = await screen.findByRole('navigation', { name: 'Menú principal' });
+    return within(menu)
+      .getAllByRole('link')
+      .filter((l) => l.hasAttribute('aria-current') && l.classList.contains('active'))
+      .map((l) => l.textContent);
+  };
+
+  it('en el historial de suministros, "Suministros"', async () => {
+    renderizarApp('/suministros', ENFERMERO);
+    await screen.findByRole('heading', { level: 1 });
+    expect(await resaltadas()).toEqual(['Suministros']);
+  });
+
+  // Administrar y Registrar insumos no son "Suministros" (el historial): se resalta la sección
+  // desde la que se está trabajando, la misma a la que lleva "Volver" (D161).
+  it.each([
+    ['/suministros/medicamento?pacienteId=7&desde=recordatorios', 'Recordatorios'],
+    ['/suministros/medicamento?pacienteId=7', 'Pacientes'],
+    ['/suministros/insumos?pacienteId=7', 'Pacientes'],
+  ])('en %s resalta "%s"', async (ruta, opcion) => {
+    renderizarApp(ruta, ENFERMERO);
+    await screen.findByRole('heading', { level: 1 });
+    expect(await resaltadas()).toEqual([opcion]);
+  });
+
+  it.each([
+    ['/suministros/medicamento', 'Administrar medicamento'],
+    ['/suministros/insumos', 'Registrar insumos'],
+  ])('en %s sin paciente no resalta ninguna (tampoco "Suministros")', async (ruta, titulo) => {
+    renderizarApp(ruta, ENFERMERO);
+    await screen.findByRole('heading', { level: 1, name: titulo });
+    expect(await resaltadas()).toEqual([]);
+  });
+
+  it('en la ficha de un paciente, "Pacientes" (las rutas que cuelgan siguen resaltando)', async () => {
+    renderizarApp('/pacientes/7', ENFERMERO);
+    await screen.findByRole('heading', { level: 1 });
+    expect(await resaltadas()).toEqual(['Pacientes']);
   });
 });

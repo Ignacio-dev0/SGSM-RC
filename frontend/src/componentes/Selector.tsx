@@ -12,6 +12,8 @@ interface Props extends Omit<TextFieldProps, 'value' | 'onChange' | 'error' | 'l
   opciones: OpcionSelector[];
   alCambiar: (valor: string) => void;
   error?: string | undefined;
+  /** Ayuda que se muestra debajo cuando no hay error (como en CampoTexto). */
+  ayuda?: string | undefined;
   /** Texto de la opción vacía; si se omite, no se ofrece opción vacía. */
   textoVacio?: string;
   /**
@@ -39,6 +41,7 @@ export function Selector({
   opciones,
   alCambiar,
   error,
+  ayuda,
   textoVacio,
   alReintentar,
   errorDeCarga,
@@ -54,7 +57,7 @@ export function Selector({
       value={valor}
       onChange={(e) => alCambiar(e.target.value)}
       error={Boolean(error)}
-      helperText={error}
+      helperText={error ?? ayuda}
       slotProps={{ select: { native: true }, inputLabel: { shrink: true } }}
     >
       {textoVacio !== undefined && <option value="">{textoVacio}</option>}

@@ -15,6 +15,8 @@ export interface OpcionDelMenu {
   icono: ReactNode;
   /** Permiso que habilita la opción; null = cualquier usuario con sesión. */
   permiso: string | null;
+  /** Se resalta solo en su ruta exacta, no en las que cuelgan de ella (F10). */
+  exacta?: boolean;
 }
 
 /** Todas las opciones del menú principal, en el orden en que se muestran (T108). */
@@ -37,6 +39,9 @@ export const OPCIONES_DEL_MENU: OpcionDelMenu[] = [
     etiqueta: 'Suministros',
     icono: <MedicationOutlinedIcon />,
     permiso: 'suministros.ver',
+    // Es el historial: Administrar medicamento y Registrar insumos cuelgan de la ruta, pero no
+    // son esta opción (F10).
+    exacta: true,
   },
   {
     // E6: lo que se consumió en un período, para el administrador y el médico (S17).
@@ -75,3 +80,20 @@ export const OPCIONES_DEL_MENU: OpcionDelMenu[] = [
 /** Opciones que habilitan el rol y los permisos adicionales del usuario (RF15). */
 export const opcionesDelMenu = (permisos: string[]) =>
   OPCIONES_DEL_MENU.filter((o) => o.permiso === null || permisos.includes(o.permiso));
+
+/** Pantallas de una tarea que cuelgan de "Suministros" pero no son esa opción (el historial). */
+const PANTALLAS_DE_TAREA = ['/suministros/medicamento', '/suministros/insumos'];
+
+/**
+ * Qué opción resaltar cuando no es la de la ruta (F10 · D161): en Administrar medicamento y
+ * Registrar insumos, la sección desde la que se trabaja, la misma a la que lleva "Volver":
+ * Recordatorios (`desde=recordatorios`), Pacientes (con un paciente elegido) o ninguna.
+ * `undefined`: la de la ruta, como siempre.
+ */
+export function rutaResaltada(pathname: string, search: string): string | null | undefined {
+  if (!PANTALLAS_DE_TAREA.includes(pathname)) return undefined;
+  const parametros = new URLSearchParams(search);
+  if (parametros.get('desde') === 'recordatorios') return '/recordatorios';
+  if (parametros.get('pacienteId')) return '/pacientes';
+  return null;
+}

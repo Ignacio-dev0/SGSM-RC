@@ -8,6 +8,7 @@ import {
   InputAdornment,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
+import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 import SearchIcon from '@mui/icons-material/Search';
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ErrorApi, erroresPorCampo, mensajeDeError } from '../../api/cliente';
@@ -50,6 +51,27 @@ const COLUMNA_ESTADO: Columna<Insumo> = {
 
 const VACIO: DatosInsumo = { nombre: '', tipo: 'MEDICAMENTO', unidadMedida: '', presentacion: '' };
 
+/** Por qué el tipo y la unidad no se pueden cambiar (C4 · F16). */
+const AYUDA_EN_USO = 'Ya se usó en prescripciones o registros: no se puede cambiar';
+
+/** Un campo que se lee pero no se cambia: con un candado, para que no parezca roto. */
+const soloLectura = {
+  htmlInput: { readOnly: true },
+  input: {
+    endAdornment: (
+      <InputAdornment position="end">
+        <LockOutlinedIcon fontSize="small" aria-hidden />
+      </InputAdornment>
+    ),
+  },
+} as const;
+
+/** El rechazo del servidor (409 INSUMO_EN_USO) dicho para quien edita el catálogo. */
+const mensajeAlGuardar = (e: unknown, nombre: string) =>
+  e instanceof ErrorApi && e.codigo === 'INSUMO_EN_USO'
+    ? `${nombre} ya se usó en prescripciones o registros, así que no se puede cambiar su tipo ni su unidad de medida. Si hace falta otro, agréguelo como nuevo.`
+    : mensajeDeError(e);
+
 interface PropsDialogo {
   /** null = alta; un insumo = edición. */
   insumo: Insumo | null;
@@ -62,17 +84,31 @@ function DialogoInsumo({ insumo, abierto, alCerrar, alTerminar }: PropsDialogo) 
   const [datos, setDatos] = useState<DatosInsumo>(VACIO);
   const [errores, setErrores] = useState<Partial<Record<keyof DatosInsumo, string>>>({});
   const [confirmandoBaja, setConfirmandoBaja] = useState(false);
+  // Ya lo usa una prescripción o un suministro: el tipo y la unidad quedan fijos (C4).
+  const [enUso, setEnUso] = useState(false);
+  const clienteQuery = useQueryClient();
   const { ref: refFormulario, enfocarPrimerError } = useFocoEnPrimerError<HTMLDivElement>();
 
   const alFallar = (err: unknown) => {
     const porCampo = erroresPorCampo(err) as Partial<Record<keyof DatosInsumo, string>>;
     if (err instanceof ErrorApi && err.codigo === 'INSUMO_DUPLICADO') porCampo.nombre = err.message;
+    if (err instanceof ErrorApi && err.codigo === 'INSUMO_EN_USO' && insumo) {
+      // Alguien lo usó mientras tanto: vuelven los valores guardados y la lista se renueva.
+      setEnUso(true);
+      setDatos((d) => ({ ...d, tipo: insumo.tipo, unidadMedida: insumo.unidadMedida }));
+      void clienteQuery.invalidateQueries({ queryKey: ['insumos'] });
+    }
     setErrores(porCampo);
     enfocarPrimerError();
   };
 
   const guardar = useMutation({
-    mutationFn: () => (insumo ? insumosApi.modificar(insumo.id, datos) : insumosApi.crear(datos)),
+    mutationFn: () => {
+      if (!insumo) return insumosApi.crear(datos);
+      // En uso, el tipo y la unidad no viajan: no se pueden cambiar.
+      const { nombre, presentacion } = datos;
+      return insumosApi.modificar(insumo.id, enUso ? { nombre, presentacion } : datos);
+    },
     onSuccess: (i) =>
       alTerminar(
         insumo ? `Se guardaron los cambios de ${i.nombre}` : `${i.nombre} agregado al catálogo`,
@@ -102,6 +138,7 @@ function DialogoInsumo({ insumo, abierto, alCerrar, alTerminar }: PropsDialogo) 
     setConfirmandoBaja(false);
     olvidarErrorAlGuardar();
     olvidarErrorDeEstado();
+    setEnUso(Boolean(insumo?.enUso));
     if (abierto) {
       setDatos(
         insumo
@@ -153,20 +190,36 @@ function DialogoInsumo({ insumo, abierto, alCerrar, alTerminar }: PropsDialogo) 
         {insumo ? 'Editar' : 'Nuevo'} {datos.tipo === 'MEDICAMENTO' ? 'medicamento' : 'insumo'}
       </DialogTitle>
       <DialogContent ref={refFormulario} sx={{ display: 'grid', gap: 2, pt: '8px !important' }}>
-        {error ? <Alerta tipo="error">{mensajeDeError(error)}</Alerta> : null}
+        {error ? (
+          <Alerta tipo="error">{mensajeAlGuardar(error, insumo?.nombre ?? datos.nombre)}</Alerta>
+        ) : null}
         <CampoTexto etiqueta="Nombre" {...campo('nombre')} required />
-        <Selector
-          etiqueta="Tipo"
-          {...campo('tipo')}
-          alCambiar={(v) => setDatos((d) => ({ ...d, tipo: v as TipoInsumo }))}
-          opciones={TIPOS}
-          required
-        />
+        {enUso ? (
+          // Solo lectura y no deshabilitado (F16): se llega con el teclado, el lector de pantalla
+          // lo lee con su explicación y la ayuda no queda en el gris de lo deshabilitado.
+          <CampoTexto
+            etiqueta="Tipo"
+            valor={TIPOS.find((t) => t.valor === datos.tipo)?.etiqueta ?? datos.tipo}
+            alCambiar={() => {}}
+            required
+            ayuda={AYUDA_EN_USO}
+            slotProps={soloLectura}
+          />
+        ) : (
+          <Selector
+            etiqueta="Tipo"
+            {...campo('tipo')}
+            alCambiar={(v) => setDatos((d) => ({ ...d, tipo: v as TipoInsumo }))}
+            opciones={TIPOS}
+            required
+          />
+        )}
         <CampoTexto
           etiqueta="Unidad de medida"
           {...campo('unidadMedida')}
           required
-          ayuda="Cómo se registra el consumo: mg, ml, comprimido, unidad…"
+          ayuda={enUso ? AYUDA_EN_USO : 'Cómo se registra el consumo: mg, ml, comprimido, unidad…'}
+          {...(enUso ? { slotProps: soloLectura } : {})}
         />
         <CampoTexto
           etiqueta="Presentación"

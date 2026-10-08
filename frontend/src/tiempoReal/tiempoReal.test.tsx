@@ -13,6 +13,7 @@ import {
   respuestaRecordatorios,
   simularRecordatorios,
 } from '../pruebas/datosRecordatorios';
+import { simularAudioYVibracion } from '../pruebas/audioFalso';
 import { renderizarApp } from '../pruebas/renderizar';
 import { servidor } from '../pruebas/servidor';
 
@@ -33,37 +34,6 @@ const NUEVAS = [
   recordatorio({ id: 30, prioridad: 'BAJA', fechaHoraObjetivo: aLos(28) }),
   recordatorio({ id: 31, prioridad: 'BAJA', fechaHoraObjetivo: aLos(29) }),
 ];
-
-/** Web Audio y vibración falsos: cuentan las notas y las vibraciones. */
-function simularAudioYVibracion() {
-  const notas: number[] = [];
-  class ContextoFalso {
-    state = 'running';
-    currentTime = 0;
-    destination = {};
-    resume = async () => {};
-    createGain() {
-      return {
-        gain: { setValueAtTime() {}, exponentialRampToValueAtTime() {} },
-        connect: (d: unknown) => d,
-      };
-    }
-    createOscillator() {
-      const frecuencia = { value: 0 };
-      return {
-        type: 'sine',
-        frequency: frecuencia,
-        connect: (d: unknown) => d,
-        start: () => notas.push(frecuencia.value),
-        stop() {},
-      };
-    }
-  }
-  vi.stubGlobal('AudioContext', ContextoFalso);
-  const vibrar = vi.fn(() => true);
-  Object.defineProperty(navigator, 'vibrate', { value: vibrar, configurable: true });
-  return { notas, vibrar };
-}
 
 /**
  * La insignia ya muestra la lista: un aviso que llegue ahora hace un pedido nuevo (mientras la

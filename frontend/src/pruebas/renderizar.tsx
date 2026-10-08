@@ -26,8 +26,12 @@ export function simularSesion(usuario: UsuarioSesion | null) {
 
 export function renderizarApp(ruta: string, usuario: UsuarioSesion | null) {
   simularSesion(usuario);
+  // Como en App.tsx, sin volver a pedir al volver a la pantalla: lo hace solo quien lo pide.
   const cliente = new QueryClient({
-    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+    defaultOptions: {
+      queries: { retry: false, refetchOnWindowFocus: false },
+      mutations: { retry: false },
+    },
   });
   // Router de datos, como en App.tsx: así las pantallas pueden usar useBlocker.
   const router = createMemoryRouter(
@@ -50,6 +54,7 @@ export function renderizarApp(ruta: string, usuario: UsuarioSesion | null) {
       </ThemeProvider>
     </QueryClientProvider>,
   );
-  // El router queda a mano para probar el botón Atrás del navegador (router.navigate(-1)).
-  return Object.assign(pantalla, { router });
+  // El router queda a mano para probar el botón Atrás del navegador (router.navigate(-1)), y el
+  // cliente de consultas, para ver qué datos quedan para volver a pedir.
+  return Object.assign(pantalla, { router, cliente });
 }

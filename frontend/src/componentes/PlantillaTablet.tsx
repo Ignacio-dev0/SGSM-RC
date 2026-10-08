@@ -15,17 +15,24 @@ import {
   type Theme,
 } from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
-import { NavLink } from 'react-router-dom';
+import { Link, matchPath, useLocation } from 'react-router-dom';
 import { TAMANO_TACTIL_MINIMO, tinte } from '../tema';
 
 export interface OpcionMenu {
   ruta: string;
   etiqueta: string;
   icono?: ReactNode;
+  /** Se resalta solo en su ruta exacta (Inicio siempre). */
+  exacta?: boolean;
 }
 
 interface Props {
   opciones: OpcionMenu[];
+  /**
+   * La opción a resaltar cuando no es la de la ruta (la ruta de la opción, o null para ninguna).
+   * Sin esto (undefined), se resalta la opción de la ruta actual.
+   */
+  resaltada?: string | null | undefined;
   /** Zona derecha de la barra superior (usuario, cerrar sesión). */
   acciones?: ReactNode;
   /**
@@ -63,21 +70,31 @@ const topBajoLaBarra = (t: Theme) => minHeightATop(t.mixins.toolbar as Estilos);
 function ListaMenu({
   opciones,
   compacto,
+  resaltada,
   alElegir,
 }: {
   opciones: OpcionMenu[];
   compacto: boolean;
+  resaltada: string | null | undefined;
   alElegir?: () => void;
 }) {
+  const { pathname } = useLocation();
+  // La de la ruta (Inicio y las `exacta`, solo en la suya), salvo que la pantalla diga otra.
+  const activa = (o: OpcionMenu) =>
+    resaltada !== undefined
+      ? o.ruta === resaltada
+      : matchPath({ path: o.ruta, end: o.ruta === '/' || Boolean(o.exacta) }, pathname) !== null;
   return (
     <Box component="nav" aria-label="Menú principal" sx={{ overflowY: 'auto', py: 1 }}>
       <List disablePadding>
         {opciones.map((o) => (
           <ListItemButton
             key={o.ruta}
-            component={NavLink}
+            component={Link}
             to={o.ruta}
-            end={o.ruta === '/'}
+            className={activa(o) ? 'active' : undefined}
+            // "page" en su pantalla; "true" en la sección desde la que se hace una tarea.
+            aria-current={activa(o) ? (resaltada !== undefined ? 'true' : 'page') : undefined}
             onClick={alElegir}
             sx={(t) => ({
               mx: 1,
@@ -121,7 +138,14 @@ function ListaMenu({
  * - Tablet vertical: riel con ícono y etiqueta corta, para no tapar el contenido.
  * - Teléfono: el menú se abre en un cajón con el botón de menú y deja todo el ancho al contenido.
  */
-export function PlantillaTablet({ opciones, acciones, aviso, pieDelCajon, children }: Props) {
+export function PlantillaTablet({
+  opciones,
+  resaltada,
+  acciones,
+  aviso,
+  pieDelCajon,
+  children,
+}: Props) {
   const tema = useTheme();
   const telefono = useMediaQuery(tema.breakpoints.down('sm'));
   const riel = useMediaQuery(tema.breakpoints.down('md'));
@@ -211,7 +235,12 @@ export function PlantillaTablet({ opciones, acciones, aviso, pieDelCajon, childr
           sx={{ '& .MuiDrawer-paper': { width: ANCHO_MENU, boxSizing: 'border-box' } }}
         >
           <Toolbar />
-          <ListaMenu opciones={opciones} compacto={false} alElegir={() => setAbierto(false)} />
+          <ListaMenu
+            opciones={opciones}
+            compacto={false}
+            resaltada={resaltada}
+            alElegir={() => setAbierto(false)}
+          />
           {pieDelCajon && (
             <Box sx={{ mt: 'auto', px: 2, py: 1, borderTop: 1, borderColor: 'divider' }}>
               {pieDelCajon}
@@ -228,7 +257,7 @@ export function PlantillaTablet({ opciones, acciones, aviso, pieDelCajon, childr
           }}
         >
           <Toolbar />
-          <ListaMenu opciones={opciones} compacto={riel} />
+          <ListaMenu opciones={opciones} compacto={riel} resaltada={resaltada} />
         </Drawer>
       )}
 

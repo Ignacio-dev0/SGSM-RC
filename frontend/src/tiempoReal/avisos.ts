@@ -58,21 +58,27 @@ export function crearAvisosAgrupados(
   };
 }
 
-/** Dónde se recuerda en la tablet si los avisos suenan ('no' = sin sonido ni vibración). */
+/**
+ * Dónde se recuerda en la tablet si los avisos suenan: 'no' (sin sonido ni vibración) o 'si'. Sin
+ * nada guardado vale el valor por defecto de quien la usa (F8): encendido para el personal de sala,
+ * apagado para el administrador.
+ */
 export const CLAVE_SONIDO = 'sgsm.sonidoAvisos';
 
-export function leerPreferenciaSonido(): boolean {
+export function leerPreferenciaSonido(porDefecto = true): boolean {
   try {
-    return localStorage.getItem(CLAVE_SONIDO) !== 'no';
+    const guardada = localStorage.getItem(CLAVE_SONIDO);
+    return guardada === 'no' ? false : guardada === 'si' ? true : porDefecto;
   } catch {
-    return true;
+    return porDefecto;
   }
 }
 
-export function guardarPreferenciaSonido(activo: boolean) {
+/** Guarda solo lo que se aparta del valor por defecto; volver a él borra la elección. */
+export function guardarPreferenciaSonido(activo: boolean, porDefecto = true) {
   try {
-    if (activo) localStorage.removeItem(CLAVE_SONIDO);
-    else localStorage.setItem(CLAVE_SONIDO, 'no');
+    if (activo === porDefecto) localStorage.removeItem(CLAVE_SONIDO);
+    else localStorage.setItem(CLAVE_SONIDO, activo ? 'si' : 'no');
   } catch {
     // Sin almacenamiento (modo privado): la elección vale mientras la pantalla siga abierta.
   }

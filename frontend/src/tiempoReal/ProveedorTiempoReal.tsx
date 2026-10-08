@@ -5,6 +5,7 @@ import {
   recordatoriosApi,
   type ListaRecordatorios,
 } from '../api/recordatorios';
+import { esPersonalDeSala } from '../auth/personalDeSala';
 import { useSesion } from '../auth/useSesion';
 import { contarUrgentes } from '../paginas/recordatorios/urgencia';
 import { useAhora } from '../utilidades/useAhora';
@@ -65,11 +66,17 @@ export function ProveedorTiempoReal({ children, fabrica, avisador: avisadorDePru
   const cliente = useQueryClient();
   const puedeVer = tienePermiso('recordatorios.ver');
   const atiende = tienePermiso('recordatorios.atender');
+  // Encendido por defecto solo para el personal de sala; el administrador lo enciende si quiere (F8).
+  const sonidoPorDefecto = esPersonalDeSala(usuario);
   const usuarioId = usuario?.id;
 
   const [estado, setEstado] = useState<EstadoConexion>('conectando');
   const [desfaseMs, setDesfase] = useState(0);
-  const [sonido, setSonido] = useState(leerPreferenciaSonido);
+  const [sonido, setSonido] = useState(() => leerPreferenciaSonido(sonidoPorDefecto));
+  // Otra persona en la misma tablet: vale su valor por defecto (o lo que se eligió en la tablet).
+  useEffect(() => {
+    setSonido(leerPreferenciaSonido(sonidoPorDefecto));
+  }, [sonidoPorDefecto, usuarioId]);
   const [aviso, setAviso] = useState<Aviso | null>(null);
   const conexion = useRef<ConexionTiempoReal | null>(null);
   const [avisador] = useState(() => avisadorDePrueba ?? crearAvisador());
@@ -216,12 +223,12 @@ export function ProveedorTiempoReal({ children, fabrica, avisador: avisadorDePru
 
   const fijarSonido = useCallback(
     (activo: boolean) => {
-      guardarPreferenciaSonido(activo);
+      guardarPreferenciaSonido(activo, sonidoPorDefecto);
       setSonido(activo);
       // Al activarlo suena una vez: confirma que esta tablet puede sonar.
       if (activo) avisador.tono();
     },
-    [avisador],
+    [avisador, sonidoPorDefecto],
   );
 
   const cerrarAviso = useCallback(() => setAviso(null), []);

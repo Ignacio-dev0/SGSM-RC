@@ -45,14 +45,17 @@ function QueSeHace({ icono, children }: { icono: ReactNode; children: ReactNode 
 const ESTILO_ICONO = { color: 'primary.main', mt: 0.25 } as const;
 const ESTILO_QUE = { fontWeight: 700, fontSize: '1.125rem', overflowWrap: 'anywhere' } as const;
 
-/** Botonera de la tarjeta: si no entran en una fila se apilan a lo ancho, la acción abajo. */
+/**
+ * Botonera de la tarjeta: si no entran en una fila se apilan a lo ancho, la acción abajo. Con
+ * guantes, 16 px entre botones (F9): "No se administró" no se toca por error al ir a Administrar.
+ */
 function Acciones({ children }: { children: ReactNode }) {
   return (
     <Box
       sx={{
         display: 'flex',
         flexWrap: 'wrap',
-        gap: 1,
+        gap: 2,
         mt: 'auto',
         pt: 0.5,
         '& > *': { flex: '1 1 160px' },
@@ -163,6 +166,15 @@ export function TarjetaRecordatorio({
             {etiquetaVia(p.via)}
             {p.presentacion && ` · ${sinCortes(p.presentacion)}`}
           </Typography>
+          {p.observaciones && (
+            // Lo que indicó el médico ("Si fiebre", "Con el almuerzo"): se lee sin abrir nada (F7).
+            <Typography sx={{ overflowWrap: 'anywhere' }}>
+              <Box component="span" sx={{ color: 'text.secondary' }}>
+                Observaciones:
+              </Box>{' '}
+              {p.observaciones}
+            </Typography>
+          )}
         </QueSeHace>
       )}
       {e && (

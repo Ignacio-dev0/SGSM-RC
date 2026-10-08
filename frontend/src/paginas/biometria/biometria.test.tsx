@@ -129,6 +129,14 @@ describe('prueba de concepto del reconocimiento facial (T401)', () => {
     expect(screen.queryByText(/VITE_/)).not.toBeInTheDocument();
   });
 
+  it('no nombra archivos de la documentación: dice a quién pedir la guía (F12)', async () => {
+    vi.stubEnv('VITE_BIOMETRIA_MODO', 'simulado');
+    renderizarApp('/biometria/prueba', ADMIN);
+    const aviso = await screen.findByText(/Esta prueba necesita la cámara/);
+    expect(aviso).toHaveTextContent(/el área de sistemas tiene la guía/);
+    expect(document.body).not.toHaveTextContent(/docs\/|\.md\b/);
+  });
+
   it('con la cámara mide el tiempo de detección y la cantidad de rostros', async () => {
     Object.defineProperty(navigator, 'mediaDevices', {
       configurable: true,

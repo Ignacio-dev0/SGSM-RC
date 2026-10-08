@@ -3,15 +3,16 @@ import { useQueryClient } from '@tanstack/react-query';
 import { alExpirarSesion, api } from '../api/cliente';
 import type { UsuarioSesion } from '../api/tipos';
 import { AvisoInactividad } from './AvisoInactividad';
+import { esPersonalDeSala } from './personalDeSala';
 import { useInactividad } from './useInactividad';
 import { Contexto, type ValorSesion } from './useSesion';
 
 /**
- * Por qué se cerró la sesión, para la pantalla de ingreso (ESC1). A quien atiende recordatorios
- * se le aclara que, sin sesión, la tablet ya no suena ni avisa los nuevos.
+ * Por qué se cerró la sesión, para la pantalla de ingreso (ESC1). Al personal de sala (F8) se le
+ * aclara que, sin sesión, la tablet ya no suena ni avisa los nuevos.
  */
 function motivoCierrePorInactividad(usuario: UsuarioSesion | null | undefined) {
-  return usuario?.permisos.includes('recordatorios.atender')
+  return esPersonalDeSala(usuario)
     ? 'Se cerró la sesión por inactividad. Los avisos de recordatorios quedan apagados hasta que vuelva a ingresar.'
     : 'Se cerró la sesión por inactividad. Vuelva a ingresar.';
 }

@@ -127,8 +127,8 @@ export function PruebaReconocimiento() {
         <EncabezadoPagina titulo="Prueba de reconocimiento facial" volverA="/biometria" />
         <Alerta tipo="info">
           Esta prueba necesita la cámara y el sistema está instalado en modo de demostración. Para
-          hacerla, hay que instalarlo con la cámara activada (ver docs/biometria.md) y, en lo
-          posible, usar la tablet real del hospital.
+          hacerla, hay que instalarlo con la cámara activada (el área de sistemas tiene la guía) y,
+          en lo posible, usar la tablet real del hospital.
         </Alerta>
       </>
     );

@@ -1,6 +1,6 @@
 import { Box, IconButton, Typography, useMediaQuery, useTheme } from '@mui/material';
 import LogoutIcon from '@mui/icons-material/Logout';
-import { Outlet } from 'react-router-dom';
+import { Outlet, useLocation } from 'react-router-dom';
 import { useSesion, useUsuario } from '../auth/useSesion';
 import { modoBiometria } from '../biometria/motor';
 import { Boton } from '../componentes/Boton';
@@ -11,7 +11,7 @@ import { useTiempoReal } from '../tiempoReal/contexto';
 import { ProveedorTiempoReal } from '../tiempoReal/ProveedorTiempoReal';
 import { CampanaNotificaciones } from './CampanaNotificaciones';
 import { InsigniaRecordatorios } from './InsigniaRecordatorios';
-import { opcionesDelMenu } from './menu';
+import { opcionesDelMenu, rutaResaltada } from './menu';
 
 /** Franja fija bajo la barra superior mientras la validación facial es simulada (F27). */
 const AVISO_DEMOSTRACION =
@@ -40,10 +40,12 @@ function Plantilla() {
   const telefono = useMediaQuery(useTheme().breakpoints.down('sm'));
   const salir = () => void cerrarSesion();
   const demostracion = modoBiometria() === 'simulado';
+  const { pathname, search } = useLocation();
 
   return (
     <PlantillaTablet
       opciones={opcionesDelMenu(usuario.permisos)}
+      resaltada={rutaResaltada(pathname, search)}
       {...(demostracion || aviso
         ? {
             aviso: (

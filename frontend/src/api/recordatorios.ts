@@ -30,6 +30,8 @@ export interface Recordatorio {
     unidadDosis: string;
     via: Via;
     frecuenciaHoras: number;
+    /** Las de la prescripción ("Si fiebre"). Opcional: el servidor todavía puede no mandarlas (F7). */
+    observaciones?: string | null;
   } | null;
   /** Solo en los de ESTUDIO (fase 3). */
   estudio: { id: number; nombre: string; tipoEstudio: string; preparacion: string | null } | null;
