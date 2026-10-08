@@ -1,0 +1,865 @@
+[
+  {
+    "archivo": "img/enfermeria/01-ingresar.png",
+    "muestra": "Pantalla de ingreso de la tablet, sin datos cargados",
+    "tamano": {
+      "w": 768,
+      "h": 554
+    },
+    "marcadores": [
+      {
+        "n": 1,
+        "tipo": "punto",
+        "que_es": "campo Usuario"
+      },
+      {
+        "n": 2,
+        "tipo": "punto",
+        "que_es": "campo Contraseña"
+      },
+      {
+        "n": 3,
+        "tipo": "punto",
+        "que_es": "botón del ojo: Mostrar contraseña"
+      },
+      {
+        "n": 4,
+        "tipo": "punto",
+        "que_es": "casilla «Recordar mi usuario en esta tablet»"
+      },
+      {
+        "n": 5,
+        "tipo": "punto",
+        "que_es": "botón Ingresar"
+      }
+    ]
+  },
+  {
+    "archivo": "img/enfermeria/02-inicio.png",
+    "muestra": "Inicio de enfermería con sus tareas, el menú lateral y la barra superior",
+    "tamano": {
+      "w": 768,
+      "h": 709
+    },
+    "marcadores": [
+      {
+        "n": 1,
+        "tipo": "area",
+        "que_es": "tarea «Tomas y estudios para atender» (la principal)"
+      },
+      {
+        "n": 2,
+        "tipo": "area",
+        "que_es": "tarea «Administrar medicamento»"
+      },
+      {
+        "n": 3,
+        "tipo": "area",
+        "que_es": "tarea «Registrar insumos»"
+      },
+      {
+        "n": 4,
+        "tipo": "area",
+        "que_es": "tarea «Buscar paciente»"
+      },
+      {
+        "n": 5,
+        "tipo": "area",
+        "que_es": "menú lateral (Inicio, Recordatorios, Pacientes, Suministros)"
+      },
+      {
+        "n": 6,
+        "tipo": "punto",
+        "que_es": "botón Salir (cierra la sesión)"
+      }
+    ]
+  },
+  {
+    "archivo": "img/enfermeria/03-aviso-inactividad.png",
+    "muestra": "Aviso «¿Sigue ahí?» un minuto antes de cerrar la sesión por inactividad (15 min sin tocar la pantalla)",
+    "tamano": {
+      "w": 768,
+      "h": 282
+    },
+    "marcadores": [
+      {
+        "n": 1,
+        "tipo": "area",
+        "que_es": "cuenta regresiva del cierre"
+      },
+      {
+        "n": 2,
+        "tipo": "punto",
+        "que_es": "botón Seguir trabajando"
+      },
+      {
+        "n": 3,
+        "tipo": "punto",
+        "que_es": "botón Cerrar sesión"
+      }
+    ]
+  },
+  {
+    "archivo": "img/enfermeria/04-sesion-cerrada.png",
+    "muestra": "Ingreso después del cierre por inactividad, con el aviso de que los recordatorios quedaron apagados",
+    "tamano": {
+      "w": 768,
+      "h": 691
+    },
+    "marcadores": [
+      {
+        "n": 1,
+        "tipo": "area",
+        "que_es": "aviso: se cerró la sesión por inactividad y los avisos de recordatorios quedan apagados"
+      },
+      {
+        "n": 2,
+        "tipo": "punto",
+        "que_es": "botón Ingresar (volver a entrar)"
+      }
+    ]
+  },
+  {
+    "archivo": "img/enfermeria/05-telefono-inicio.png",
+    "muestra": "Inicio en el teléfono: la barra superior con el botón del menú, la insignia y Salir",
+    "tamano": {
+      "w": 375,
+      "h": 588
+    },
+    "marcadores": [
+      {
+        "n": 1,
+        "tipo": "punto",
+        "que_es": "botón del menú (abre el cajón)"
+      },
+      {
+        "n": 2,
+        "tipo": "punto",
+        "que_es": "insignia de recordatorios"
+      },
+      {
+        "n": 3,
+        "tipo": "punto",
+        "que_es": "botón Salir (solo el ícono)"
+      },
+      {
+        "n": 4,
+        "tipo": "area",
+        "que_es": "tarea «Tomas y estudios para atender»"
+      }
+    ]
+  },
+  {
+    "archivo": "img/enfermeria/06-telefono-menu.png",
+    "muestra": "Menú abierto en el teléfono (cajón lateral)",
+    "tamano": {
+      "w": 375,
+      "h": 812
+    },
+    "marcadores": [
+      {
+        "n": 1,
+        "tipo": "area",
+        "que_es": "opciones del menú"
+      },
+      {
+        "n": 2,
+        "tipo": "area",
+        "que_es": "Tema de la pantalla (claro u oscuro)"
+      }
+    ]
+  },
+  {
+    "archivo": "img/enfermeria/07-recordatorios.png",
+    "muestra": "Panel de Recordatorios: lo que hay para atender, de lo más urgente a lo menos",
+    "tamano": {
+      "w": 768,
+      "h": 770
+    },
+    "marcadores": [
+      {
+        "n": 1,
+        "tipo": "punto",
+        "que_es": "insignia de recordatorios en la barra (cuántos hay para atender)"
+      },
+      {
+        "n": 2,
+        "tipo": "punto",
+        "que_es": "resumen: cuántos para atender, cuántos urgentes y hora de actualización"
+      },
+      {
+        "n": 3,
+        "tipo": "punto",
+        "que_es": "interruptor Sonido de avisos"
+      },
+      {
+        "n": 4,
+        "tipo": "punto",
+        "que_es": "interruptor Mantener la pantalla encendida"
+      },
+      {
+        "n": 5,
+        "tipo": "area",
+        "que_es": "filtros Tipo (tomas o estudios) y Sala"
+      },
+      {
+        "n": 6,
+        "tipo": "area",
+        "que_es": "tarjeta de un recordatorio"
+      }
+    ]
+  },
+  {
+    "archivo": "img/enfermeria/08-tarjeta-toma.png",
+    "muestra": "Tarjeta de una toma en el panel de Recordatorios",
+    "tamano": {
+      "w": 768,
+      "h": 433
+    },
+    "marcadores": [
+      {
+        "n": 1,
+        "tipo": "punto",
+        "que_es": "hora de la toma y cuánto falta (o cuánto pasó)"
+      },
+      {
+        "n": 2,
+        "tipo": "punto",
+        "que_es": "nivel de urgencia (Urgente, Pronto, Programada o Vencida)"
+      },
+      {
+        "n": 3,
+        "tipo": "punto",
+        "que_es": "paciente: nombre, DNI, cama y sala"
+      },
+      {
+        "n": 4,
+        "tipo": "punto",
+        "que_es": "medicamento, dosis, vía y presentación"
+      },
+      {
+        "n": 5,
+        "tipo": "punto",
+        "que_es": "botón No se administró"
+      },
+      {
+        "n": 6,
+        "tipo": "punto",
+        "que_es": "botón Administrar"
+      }
+    ]
+  },
+  {
+    "archivo": "img/enfermeria/09-niveles-urgencia.png",
+    "muestra": "Niveles de urgencia en las tarjetas del panel (a esta hora: Urgente, Pronto)",
+    "tamano": {
+      "w": 768,
+      "h": 433
+    },
+    "marcadores": [
+      {
+        "n": 1,
+        "tipo": "punto",
+        "que_es": "nivel «Urgente»"
+      },
+      {
+        "n": 2,
+        "tipo": "punto",
+        "que_es": "nivel «Pronto»"
+      }
+    ]
+  },
+  {
+    "archivo": "img/enfermeria/10-sin-conexion.png",
+    "muestra": "Panel sin conexión en tiempo real: la franja lo avisa y la insignia lleva el ícono de sin señal",
+    "tamano": {
+      "w": 768,
+      "h": 410
+    },
+    "marcadores": [
+      {
+        "n": 1,
+        "tipo": "punto",
+        "que_es": "insignia con el ícono de sin señal"
+      },
+      {
+        "n": 2,
+        "tipo": "area",
+        "que_es": "franja «Sin conexión en tiempo real: la lista y los avisos se actualizan cada 30 s»"
+      }
+    ]
+  },
+  {
+    "archivo": "img/enfermeria/11-administrar-elegir.png",
+    "muestra": "Administrar medicamento: paciente elegido y sus prescripciones vigentes para tocar",
+    "tamano": {
+      "w": 768,
+      "h": 839
+    },
+    "marcadores": [
+      {
+        "n": 1,
+        "tipo": "punto",
+        "que_es": "selector Paciente (cama · apellido, nombre)"
+      },
+      {
+        "n": 2,
+        "tipo": "area",
+        "que_es": "identificación del paciente: nombre, DNI, edad y cama"
+      },
+      {
+        "n": 3,
+        "tipo": "area",
+        "que_es": "prescripciones vigentes con el estado de la toma (tocar la que se va a dar)"
+      },
+      {
+        "n": 4,
+        "tipo": "area",
+        "que_es": "botón Confirmar con mi rostro, deshabilitado hasta elegir, con el porqué"
+      }
+    ]
+  },
+  {
+    "archivo": "img/enfermeria/12-administrar-revisar.png",
+    "muestra": "Administrar medicamento: prescripción elegida, cantidad y resumen para revisar antes de confirmar",
+    "tamano": {
+      "w": 768,
+      "h": 841
+    },
+    "marcadores": [
+      {
+        "n": 1,
+        "tipo": "area",
+        "que_es": "prescripción elegida (con el tilde)"
+      },
+      {
+        "n": 2,
+        "tipo": "punto",
+        "que_es": "campo Cantidad (viene con la dosis prescripta)"
+      },
+      {
+        "n": 3,
+        "tipo": "punto",
+        "que_es": "campo Observaciones"
+      },
+      {
+        "n": 4,
+        "tipo": "area",
+        "que_es": "resumen «Revise antes de confirmar»: paciente con DNI y cama, qué se da, vía y toma"
+      },
+      {
+        "n": 5,
+        "tipo": "punto",
+        "que_es": "botón Confirmar con mi rostro"
+      }
+    ]
+  },
+  {
+    "archivo": "img/enfermeria/13-confirmar-rostro.png",
+    "muestra": "Diálogo «Confirmar con su rostro» en modo demostración (la tablet real usa la cámara)",
+    "tamano": {
+      "w": 768,
+      "h": 529
+    },
+    "tapado": "el usuario de prueba (barra gris)",
+    "marcadores": [
+      {
+        "n": 1,
+        "tipo": "area",
+        "que_es": "qué se está confirmando (título y operación)"
+      },
+      {
+        "n": 2,
+        "tipo": "area",
+        "que_es": "aviso «Modo demostración: el rostro se simula»"
+      },
+      {
+        "n": 3,
+        "tipo": "area",
+        "que_es": "lo que se registra: medicamento, dosis, vía y paciente con DNI y cama"
+      },
+      {
+        "n": 4,
+        "tipo": "punto",
+        "que_es": "botón «Simular el rostro de …» (en la tablet real, la cámara)"
+      },
+      {
+        "n": 5,
+        "tipo": "punto",
+        "que_es": "botón Cancelar"
+      }
+    ]
+  },
+  {
+    "archivo": "img/enfermeria/14-no-se-sabe.png",
+    "muestra": "Aviso «No se sabe si quedó registrada» (corte de conexión simulado: no se guardó nada)",
+    "tamano": {
+      "w": 768,
+      "h": 298
+    },
+    "marcadores": [
+      {
+        "n": 1,
+        "tipo": "area",
+        "que_es": "aviso «No se sabe si quedó registrada»"
+      },
+      {
+        "n": 2,
+        "tipo": "punto",
+        "que_es": "botón Ver el historial (revisar antes de volver a intentar)"
+      }
+    ]
+  },
+  {
+    "archivo": "img/enfermeria/15-desde-recordatorio.png",
+    "muestra": "Administrar medicamento abierto desde un recordatorio (Villafañe, Herminia): paciente y prescripción ya elegidos",
+    "tamano": {
+      "w": 768,
+      "h": 784
+    },
+    "marcadores": [
+      {
+        "n": 1,
+        "tipo": "punto",
+        "que_es": "flecha Volver (vuelve al panel de Recordatorios)"
+      },
+      {
+        "n": 2,
+        "tipo": "punto",
+        "que_es": "paciente del recordatorio"
+      },
+      {
+        "n": 3,
+        "tipo": "area",
+        "que_es": "identificación del paciente"
+      },
+      {
+        "n": 4,
+        "tipo": "area",
+        "que_es": "prescripción del recordatorio, ya elegida"
+      }
+    ]
+  },
+  {
+    "archivo": "img/enfermeria/16-no-se-administro.png",
+    "muestra": "Diálogo «No se administró» con el motivo escrito (sin registrar)",
+    "tamano": {
+      "w": 768,
+      "h": 428
+    },
+    "marcadores": [
+      {
+        "n": 1,
+        "tipo": "area",
+        "que_es": "qué toma, de quién y que no se puede deshacer"
+      },
+      {
+        "n": 2,
+        "tipo": "punto",
+        "que_es": "campo «Por qué no se administró» (obligatorio)"
+      },
+      {
+        "n": 3,
+        "tipo": "punto",
+        "que_es": "botón Registrar"
+      },
+      {
+        "n": 4,
+        "tipo": "punto",
+        "que_es": "botón Cancelar"
+      }
+    ]
+  },
+  {
+    "archivo": "img/enfermeria/17-insumos-catalogo.png",
+    "muestra": "Registrar insumos: paciente elegido y catálogo de insumos para tocar",
+    "tamano": {
+      "w": 768,
+      "h": 944
+    },
+    "marcadores": [
+      {
+        "n": 1,
+        "tipo": "punto",
+        "que_es": "selector Paciente"
+      },
+      {
+        "n": 2,
+        "tipo": "area",
+        "que_es": "identificación del paciente"
+      },
+      {
+        "n": 3,
+        "tipo": "punto",
+        "que_es": "campo Buscar insumo"
+      },
+      {
+        "n": 4,
+        "tipo": "area",
+        "que_es": "insumos del catálogo (cada toque suma uno)"
+      }
+    ]
+  },
+  {
+    "archivo": "img/enfermeria/18-insumos-lista.png",
+    "muestra": "Registrar insumos: la lista de lo que se va a registrar, con cantidades y observaciones",
+    "tamano": {
+      "w": 768,
+      "h": 507
+    },
+    "marcadores": [
+      {
+        "n": 1,
+        "tipo": "area",
+        "que_es": "insumos a registrar con su cantidad"
+      },
+      {
+        "n": 2,
+        "tipo": "area",
+        "que_es": "cantidad de la fila con los botones restar uno, sumar uno y quitar"
+      },
+      {
+        "n": 3,
+        "tipo": "punto",
+        "que_es": "campo Observaciones"
+      },
+      {
+        "n": 4,
+        "tipo": "punto",
+        "que_es": "botón Confirmar con mi rostro"
+      }
+    ]
+  },
+  {
+    "archivo": "img/enfermeria/19-insumos-rostro.png",
+    "muestra": "Confirmar con su rostro el registro de insumos (modo demostración, sin confirmar)",
+    "tamano": {
+      "w": 768,
+      "h": 589
+    },
+    "tapado": "el usuario de prueba (barra gris)",
+    "marcadores": [
+      {
+        "n": 1,
+        "tipo": "area",
+        "que_es": "qué se está confirmando (título y operación)"
+      },
+      {
+        "n": 2,
+        "tipo": "area",
+        "que_es": "aviso «Modo demostración: el rostro se simula»"
+      },
+      {
+        "n": 3,
+        "tipo": "area",
+        "que_es": "los insumos con sus cantidades y el paciente con DNI y cama"
+      },
+      {
+        "n": 4,
+        "tipo": "punto",
+        "que_es": "botón «Simular el rostro de …» (en la tablet real, la cámara)"
+      },
+      {
+        "n": 5,
+        "tipo": "punto",
+        "que_es": "botón Cancelar"
+      }
+    ]
+  },
+  {
+    "archivo": "img/enfermeria/20-buscar-paciente.png",
+    "muestra": "Buscar paciente: búsqueda por apellido, DNI o cama, con filtros de sala y estado",
+    "tamano": {
+      "w": 768,
+      "h": 512
+    },
+    "marcadores": [
+      {
+        "n": 1,
+        "tipo": "punto",
+        "que_es": "campo Buscar por apellido, DNI o cama"
+      },
+      {
+        "n": 2,
+        "tipo": "punto",
+        "que_es": "filtro Sala"
+      },
+      {
+        "n": 3,
+        "tipo": "punto",
+        "que_es": "filtro Estado (Internados, Egresados o Todos)"
+      },
+      {
+        "n": 4,
+        "tipo": "area",
+        "que_es": "fila del paciente encontrado (tocar para abrir la ficha)"
+      }
+    ]
+  },
+  {
+    "archivo": "img/enfermeria/21-ficha-prescripciones.png",
+    "muestra": "Ficha del paciente, pestaña Prescripciones: cada medicamento con su próxima toma y Administrar",
+    "tamano": {
+      "w": 768,
+      "h": 700
+    },
+    "marcadores": [
+      {
+        "n": 1,
+        "tipo": "area",
+        "que_es": "paciente: nombre, DNI, edad y cama"
+      },
+      {
+        "n": 2,
+        "tipo": "area",
+        "que_es": "botones Administrar medicamento y Registrar insumos"
+      },
+      {
+        "n": 3,
+        "tipo": "area",
+        "que_es": "pestañas Datos, Prescripciones, Estudios e Historial"
+      },
+      {
+        "n": 4,
+        "tipo": "punto",
+        "que_es": "próxima toma y última administración"
+      },
+      {
+        "n": 5,
+        "tipo": "punto",
+        "que_es": "botón Administrar de esa prescripción"
+      }
+    ]
+  },
+  {
+    "archivo": "img/enfermeria/22-ficha-historial.png",
+    "muestra": "Ficha del paciente, pestaña Historial: los suministros registrados, para abrir y corregir",
+    "tamano": {
+      "w": 768,
+      "h": 897
+    },
+    "marcadores": [
+      {
+        "n": 1,
+        "tipo": "punto",
+        "que_es": "pestaña Historial"
+      },
+      {
+        "n": 2,
+        "tipo": "area",
+        "que_es": "fechas Desde y Hasta"
+      },
+      {
+        "n": 3,
+        "tipo": "punto",
+        "que_es": "pestaña Suministros del historial"
+      },
+      {
+        "n": 4,
+        "tipo": "area",
+        "que_es": "un registro (tocar para abrirlo)"
+      }
+    ]
+  },
+  {
+    "archivo": "img/enfermeria/23-suministro-detalle.png",
+    "muestra": "Detalle de un registro de administración, con Corregir (dentro de las 24 h)",
+    "tamano": {
+      "w": 768,
+      "h": 608
+    },
+    "marcadores": [
+      {
+        "n": 1,
+        "tipo": "area",
+        "que_es": "datos del registro: paciente, quién registró, prescripción, detalle"
+      },
+      {
+        "n": 2,
+        "tipo": "punto",
+        "que_es": "botón Corregir"
+      },
+      {
+        "n": 3,
+        "tipo": "punto",
+        "que_es": "botón Cerrar"
+      }
+    ]
+  },
+  {
+    "archivo": "img/enfermeria/24-corregir.png",
+    "muestra": "Corrección de un registro: nueva cantidad y motivo, antes de confirmar con el rostro",
+    "tamano": {
+      "w": 768,
+      "h": 832
+    },
+    "marcadores": [
+      {
+        "n": 1,
+        "tipo": "punto",
+        "que_es": "campo Cantidad corregida"
+      },
+      {
+        "n": 2,
+        "tipo": "punto",
+        "que_es": "campo Motivo de la corrección (obligatorio)"
+      },
+      {
+        "n": 3,
+        "tipo": "punto",
+        "que_es": "botón Confirmar corrección con mi rostro"
+      },
+      {
+        "n": 4,
+        "tipo": "punto",
+        "que_es": "botón Cancelar (deja el registro como estaba)"
+      }
+    ]
+  },
+  {
+    "archivo": "img/enfermeria/25-corregir-rostro.png",
+    "muestra": "Confirmar con su rostro la corrección (modo demostración, sin confirmar): antes, después y motivo",
+    "tamano": {
+      "w": 768,
+      "h": 581
+    },
+    "tapado": "el usuario de prueba (barra gris)",
+    "marcadores": [
+      {
+        "n": 1,
+        "tipo": "area",
+        "que_es": "qué se está confirmando (título y operación)"
+      },
+      {
+        "n": 2,
+        "tipo": "area",
+        "que_es": "aviso «Modo demostración: el rostro se simula»"
+      },
+      {
+        "n": 3,
+        "tipo": "area",
+        "que_es": "la corrección: paciente, antes, después y motivo"
+      },
+      {
+        "n": 4,
+        "tipo": "punto",
+        "que_es": "botón «Simular el rostro de …» (en la tablet real, la cámara)"
+      },
+      {
+        "n": 5,
+        "tipo": "punto",
+        "que_es": "botón Cancelar"
+      }
+    ]
+  },
+  {
+    "archivo": "img/enfermeria/26-ficha-estudios.png",
+    "muestra": "Ficha del paciente, pestaña Estudios: el estudio programado con Confirmar que se realizó",
+    "tamano": {
+      "w": 768,
+      "h": 724
+    },
+    "marcadores": [
+      {
+        "n": 1,
+        "tipo": "punto",
+        "que_es": "pestaña Estudios"
+      },
+      {
+        "n": 2,
+        "tipo": "area",
+        "que_es": "estudio programado: nombre, fecha y hora"
+      },
+      {
+        "n": 3,
+        "tipo": "punto",
+        "que_es": "botón Confirmar que se realizó"
+      }
+    ]
+  },
+  {
+    "archivo": "img/enfermeria/27-confirmar-estudio.png",
+    "muestra": "Confirmar que se realizó el estudio: resumen, observaciones y Confirmar con mi rostro (sin confirmar)",
+    "tamano": {
+      "w": 768,
+      "h": 498
+    },
+    "marcadores": [
+      {
+        "n": 1,
+        "tipo": "area",
+        "que_es": "qué se confirma: estudio, fecha y hora, preparación y paciente"
+      },
+      {
+        "n": 2,
+        "tipo": "punto",
+        "que_es": "campo Observaciones (opcional)"
+      },
+      {
+        "n": 3,
+        "tipo": "punto",
+        "que_es": "botón Confirmar con mi rostro"
+      },
+      {
+        "n": 4,
+        "tipo": "punto",
+        "que_es": "botón Cancelar"
+      }
+    ]
+  },
+  {
+    "archivo": "img/enfermeria/29-ficha-datos.png",
+    "muestra": "Ficha del paciente, pestaña Datos: las alergias, si el médico las anotó, están en Observaciones (alergia ficticia)",
+    "tamano": {
+      "w": 768,
+      "h": 744
+    },
+    "marcadores": [
+      {
+        "n": 1,
+        "tipo": "punto",
+        "que_es": "pestaña Datos"
+      },
+      {
+        "n": 2,
+        "tipo": "area",
+        "que_es": "Observaciones (donde el médico anota, por ejemplo, las alergias)"
+      }
+    ]
+  },
+  {
+    "archivo": "img/enfermeria/30-historial-no-administrado.png",
+    "muestra": "Historial › Modificaciones: el renglón de un «No se administró», con el motivo en Detalle",
+    "tamano": {
+      "w": 768,
+      "h": 704
+    },
+    "marcadores": [
+      {
+        "n": 1,
+        "tipo": "punto",
+        "que_es": "pestaña Historial"
+      },
+      {
+        "n": 2,
+        "tipo": "punto",
+        "que_es": "solapa Modificaciones del historial"
+      },
+      {
+        "n": 3,
+        "tipo": "punto",
+        "que_es": "Acción «NO_ADMINISTRAR»"
+      },
+      {
+        "n": 4,
+        "tipo": "area",
+        "que_es": "Detalle: el motivo (después de «motivoNoAdministrado»)"
+      },
+      {
+        "n": 5,
+        "tipo": "punto",
+        "que_es": "Usuario: quién lo registró"
+      }
+    ]
+  }
+]
