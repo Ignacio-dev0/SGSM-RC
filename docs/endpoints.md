@@ -70,7 +70,7 @@ el rol o dar de baja al único administrador activo; D120). Decisiones en
 | POST   | `/api/pacientes/:id/reingresar`                               | `pacientes.gestionar` | Reingreso de un egresado en su misma ficha: `camaId` + datos a actualizar                                                      |
 | POST   | `/api/pacientes/:id/trasladar`                                | `pacientes.gestionar` | `{ camaId }`: cierra la asignación actual y abre la nueva (motivo TRASLADO)                                                    |
 | POST   | `/api/pacientes/:id/egresar`                                  | `pacientes.gestionar` | `{ motivo, fechaEgreso? }`: baja lógica con los efectos de T210                                                                |
-| GET    | `/api/pacientes/:id/historial?desde&hasta`                    | `pacientes.ver`       | Asignaciones de cama, modificaciones (auditoría) y suministros                                                                 |
+| GET    | `/api/pacientes/:id/historial?desde&hasta`                    | `pacientes.ver`       | Asignaciones de cama, modificaciones (auditoría, con `entidadId` y `entidadEtiqueta`, D114) y suministros                      |
 
 Errores: `409 DNI_DUPLICADO`, `409 PACIENTE_EGRESADO` (`detalles.pacienteId`: ofrecer el reingreso),
 `409 CAMA_OCUPADA`, `422 CAMA_NO_HABILITADA`, `409 PACIENTE_INTERNADO`, `409 PACIENTE_NO_INTERNADO`,
@@ -169,11 +169,12 @@ hay que registrar el rostro de nuevo). Acciones de auditoría: `REGISTRAR_BIOMET
 
 Errores: `403 VALIDACION_FACIAL_REQUERIDA` (falta, vencido, ajeno o ya usado),
 `409 TOMA_YA_DADA` (la toma ya tiene una administración, o hay una dosis de hace menos de media
-frecuencia aunque sea de otra toma o de antes de reanudar: `detalles.fechaHora` y
-`detalles.usuario` de la anterior; se reenvía con `otraToma: true` si corresponde otra, con el
-mismo comprobante facial: D113 y D123 de [suministros.md](suministros.md#decisiones)),
-`409 PACIENTE_NO_INTERNADO`, `422 SIN_PRESCRIPCION_VIGENTE`, `422 INSUMO_NO_DISPONIBLE`,
-`422 FUERA_DE_PLAZO`, `422 CORRECCION_INVALIDA`, `422 SIN_CAMBIOS`. Acciones de auditoría:
+frecuencia aunque sea de otra toma o de antes de reanudar: `detalles.motivo` `MISMA_TOMA` o
+`DOSIS_RECIENTE`, y `detalles.fechaHora` y `detalles.usuario` de la anterior; se reenvía con
+`otraToma: true` si corresponde otra, con el mismo comprobante facial: D113 y D123 de
+[suministros.md](suministros.md#decisiones)), `409 PACIENTE_NO_INTERNADO`,
+`422 SIN_PRESCRIPCION_VIGENTE`, `422 INSUMO_NO_DISPONIBLE`, `422 FUERA_DE_PLAZO` (pasado el plazo
+nadie corrige, D152), `422 CORRECCION_INVALIDA`, `422 SIN_CAMBIOS`. Acciones de auditoría:
 `REGISTRAR`, `CORREGIR` (Suministro). Reglas en [suministros.md](suministros.md).
 
 ## Recordatorios — T501–T508 · CU24–CU28

@@ -130,6 +130,8 @@ interface Recordatorio {
     unidadDosis: string;
     via: string; // ViaAdministracion: ORAL, INTRAVENOSA…
     frecuenciaHoras: number;
+    /** Las de la prescripción ("Si fiebre"), para la tarjeta (F7); null si no tiene. */
+    observaciones: string | null;
   } | null;
   /** Solo en los de ESTUDIO (ver estudios.md). */
   estudio: { id: number; nombre: string; tipoEstudio: string; preparacion: string | null } | null;
@@ -509,10 +511,8 @@ el vencido) y
 | D163 | Reanudar y cambiar la frecuencia dicen desde cuándo se cuentan las tomas con la misma regla que el servidor (D112 · D122, en [`prescripciones/agenda.ts`](../frontend/src/paginas/prescripciones/agenda.ts) de la interfaz): "desde la última dosis dada" solo si hay una de la agenda vigente (su `tomaProgramada` ≥ `agendaDesde`) y ninguna toma quedó sin dar después; si no, "desde ahora"; si el tratamiento todavía no empezó, "desde el inicio del tratamiento (08/10 08:00)", también al reanudar. | Decía "desde la última dosis dada" con cualquier dosis: reanudada a las 15:00 y con la última dosis de las 06:00, el servidor anclaba en ahora; y "desde ahora" en un tratamiento que empieza mañana, cuando el servidor no lo adelanta. |
 | D166 | "Marcar todas como leídas" dice cuántas marcó (`role="status"`: "Se marcaron 2 como leídas.") y lleva el foco a **Cerrar**, porque el botón desaparece cuando ya no quedan sin leer.                                                                                                                                                                                                                                                                                                                        | El foco caía al contenedor del diálogo y nada anunciaba el resultado.                                                                                                                                                                    |
 
-La tarjeta muestra las **Observaciones** de la prescripción ("Observaciones: Si fiebre") cuando el
-recordatorio las trae en `prescripcion.observaciones` (F7). El servidor todavía no las manda (el
-contrato de `prescripcion`, arriba, no las tiene): hasta que sume `observaciones: string | null`,
-la tarjeta no muestra nada y no las inventa.
+La tarjeta muestra las **Observaciones** de la prescripción ("Observaciones: Si fiebre") que el
+recordatorio trae en `prescripcion.observaciones` (F7); si son `null`, no muestra nada.
 
 Cómo se cuentan los recordatorios en las estadísticas (a tiempo, tarde, no administrados, vencidos
 sin atender): [reportes.md](reportes.md), D45 y supuesto S20.

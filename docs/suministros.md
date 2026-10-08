@@ -28,18 +28,21 @@ Ambos exigen el comprobante de la **validación facial** del usuario que registr
   no cambia.
 - **Una toma que ya se dio no se vuelve a registrar sin querer (D113).** Si la toma a la que se
   atribuye la administración ya tiene una, responde `409 TOMA_YA_DADA` con
-  `detalles: { fechaHora, usuario }` de la anterior ("Apellido, Nombre") y no registra nada. Si
-  corresponde dar otra, la persona marca _Corresponde dar otra toma_ y la pantalla reenvía con
-  `otraToma: true` (por defecto `false`): se registra y la auditoría lo dice en el `detalle`. El
-  comprobante facial no se gasta con el 409: el servidor aceptaría el reenvío con el mismo
-  comprobante mientras siga vigente, pero la pantalla de la tablet vuelve a pedir el rostro a
-  propósito (D150).
+  `detalles: { motivo: 'MISMA_TOMA', fechaHora, usuario }` de la anterior ("Apellido, Nombre") y
+  no registra nada. Si corresponde dar otra, la persona marca _Corresponde dar otra toma_ y la
+  pantalla reenvía con `otraToma: true` (por defecto `false`): se registra y la auditoría lo dice
+  en el `detalle`. El comprobante facial no se gasta con el 409: el servidor aceptaría el reenvío
+  con el mismo comprobante mientras siga vigente, pero la pantalla de la tablet vuelve a pedir el
+  rostro a propósito (D150).
 - **Una dosis reciente también se confirma a propósito (D123).** Aunque la toma de ahora no tenga
   administración, si hubo una dosis de la misma prescripción hace menos de media frecuencia
   (de otra toma, o de antes de suspenderla y reanudarla) responde el mismo `409 TOMA_YA_DADA`,
-  con esa dosis en `detalles` y un mensaje que lo dice: "Ya se dio una dosis a las 14:50
-  (Acosta, Sofía), hace 10 min, y la indicación es cada 8 h. Si corresponde dar otra, márquelo y
-  vuelva a confirmar." Se sigue con `otraToma: true`, como en D113.
+  con esa dosis en `detalles: { motivo: 'DOSIS_RECIENTE', fechaHora, usuario }` y un mensaje que
+  lo dice: "Ya se dio una dosis a las 14:50 (Acosta, Sofía), hace 10 min, y la indicación es
+  cada 8 h. Si corresponde dar otra, márquelo y vuelva a confirmar." Se sigue con
+  `otraToma: true`, como en D113.
+- **`detalles.motivo`** dice cuál de los dos casos fue: `MISMA_TOMA` (D113) o `DOSIS_RECIENTE`
+  (D123). La pantalla lo usa para no hablar de "esta toma" cuando la dosis fue de otra.
 - **Bloqueos (D121).** El registro bloquea la prescripción (`FOR NO KEY UPDATE`) al empezar y
   recién después la lee: dos administraciones de la misma prescripción van de a una, y un cambio
   de frecuencia o una reanudación que se confirma en el medio se ve (esos cambios toman el mismo
@@ -51,7 +54,9 @@ Ambos exigen el comprobante de la **validación facial** del usuario que registr
 - Solo dentro de las **24 horas** de registrado (`SUMINISTRO_PLAZO_CORRECCION_HORAS`); después
   responde `FUERA_DE_PLAZO` y nadie lo puede corregir, tampoco el administrador. La pantalla lo
   dice así: "Pasaron más de 24 horas: ya no se puede corregir. Avise a su supervisora para dejar
-  constancia." Las horas son las del plazo configurado (`corregibleHasta − fechaHora`). Si el plazo
+  constancia." Las horas son las del plazo configurado (`corregibleHasta − fechaHora`); el
+  mensaje del `FUERA_DE_PLAZO` del servidor dice lo mismo, con las horas de
+  `SUMINISTRO_PLAZO_CORRECCION_HORAS`, y ya no manda a pedírsela al administrador. Si el plazo
   vence con el diálogo abierto, el `FUERA_DE_PLAZO` dice lo mismo, sale de la corrección y ya no
   ofrece Corregir (D152).
 - **Motivo obligatorio** y **validación facial** de quien corrige.
@@ -95,10 +100,13 @@ en la pestaña **Historial** de cada paciente.
   confirmar). El diálogo facial muestra los insumos con sus cantidades y el paciente.
 - Un único botón final: **Confirmar con mi rostro**.
 - Si el servidor responde `TOMA_YA_DADA` (otra persona la dio mientras tanto, o la pantalla no lo
-  sabía), el aviso toma el foco: "Esta toma ya se registró a las 08:05 (Acosta, Sofía). Si
-  corresponde dar otra, márquelo y vuelva a confirmar.". La prescripción se vuelve a pedir y
-  _Corresponde dar otra toma_ aparece aunque la tarjeta todavía no lo muestre; solo con la casilla
-  marcada viaja `otraToma: true` (D150).
+  sabía), el aviso toma el foco y dice el caso según `detalles.motivo`
+  ([`tomaYaDada.ts`](../frontend/src/paginas/suministros/tomaYaDada.ts)): con `MISMA_TOMA`, "Esta
+  toma ya se registró a las 08:05 (Acosta, Sofía). Si corresponde dar otra, márquelo y vuelva a
+  confirmar."; con `DOSIS_RECIENTE`, "Hace 40 min se registró una dosis de este medicamento (a
+  las 11:20, Acosta, Sofía). Si corresponde dar otra, márquelo y vuelva a confirmar." (sin motivo,
+  el primero). La prescripción se vuelve a pedir y _Corresponde dar otra toma_ aparece aunque la
+  tarjeta todavía no lo muestre; solo con la casilla marcada viaja `otraToma: true` (D150).
 - La pantalla vuelve a pedir las prescripciones al volver a estar a la vista (otra pestaña, la
   tablet que se despierta) y cada 60 s mientras se ve, para que "Ya se dio" esté al día (D151).
   Si la prescripción elegida ya no viene (la suspendieron o la finalizaron), el formulario no
@@ -138,10 +146,10 @@ medicamento o un insumo y, si está dado de baja, que se reactive en lugar de ag
 
 | #    | Decisión                                                                                                                                                                                                                                                                                                                                                                                                                                                 | Por qué                                                                                                                                                                                                                                                                                                                                                                                              |
 | ---- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| D113 | `TOMA_YA_DADA` en el servidor: la toma de ahora (la más cercana, como `tomaProgramada`) con una administración previa se rechaza salvo `otraToma: true`. Se bloquea la fila de la prescripción mientras se decide, el comprobante facial se revisa antes y se gasta después del control, y un `otraToma` que de verdad repitió queda en el `detalle` de la auditoría.                                                                                    | La pantalla ya avisaba, pero con dos tablets (o una lista vieja) se podía dar dos veces sin saberlo. Las decisiones clínicas no las toma el sistema: solo exige que sea a propósito. Gastar el comprobante en un 409 obligaba a cualquier cliente de la API a volver a validar el rostro para algo que la persona ya confirmó (la pantalla de la tablet igual lo vuelve a pedir, a propósito: D150). |
+| D113 | `TOMA_YA_DADA` en el servidor: la toma de ahora (la más cercana, como `tomaProgramada`) con una administración previa se rechaza salvo `otraToma: true`. Se bloquea la fila de la prescripción mientras se decide, el comprobante facial se revisa antes y se gasta después del control, y un `otraToma` que de verdad repitió queda en el `detalle` de la auditoría. `detalles.motivo`: `MISMA_TOMA`.                                                   | La pantalla ya avisaba, pero con dos tablets (o una lista vieja) se podía dar dos veces sin saberlo. Las decisiones clínicas no las toma el sistema: solo exige que sea a propósito. Gastar el comprobante en un 409 obligaba a cualquier cliente de la API a volver a validar el rostro para algo que la persona ya confirmó (la pantalla de la tablet igual lo vuelve a pedir, a propósito: D150). |
 | D116 | `enUso` se calcula con una consulta de existencia (`EXISTS` en prescripciones y en detalles de suministros) por los índices nuevos por insumo, para todo el catálogo de una vez; con uso, `tipo` y `unidadMedida` no cambian (`409 INSUMO_EN_USO`). El cambio bloquea la fila del insumo (`FOR UPDATE`) antes de mirar si está en uso; el alta de una prescripción y el registro de insumos la bloquean para leer el tipo (`FOR SHARE`).                 | Cambiar la unidad de un medicamento ya prescripto cambiaría el sentido de las dosis y los reportes; pasarlo a insumo dejaría prescripciones de algo que no es un medicamento. Con los índices, preguntar por un insumo sin uso no recorre los detalles de un año. Sin los bloqueos, un cambio a insumo y una prescripción nueva del mismo medicamento a la vez se confirmaban los dos.               |
 | D121 | Cada administración guarda su toma (`suministros.toma_programada`, nula en los insumos), calculada al registrarla con la agenda vigente. El DTO, `TOMA_YA_DADA`, la atención del recordatorio, la próxima toma y las tomas que el temporizador ya no recuerda usan ese dato; la migración lo completó para las existentes con la agenda con la que se dieron. El registro y los cambios de agenda bloquean la prescripción al empezar y la leen después. | Se recalculaba en cada lectura con la agenda actual: al volver a anclar, lo dado antes quedaba sin toma ("toma de las —") y la dosis tardía que servía de ancla cambiaba de toma (la de las 12:00 dada a las 12:40 pasaba a ser "la de las 12:40"). Leer la prescripción antes del bloqueo dejaba decidir `TOMA_YA_DADA` con una agenda vieja.                                                       |
-| D123 | Una dosis de la misma prescripción de hace menos de media frecuencia (la vigente) también responde `409 TOMA_YA_DADA` si la toma de ahora no tiene administración, aunque sea de otra toma o de antes de reanudar. Se sigue con `otraToma`.                                                                                                                                                                                                              | Al reanudar, la toma vuelve a ser "ahora": con una dosis dada a las 14:50, suspendida a las 14:55 y reanudada a las 15:00, se registraba otra sin aviso. Pasaba también con una dosis tardía seguida de la siguiente. Es la misma regla con la que la pantalla avisa "Ya se dio"; como D113, no impide nada: solo pide confirmarlo. Queda para validar con el hospital (supuestos).                  |
+| D123 | Una dosis de la misma prescripción de hace menos de media frecuencia (la vigente) también responde `409 TOMA_YA_DADA` si la toma de ahora no tiene administración, aunque sea de otra toma o de antes de reanudar, con `detalles.motivo`: `DOSIS_RECIENTE` (la pantalla dice "Hace N min se registró una dosis de este medicamento…", no "esta toma"). Se sigue con `otraToma`.                                                                          | Al reanudar, la toma vuelve a ser "ahora": con una dosis dada a las 14:50, suspendida a las 14:55 y reanudada a las 15:00, se registraba otra sin aviso. Pasaba también con una dosis tardía seguida de la siguiente. Es la misma regla con la que la pantalla avisa "Ya se dio"; como D113, no impide nada: solo pide confirmarlo. Queda para validar con el hospital (supuestos).                  |
 
 Pruebas: [`registro.test.ts`](../backend/src/modulos/suministros/registro.test.ts) ("una toma
 que ya se dio": la dosis reciente, dos enfermeras a la vez y un cambio de agenda en curso),

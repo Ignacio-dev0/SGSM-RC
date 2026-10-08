@@ -111,6 +111,10 @@ candado de PostgreSQL (`pg_advisory_xact_lock`) al empezar su transacción y van
 administradores que se quitan el rol (o se dan de baja) uno al otro a la vez no dejan cero; el
 segundo ya no tiene los permisos y recibe `PRIVILEGIO_AJENO`.
 
+Las pantallas muestran estos dos rechazos con el mensaje del servidor: en el formulario del usuario
+y en sus permisos adicionales, en un aviso de error que se lleva a la vista y toma el foco (queda
+arriba, lejos de **Guardar**); al dar de baja, dentro del diálogo de confirmación.
+
 **Las descripciones de los permisos** (las muestra la pantalla de permisos de un usuario, desde
 `GET /api/permisos`) están en palabras de quien la usa y con el glosario de
 [PRODUCT.md](../PRODUCT.md): "Crear, buscar, modificar, dar de baja y reactivar usuarios",
