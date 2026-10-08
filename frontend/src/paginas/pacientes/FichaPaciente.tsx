@@ -1,6 +1,7 @@
 import { useId, useState, type ReactNode } from 'react';
 import { Box, Paper, Tab, Tabs, Typography } from '@mui/material';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
+import HotelOutlinedIcon from '@mui/icons-material/HotelOutlined';
 import InventoryOutlinedIcon from '@mui/icons-material/Inventory2Outlined';
 import MedicationOutlinedIcon from '@mui/icons-material/MedicationOutlined';
 import SwapHorizIcon from '@mui/icons-material/SwapHoriz';
@@ -140,6 +141,8 @@ export function FichaPaciente() {
 
   const gestiona = tienePermiso('pacientes.gestionar') && p.estado === 'INTERNADO';
   const suministra = tienePermiso('suministros.registrar') && p.estado === 'INTERNADO';
+  // Si vuelve, el reingreso se registra desde su ficha, con sus datos ya cargados (F18).
+  const reingresa = tienePermiso('pacientes.gestionar') && p.estado === 'EGRESADO';
 
   return (
     <>
@@ -161,8 +164,16 @@ export function FichaPaciente() {
           </Box>
         }
         acciones={
-          (gestiona || suministra) && (
+          (gestiona || suministra || reingresa) && (
             <>
+              {reingresa && (
+                <Boton
+                  startIcon={<HotelOutlinedIcon />}
+                  onClick={() => navegar(`/pacientes/nuevo?reingreso=${id}`)}
+                >
+                  Registrar reingreso
+                </Boton>
+              )}
               {suministra && (
                 <>
                   <Boton

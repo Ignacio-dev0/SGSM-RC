@@ -1,10 +1,10 @@
 import { useState } from 'react';
-import { Box, Tab, Tabs, Typography } from '@mui/material';
+import { Box, FormControlLabel, Switch, Tab, Tabs, Typography } from '@mui/material';
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { mensajeDeError } from '../../api/cliente';
 import { pacientesApi } from '../../api/pacientes';
 import { suministrosApi } from '../../api/suministros';
-import type { HistorialPaciente as Historial, Suministro } from '../../api/tipos';
+import type { Suministro } from '../../api/tipos';
 import { useSesion } from '../../auth/useSesion';
 import { Alerta } from '../../componentes/Alerta';
 import { CampoTexto } from '../../componentes/CampoTexto';
@@ -19,35 +19,9 @@ import { Recargando } from '../../utilidades/listado';
 import { oracionDe, pasosParaProbar } from '../../utilidades/sinResultados';
 import { DialogoSuministro } from '../suministros/DialogoSuministro';
 import { detalleDe } from '../suministros/formato';
-import { CAMPOS, MOTIVO_ASIGNACION, etiquetaAccion, formatearCama } from './etiquetas';
-
-type Modificacion = Historial['modificaciones'][number];
-
-const mostrarValor = (v: unknown) =>
-  v === null || v === undefined || v === ''
-    ? '(vacío)'
-    : typeof v === 'string' && /^\d{4}-\d{2}-\d{2}T/.test(v)
-      ? formatearFechaHora(v)
-      : String(v);
-
-/** "Obra social: IOMA → PAMI" por cada campo que cambió. */
-function cambiosDe(m: Modificacion) {
-  const campos = new Set([
-    ...Object.keys(m.valorAnterior ?? {}),
-    ...Object.keys(m.valorNuevo ?? {}),
-  ]);
-  if (campos.size === 0) return m.detalle ?? '';
-  return [...campos]
-    .map((c) => {
-      const antes =
-        m.valorAnterior && c in m.valorAnterior ? mostrarValor(m.valorAnterior[c]) : null;
-      const despues = m.valorNuevo && c in m.valorNuevo ? mostrarValor(m.valorNuevo[c]) : null;
-      const nombre = CAMPOS[c] ?? c;
-      if (antes !== null && despues !== null) return `${nombre}: ${antes} → ${despues}`;
-      return `${nombre}: ${despues ?? antes}`;
-    })
-    .join(' · ');
-}
+import { accionSobre, sobreQue } from '../auditoria/palabras';
+import { MOTIVO_ASIGNACION, formatearCama } from './etiquetas';
+import { cambiosEnPalabras, esAvisoAutomatico, soloAvisosAutomaticos } from './modificaciones';
 
 /** Qué se espera ver en cada pestaña cuando todavía no hay nada, y cuándo va a aparecer. */
 const SIN_REGISTROS = {
@@ -82,6 +56,13 @@ export function HistorialPaciente({ pacienteId }: { pacienteId: number }) {
     placeholderData: keepPreviousData,
   });
   const h = historial.data;
+  // Los recordatorios que el sistema genera y vence solo tapan lo que hicieron las personas (F2).
+  const [verAutomaticos, setVerAutomaticos] = useState(false);
+  const automaticos = h?.modificaciones.filter(esAvisoAutomatico).length ?? 0;
+  const modificaciones =
+    h && !verAutomaticos
+      ? h.modificaciones.filter((m) => !esAvisoAutomatico(m))
+      : (h?.modificaciones ?? []);
   const { tienePermiso } = useSesion();
   const clienteQuery = useQueryClient();
   const [suministro, setSuministro] = useState<Suministro | null>(null);
@@ -113,7 +94,7 @@ export function HistorialPaciente({ pacienteId }: { pacienteId: number }) {
       <Tabs value={pestana} onChange={(_e, v: number) => setPestana(v)} sx={{ mb: 2 }}>
         {/* Sin respuesta (cargando o con error) no se afirma "(0)": no se sabe cuántos hay. */}
         <Tab label={h ? `Camas (${h.asignaciones.length})` : 'Camas'} />
-        <Tab label={h ? `Modificaciones (${h.modificaciones.length})` : 'Modificaciones'} />
+        <Tab label={h ? `Modificaciones (${modificaciones.length})` : 'Modificaciones'} />
         <Tab label={h ? `Suministros (${h.suministros.length})` : 'Suministros'} />
       </Tabs>
 
@@ -146,6 +127,18 @@ export function HistorialPaciente({ pacienteId }: { pacienteId: number }) {
               mensajeVacio={mensajeSin('asignaciones de cama', SIN_REGISTROS.camas, desde, hasta)}
             />
           )}
+          {pestana === 1 && automaticos > 0 && (
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={verAutomaticos}
+                  onChange={(e) => setVerAutomaticos(e.target.checked)}
+                />
+              }
+              label="Mostrar los avisos automáticos"
+              sx={{ minHeight: 56, mx: 0, mb: 1 }}
+            />
+          )}
           {pestana === 1 && (
             <Tabla
               titulo="Modificaciones"
@@ -155,22 +148,32 @@ export function HistorialPaciente({ pacienteId }: { pacienteId: number }) {
                   valor: (m) => formatearFechaHora(m.fechaHora),
                   ancho: 170,
                 },
-                { titulo: 'Acción', valor: (m) => etiquetaAccion(m.accion, m.entidad) },
+                // Las palabras de la auditoría (F2): "Suspendió · Prescripción".
+                { titulo: 'Acción', valor: (m) => accionSobre(m.accion, m.entidad) },
+                // Cuál: con dos prescripciones, "Prescripción" sola no dice cuál se suspendió.
+                {
+                  titulo: 'Sobre qué',
+                  valor: (m) =>
+                    sobreQue({
+                      entidad: m.entidad,
+                      entidadId: m.entidadId ?? null,
+                      entidadEtiqueta: m.entidadEtiqueta ?? null,
+                    }),
+                },
                 {
                   titulo: 'Detalle',
-                  valor: (m) => <Typography variant="body2">{cambiosDe(m)}</Typography>,
+                  valor: (m) => <Typography variant="body2">{cambiosEnPalabras(m)}</Typography>,
                 },
-                { titulo: 'Usuario', valor: (m) => m.usuario ?? 'Sistema' },
+                { titulo: 'Quién lo hizo', valor: (m) => m.usuario ?? 'Sistema' },
               ]}
-              filas={h?.modificaciones ?? []}
+              filas={modificaciones}
               claveFila={(m) => m.id}
               cargando={historial.isFetching}
-              mensajeVacio={mensajeSin(
-                'modificaciones',
-                SIN_REGISTROS.modificaciones,
-                desde,
-                hasta,
-              )}
+              mensajeVacio={
+                automaticos > 0 && !verAutomaticos
+                  ? soloAvisosAutomaticos(automaticos)
+                  : mensajeSin('modificaciones', SIN_REGISTROS.modificaciones, desde, hasta)
+              }
             />
           )}
           {pestana === 2 && (

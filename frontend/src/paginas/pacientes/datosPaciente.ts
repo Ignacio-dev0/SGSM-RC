@@ -42,3 +42,22 @@ export function validarPaciente(d: DatosPaciente): ErroresPaciente {
   if (!d.sexo) e.sexo = 'Elija el sexo';
   return e;
 }
+
+/**
+ * Para el reingreso desde la ficha (F18): solo los datos que se cambiaron frente a la ficha. Lo que
+ * no se tocó no viaja y el servidor lo deja como estaba (un opcional vacío lo borraría).
+ */
+export function soloCambios(datos: DatosPaciente, ficha: DatosPaciente): Partial<DatosPaciente> {
+  return Object.fromEntries(
+    Object.entries(datos).filter(
+      ([campo, valor]) => valor.trim() !== ficha[campo as keyof DatosPaciente].trim(),
+    ),
+  );
+}
+
+/**
+ * Para el reingreso que se descubre al internar (el DNI es de un egresado): solo lo escrito. Un
+ * opcional que quedó vacío no borra el de la ficha (F18).
+ */
+export const soloConValor = (datos: DatosPaciente): Partial<DatosPaciente> =>
+  Object.fromEntries(Object.entries(datos).filter(([, valor]) => valor.trim() !== ''));

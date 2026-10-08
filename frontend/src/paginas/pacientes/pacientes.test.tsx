@@ -300,7 +300,10 @@ describe('ficha del paciente: modificación, traslado y baja (T207 · T208 · CU
     );
     await userEvent.click(within(dialogo).getByRole('button', { name: 'Trasladar' }));
 
-    expect(await screen.findByRole('status')).toHaveTextContent(/B-01/);
+    // Con el guion que no deja partir la cama (F3).
+    expect(await screen.findByRole('status')).toHaveTextContent(
+      `cama B${String.fromCharCode(0x2011)}01`,
+    );
   });
 
   it('da de alta al paciente con motivo', async () => {
@@ -370,7 +373,10 @@ describe('ficha del paciente: modificación, traslado y baja (T207 · T208 · CU
     await userEvent.click(await screen.findByRole('button', { name: 'Trasladar' }));
     const dialogo = screen.getByRole('dialog', { name: /Trasladar/ });
     expect(dialogo).toHaveTextContent(/Benítez, Rosa/);
-    expect(dialogo).toHaveTextContent(/Cama actual: Sala A – Neurorrehabilitación · A-01/);
+    // La cama con el guion que no corta (F3).
+    expect(dialogo).toHaveTextContent(
+      `Cama actual: Sala A – Neurorrehabilitación · A${String.fromCharCode(0x2011)}01`,
+    );
     const trasladar = within(dialogo).getByRole('button', { name: 'Trasladar' });
     expect(trasladar).toBeDisabled();
     await userEvent.selectOptions(
@@ -400,8 +406,9 @@ describe('ficha del paciente: modificación, traslado y baja (T207 · T208 · CU
     await userEvent.click(await screen.findByRole('button', { name: 'Dar de alta' }));
     const dialogo = screen.getByRole('dialog', { name: /Dar de alta/ });
     expect(dialogo).toHaveTextContent(/Benítez, Rosa/);
-    expect(dialogo).toHaveTextContent(/cama A-01/);
-    expect(dialogo).toHaveTextContent(/Internar paciente.*reingreso/);
+    expect(dialogo).toHaveTextContent(`cama A${String.fromCharCode(0x2011)}01`);
+    // F18: el reingreso se registra desde la misma ficha, con sus datos ya cargados.
+    expect(dialogo).toHaveTextContent(/Si vuelve, registre su reingreso desde esta ficha/);
   });
 
   it('dar de alta valida la fecha: vacía o futura no se puede confirmar', async () => {
@@ -492,7 +499,7 @@ describe('historial del paciente (T209 · CU16)', () => {
     expect(within(dialogo).getByRole('button', { name: 'Corregir' })).toBeInTheDocument();
   });
 
-  it('el registro del paciente figura como "Internación", no como "Alta"', async () => {
+  it('el registro del paciente figura como "Internó" (glosario), no como "Alta" ni "Creó"', async () => {
     servidor.use(
       http.get('*/api/pacientes/7', () => HttpResponse.json({ data: paciente() })),
       http.get('*/api/pacientes/7/historial', () =>
@@ -520,7 +527,8 @@ describe('historial del paciente (T209 · CU16)', () => {
     await userEvent.click(await screen.findByRole('tab', { name: 'Historial' }));
     await userEvent.click(await screen.findByRole('tab', { name: /Modificaciones/ }));
     const tabla = await screen.findByRole('table', { name: 'Modificaciones' });
-    expect(await within(tabla).findByText('Internación')).toBeInTheDocument();
+    expect(await within(tabla).findByText('Internó')).toBeInTheDocument();
+    expect(within(tabla).queryByText('Creó')).not.toBeInTheDocument();
     expect(within(tabla).queryByText('Alta')).not.toBeInTheDocument();
   });
 });

@@ -1,18 +1,26 @@
-import { useState, type FormEvent } from 'react';
-import { Box, Paper, Typography } from '@mui/material';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { Box, Button, Paper, Typography } from '@mui/material';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { useNavigate } from 'react-router-dom';
+import { Link as EnlaceRouter, useNavigate, useSearchParams } from 'react-router-dom';
 import { ErrorApi, erroresPorCampo, mensajeDeError } from '../../api/cliente';
-import { pacientesApi, useCamasLibres, type DatosPaciente } from '../../api/pacientes';
+import { pacientesApi, useCamasLibres, usePaciente, type DatosPaciente } from '../../api/pacientes';
 import type { Paciente } from '../../api/tipos';
 import { AccionesFormulario } from '../../componentes/AccionesFormulario';
 import { Alerta } from '../../componentes/Alerta';
 import { Boton } from '../../componentes/Boton';
 import { EncabezadoPagina } from '../../componentes/EncabezadoPagina';
+import { Cargando, ErrorDeCarga } from '../../componentes/EstadoDeCarga';
 import { Selector } from '../../componentes/Selector';
 import { CamposPaciente } from './CamposPaciente';
-import { PACIENTE_VACIO, validarPaciente, type ErroresPaciente } from './datosPaciente';
-import { descripcionCama, opcionesDeCamas } from './etiquetas';
+import {
+  PACIENTE_VACIO,
+  datosDePaciente,
+  soloCambios,
+  soloConValor,
+  validarPaciente,
+  type ErroresPaciente,
+} from './datosPaciente';
+import { laCama, opcionesDeCamas } from './etiquetas';
 import { hayDiferencias, useCambiosSinGuardar } from '../../utilidades/useCambiosSinGuardar';
 import { useFocoEnPrimerError } from '../../utilidades/useFocoEnPrimerError';
 
@@ -26,26 +34,43 @@ const CAMPO_DEL_ERROR: Record<string, keyof ErroresPaciente> = {
 /**
  * Registro de paciente (T205 · CU11 · CU15): datos personales y elección de la cama libre en el
  * mismo paso. Si el DNI es de un paciente egresado, ofrece registrar su reingreso (T204).
+ *
+ * Con `?reingreso=<id>` (desde la ficha de un egresado, F18) es el reingreso de esa persona: el
+ * formulario viene con los datos de su ficha y al confirmar viajan la cama y solo lo que se
+ * cambió, así lo que no se tocó queda como estaba.
  */
 export function RegistroPaciente() {
   const navegar = useNavigate();
   const clienteQuery = useQueryClient();
   const camas = useCamasLibres();
+  const [parametros] = useSearchParams();
+  const reingresoId = Number(parametros.get('reingreso')) || 0;
+  const ficha = usePaciente(reingresoId);
+  const datosDeLaFicha = ficha.data ? datosDePaciente(ficha.data) : null;
   const [datos, setDatos] = useState<DatosPaciente>(PACIENTE_VACIO);
   const [camaId, setCamaId] = useState('');
   const [errores, setErrores] = useState<ErroresPaciente>({});
   const { ref: refFormulario, enfocarPrimerError } = useFocoEnPrimerError<HTMLFormElement>();
   const [egresadoId, setEgresadoId] = useState<number | null>(null);
   const { dialogo, permitirSalida } = useCambiosSinGuardar(
-    hayDiferencias(datos, PACIENTE_VACIO) || camaId !== '',
+    hayDiferencias(datos, datosDeLaFicha ?? PACIENTE_VACIO) || camaId !== '',
   );
+
+  // Los datos de la ficha se cargan una sola vez: después son los que edita la persona.
+  const precargado = useRef(false);
+  useEffect(() => {
+    if (!ficha.data || precargado.current) return;
+    precargado.current = true;
+    setDatos(datosDePaciente(ficha.data));
+  }, [ficha.data]);
 
   const alTerminar = async (p: Paciente, accion: string) => {
     await clienteQuery.invalidateQueries({ queryKey: ['pacientes'] });
     await clienteQuery.invalidateQueries({ queryKey: ['camas'] });
+    clienteQuery.setQueryData(['paciente', p.id], p);
     permitirSalida();
     navegar(`/pacientes/${p.id}`, {
-      state: { aviso: `${accion} en ${p.cama ? descripcionCama(p.cama) : 'la cama elegida'}` },
+      state: { aviso: `${accion} en ${p.cama ? laCama(p.cama) : 'la cama elegida'}` },
     });
   };
 
@@ -69,7 +94,13 @@ export function RegistroPaciente() {
   });
 
   const reingresar = useMutation({
-    mutationFn: () => pacientesApi.reingresar(egresadoId!, { ...datos, camaId: Number(camaId) }),
+    mutationFn: () =>
+      reingresoId
+        ? pacientesApi.reingresar(reingresoId, {
+            ...soloCambios(datos, datosDeLaFicha ?? PACIENTE_VACIO),
+            camaId: Number(camaId),
+          })
+        : pacientesApi.reingresar(egresadoId!, { ...soloConValor(datos), camaId: Number(camaId) }),
     onSuccess: (p) => alTerminar(p, 'Reingreso registrado'),
     onError: alFallar,
   });
@@ -83,17 +114,65 @@ export function RegistroPaciente() {
     };
     setErrores(faltan);
     enfocarPrimerError();
-    if (Object.keys(faltan).length === 0) internar.mutate();
+    if (Object.keys(faltan).length > 0) return;
+    if (reingresoId) reingresar.mutate();
+    else internar.mutate();
   };
 
   const errorGeneral =
-    internar.isError && !egresadoId && Object.keys(errores).length === 0
-      ? mensajeDeError(internar.error)
+    (internar.isError && !egresadoId) || (reingresoId > 0 && reingresar.isError)
+      ? Object.keys(errores).length === 0
+        ? mensajeDeError(internar.error ?? reingresar.error)
+        : null
       : null;
+  const f = ficha.data;
+  const volverA = reingresoId ? `/pacientes/${reingresoId}` : '/pacientes';
+
+  if (reingresoId) {
+    if (ficha.isError) {
+      return (
+        <>
+          <EncabezadoPagina titulo="Reingreso" volverA={volverA} />
+          <ErrorDeCarga
+            que="la ficha del paciente"
+            error={ficha.error}
+            alReintentar={() => void ficha.refetch()}
+          />
+        </>
+      );
+    }
+    if (!f) return <Cargando texto="Cargando la ficha del paciente…" />;
+    if (f.estado === 'INTERNADO') {
+      return (
+        <>
+          <EncabezadoPagina titulo={`Reingreso de ${f.apellido}, ${f.nombre}`} volverA={volverA} />
+          <Alerta
+            tipo="info"
+            accion={
+              <Button component={EnlaceRouter} to={volverA}>
+                Ir a la ficha
+              </Button>
+            }
+          >
+            {f.apellido}, {f.nombre} tiene una internación en curso: no hace falta registrar el
+            reingreso.
+          </Alerta>
+        </>
+      );
+    }
+  }
 
   return (
     <>
-      <EncabezadoPagina titulo="Internar paciente" volverA="/pacientes" />
+      <EncabezadoPagina
+        titulo={f ? `Reingreso de ${f.apellido}, ${f.nombre}` : 'Internar paciente'}
+        subtitulo={
+          f
+            ? 'Se usa su misma ficha. Revise los datos y elija la cama: lo que no cambie queda como está.'
+            : undefined
+        }
+        volverA={volverA}
+      />
       {errorGeneral && <Alerta tipo="error">{errorGeneral}</Alerta>}
       {egresadoId && (
         // Pide una decisión y aparece arriba, lejos del botón tocado: se lleva el foco (UX-12).
@@ -162,11 +241,11 @@ export function RegistroPaciente() {
         </Box>
 
         <AccionesFormulario>
-          <Boton variante="texto" onClick={() => navegar('/pacientes')}>
+          <Boton variante="texto" onClick={() => navegar(volverA)}>
             Cancelar
           </Boton>
-          <Boton type="submit" cargando={internar.isPending}>
-            Internar
+          <Boton type="submit" cargando={reingresoId ? reingresar.isPending : internar.isPending}>
+            {reingresoId ? 'Registrar reingreso' : 'Internar'}
           </Boton>
         </AccionesFormulario>
       </Paper>

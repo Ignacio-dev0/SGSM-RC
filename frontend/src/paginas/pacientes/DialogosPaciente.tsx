@@ -9,7 +9,7 @@ import { CampoTexto } from '../../componentes/CampoTexto';
 import { ModalConfirmacion } from '../../componentes/ModalConfirmacion';
 import { Selector } from '../../componentes/Selector';
 import { formatearFechaHora } from '../../utilidades/formato';
-import { descripcionCama, opcionesDeCamas } from './etiquetas';
+import { formatearCama, laCama, opcionesDeCamas } from './etiquetas';
 
 interface Props {
   paciente: Paciente;
@@ -32,7 +32,7 @@ export function DialogoTraslado({ paciente, abierto, alCerrar, alTerminar }: Pro
     mutationFn: () => pacientesApi.trasladar(paciente.id, Number(camaId)),
     onSuccess: async (p) => {
       await clienteQuery.invalidateQueries({ queryKey: ['camas'] });
-      alTerminar(p, `Paciente trasladado a ${p.cama ? descripcionCama(p.cama) : 'la cama nueva'}`);
+      alTerminar(p, `Paciente trasladado a ${p.cama ? laCama(p.cama) : 'la cama nueva'}`);
     },
   });
 
@@ -49,8 +49,11 @@ export function DialogoTraslado({ paciente, abierto, alCerrar, alTerminar }: Pro
           </strong>{' '}
           · DNI {paciente.dni}
           <br />
-          Cama actual: {paciente.cama ? descripcionCama(paciente.cama) : 'sin cama'}. Al
-          trasladarlo, esa cama queda libre.
+          Cama actual:{' '}
+          {paciente.cama
+            ? `${paciente.cama.sala.nombre} · ${formatearCama(paciente.cama.numero)}`
+            : 'sin cama'}
+          . Al trasladarlo, esa cama queda libre.
         </Typography>
       }
       textoConfirmar="Trasladar"
@@ -145,12 +148,12 @@ export function DialogoEgreso({ paciente, abierto, alCerrar, alTerminar }: Props
               {paciente.apellido}, {paciente.nombre}
             </strong>{' '}
             (DNI {paciente.dni}
-            {paciente.cama ? `, cama ${paciente.cama.numero}` : ''}).
+            {paciente.cama ? `, cama ${formatearCama(paciente.cama.numero)}` : ''}).
           </Typography>
           <Typography sx={{ mt: 1 }}>
             Se liberará la cama, se suspenderán sus prescripciones vigentes y se cancelarán los
-            estudios y recordatorios pendientes. Si vuelve, se lo interna con Internar paciente y su
-            DNI, y queda como reingreso en la misma ficha.
+            estudios y recordatorios pendientes. Si vuelve, registre su reingreso desde esta ficha
+            (Registrar reingreso): se usan sus mismos datos.
           </Typography>
         </>
       }
