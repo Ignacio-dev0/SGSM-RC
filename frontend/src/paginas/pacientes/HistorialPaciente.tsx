@@ -153,12 +153,7 @@ export function HistorialPaciente({ pacienteId }: { pacienteId: number }) {
                 // Cuál: con dos prescripciones, "Prescripción" sola no dice cuál se suspendió.
                 {
                   titulo: 'Sobre qué',
-                  valor: (m) =>
-                    sobreQue({
-                      entidad: m.entidad,
-                      entidadId: m.entidadId ?? null,
-                      entidadEtiqueta: m.entidadEtiqueta ?? null,
-                    }),
+                  valor: (m) => sobreQue(m),
                 },
                 {
                   titulo: 'Detalle',

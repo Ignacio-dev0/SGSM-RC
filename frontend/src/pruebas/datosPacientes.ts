@@ -80,6 +80,8 @@ export const HISTORIAL: HistorialPaciente = {
       fechaHora: '2026-10-03T14:00:00.000Z',
       accion: 'MODIFICAR',
       entidad: 'Paciente',
+      entidadId: '7',
+      entidadEtiqueta: 'Benítez, Rosa',
       usuario: 'Ferreyra, Martín',
       valorAnterior: { obraSocial: 'IOMA' },
       valorNuevo: { obraSocial: 'PAMI' },

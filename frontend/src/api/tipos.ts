@@ -114,10 +114,10 @@ export interface HistorialPaciente {
     entidad: string;
     /**
      * Qué registro y su nombre legible, como en la auditoría (C2 · D114): "Paracetamol · Benítez,
-     * Rosa". Opcionales: el servidor puede no mandarlos todavía (queda el tipo solo).
+     * Rosa". Sin nombre (el tipo no tiene, o el registro ya no existe), null: queda el número.
      */
-    entidadId?: string | null;
-    entidadEtiqueta?: string | null;
+    entidadId: string | null;
+    entidadEtiqueta: string | null;
     usuario: string | null;
     valorAnterior: Record<string, unknown> | null;
     valorNuevo: Record<string, unknown> | null;

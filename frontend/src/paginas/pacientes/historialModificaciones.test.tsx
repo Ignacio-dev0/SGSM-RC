@@ -18,6 +18,8 @@ const modificacion = (extra: Partial<Modificacion>): Modificacion => ({
   fechaHora: '2026-10-03T14:00:00.000Z',
   accion: 'MODIFICAR',
   entidad: 'Paciente',
+  entidadId: null,
+  entidadEtiqueta: null,
   usuario: 'Ferreyra, Martín',
   valorAnterior: null,
   valorNuevo: null,
@@ -127,7 +129,7 @@ describe('modificaciones del paciente con las palabras de la auditoría (F2)', (
         valorAnterior: { estado: 'VIGENTE' },
         valorNuevo: { estado: 'SUSPENDIDA' },
       }),
-      // Sin nombre (un servidor que todavía no lo manda): el número, como en la auditoría.
+      // Sin nombre (el registro ya no existe): el número, como en la auditoría.
       modificacion({ id: 43, entidad: 'Prescripcion', entidadId: '39' }),
     ]);
     const tabla = await abrirModificaciones();

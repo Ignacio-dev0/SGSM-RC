@@ -1,4 +1,5 @@
 import { prisma } from '../../db';
+import { etiquetaDe, etiquetasDe } from '../auditoria/etiquetas.servicio';
 import { obtenerPacienteDb } from './pacientes.servicio';
 
 const nombreDe = (u: { apellido: string; nombre: string } | null) =>
@@ -7,6 +8,8 @@ const nombreDe = (u: { apellido: string; nombre: string } | null) =>
 /**
  * Historial del paciente (T209 · CU16 · RF10): asignaciones de cama, modificaciones (desde la
  * auditoría) y suministros, opcionalmente acotados a un rango de fechas. Lo más reciente primero.
+ * Cada modificación dice sobre qué registro y su nombre, como la auditoría (D114): con dos
+ * prescripciones, cuál se suspendió.
  */
 export async function historialPaciente(
   id: number,
@@ -42,6 +45,8 @@ export async function historialPaciente(
       orderBy: [{ fechaHora: 'desc' }, { id: 'desc' }],
     }),
   ]);
+  // Los nombres se buscan juntos, por tipo de registro, con el mismo resolutor de la auditoría.
+  const { etiquetas } = await etiquetasDe(modificaciones);
 
   return {
     asignaciones: asignaciones.map((a) => ({
@@ -58,6 +63,8 @@ export async function historialPaciente(
       fechaHora: m.fechaHora,
       accion: m.accion,
       entidad: m.entidad,
+      entidadId: m.entidadId,
+      entidadEtiqueta: etiquetaDe(etiquetas, m),
       usuario: nombreDe(m.usuario),
       valorAnterior: m.valorAnterior,
       valorNuevo: m.valorNuevo,
