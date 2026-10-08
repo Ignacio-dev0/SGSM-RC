@@ -35,6 +35,12 @@ un año de volumen y la tabla de tiempos en [rendimiento.md](rendimiento.md).
   así se prueban la inactividad, los bloqueos, el plazo de 24 h y los horarios de toma sin esperar.
 - Ayudantes: [`tests/soporte/`](../backend/tests/soporte/) (`crearUsuario`, `agenteConRol`,
   fábricas de pacientes, camas, insumos, `internarPaciente` y `crearPrescripcionBasica`).
+- **Dos transacciones a la vez**: [`tests/soporte/concurrencia.ts`](../backend/tests/soporte/concurrencia.ts)
+  deja una transacción abierta con sus bloqueos (`transaccionAbierta`) y manda un pedido mientras
+  tanto (`mientrasEspera`): la prueba ve si el pedido esperó el bloqueo y qué respondió después.
+  Así se prueban el orden de los bloqueos de las administraciones y los cambios de agenda (D121),
+  el catálogo en uso (D116) y, con `Promise.all`, las carreras de usuarios (D120) y de dos
+  enfermeras con la misma toma (D113).
 - **Recordatorios (E5, T514)**: el ciclo del temporizador se prueba contra la base con el reloj
   simulado (`ejecutarCiclo()` a horas elegidas), incluida la concurrencia (varios ciclos a la vez
   con `Promise.all` no duplican nada). El temporizador se prueba con `jest.useFakeTimers()` y un
@@ -64,9 +70,16 @@ un año de volumen y la tabla de tiempos en [rendimiento.md](rendimiento.md).
   ([`configurar.ts`](../frontend/src/pruebas/configurar.ts)): con todos los archivos en
   paralelo, 1 s no siempre alcanzaba.
 - `renderizarApp` usa un **router de datos** (`createMemoryRouter`), como la aplicación, y
-  devuelve el `router` para probar el botón Atrás (`router.navigate(-1)`). En `configurar.ts` el
+  devuelve el `router` para probar el botón Atrás (`router.navigate(-1)`) y el `cliente` de
+  consultas, para comprobar qué quedó invalidado en pantallas que no están a la vista. En `configurar.ts` el
   `Request` de Node se envuelve para que acepte la señal de cancelación de jsdom, que el router
   de datos pasa en cada navegación.
+- El `QueryClient` de `renderizarApp` no vuelve a pedir al volver a la pantalla
+  (`refetchOnWindowFocus: false`), igual que `App.tsx`: una pantalla que lo necesita (Administrar,
+  D151) lo pide ella, y la prueba lo comprueba despachando `visibilitychange`. El audio y la vibración
+  falsos de los avisos están en [`audioFalso.ts`](../frontend/src/pruebas/audioFalso.ts).
+- Además de los cuerpos (`contrato.ts`), el formulario de usuario compara su regla y su mensaje del
+  nombre de usuario con el esquema del backend (D160).
 - El **tiempo real** se simula con `ws.link` de MSW (`canalTiempoReal` en `servidor.ts`, que
   acepta y manda `conectado`); `datosRecordatorios.ts` trae `avisarCambio()` y
   `registrarConexiones()`. La lógica de reconexión se prueba aparte con un WebSocket falso
@@ -109,7 +122,7 @@ interfaz (por ejemplo una compilación fija servida con `vite preview` en el pue
 
 Última corrida completa (2026-10-07, compilación fija contra el servidor real): 59 de 59 en PC
 (las que se recorren una vez) y la matriz responsive 27 de 27 en teléfono, tablet y PC, en claro
-y oscuro. Suites unitarias y de integración: backend 644 pruebas en 68 archivos, frontend 1187 en 81.
+y oscuro. Suites unitarias y de integración: backend 644 pruebas en 68 archivos, frontend 1300 en 92 (corrida del 2026-10-08, después de la revisión F1–F20).
 
 ## Control de permisos con los tres roles
 

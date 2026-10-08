@@ -12,11 +12,11 @@
 
 ## Autenticación — T105, T112 · CU06
 
-| Método | Ruta               | Permiso | Descripción                                                                                             |
-| ------ | ------------------ | ------- | ------------------------------------------------------------------------------------------------------- |
-| POST   | `/api/auth/login`  | público | `{ nombreUsuario, contrasena }` → usuario con permisos y `inactividadMinutos`; deja la cookie de sesión |
-| POST   | `/api/auth/logout` | público | Borra la cookie (y audita si la sesión seguía vigente)                                                  |
-| GET    | `/api/auth/sesion` | sesión  | Usuario de la sesión activa                                                                             |
+| Método | Ruta               | Permiso | Descripción                                                                                                                                                                  |
+| ------ | ------------------ | ------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| POST   | `/api/auth/login`  | público | `{ nombreUsuario, contrasena }` → usuario con permisos y `inactividadMinutos`; deja la cookie de sesión. El usuario se compara sin espacios alrededor y en minúsculas (D111) |
+| POST   | `/api/auth/logout` | público | Borra la cookie (y audita si la sesión seguía vigente)                                                                                                                       |
+| GET    | `/api/auth/sesion` | sesión  | Usuario de la sesión activa                                                                                                                                                  |
 
 Errores: `401 CREDENCIALES_INVALIDAS`, `423 CUENTA_BLOQUEADA` (`detalles.bloqueadoHasta`),
 `429 DEMASIADOS_INTENTOS` (límite de fallidos por IP: encabezado `Retry-After` y
@@ -38,14 +38,19 @@ Errores: `401 CREDENCIALES_INVALIDAS`, `423 CUENTA_BLOQUEADA` (`detalles.bloquea
 | GET    | `/api/permisos`                          | `usuarios.gestionar` o `usuarios.permisos` | Catálogo de permisos                                                              |
 
 Errores: `409 DNI_DUPLICADO`, `409 USUARIO_DUPLICADO`, `409 USUARIO_INACTIVO`,
-`422 BAJA_PROPIA`.
+`422 BAJA_PROPIA`, `403 CAMBIO_PROPIO` (nadie se cambia a sí mismo el rol ni los permisos
+adicionales, ni se reactiva; D110), `403 PRIVILEGIO_AJENO` (un rol o un permiso que quien lo pide
+no tiene, o un usuario con permisos que él no tiene; D119) y `409 ULTIMO_ADMINISTRADOR` (quitarle
+el rol o dar de baja al único administrador activo; D120). Decisiones en
+[seguridad.md](seguridad.md#decisiones-de-la-revisión).
 
 ## Notificaciones — T112
 
-| Método | Ruta                            | Permiso | Descripción                                                |
-| ------ | ------------------------------- | ------- | ---------------------------------------------------------- |
-| GET    | `/api/notificaciones`           | sesión  | Últimas 50 del usuario, no leídas primero; `meta.noLeidas` |
-| PATCH  | `/api/notificaciones/:id/leida` | sesión  | Marca una notificación propia como leída                   |
+| Método | Ruta                             | Permiso | Descripción                                                                                  |
+| ------ | -------------------------------- | ------- | -------------------------------------------------------------------------------------------- |
+| GET    | `/api/notificaciones`            | sesión  | Últimas 50 del usuario, no leídas primero; `meta.noLeidas`                                   |
+| PATCH  | `/api/notificaciones/:id/leida`  | sesión  | Marca una notificación propia como leída                                                     |
+| POST   | `/api/notificaciones/leer-todas` | sesión  | Marca como leídas todas las del usuario de la sesión: `200 { data: { marcadas: n } }` (D115) |
 
 ## Camas y salas — T201 · CU15 · RN02
 
@@ -81,23 +86,26 @@ Acciones de auditoría del módulo: `CREAR`, `MODIFICAR`, `REINGRESAR`, `TRASLAD
 
 ## Catálogo de insumos y medicamentos — T303
 
-| Método | Ruta                             | Permiso              | Descripción                                                             |
-| ------ | -------------------------------- | -------------------- | ----------------------------------------------------------------------- |
-| GET    | `/api/insumos?texto&tipo&activo` | `catalogo.ver`       | Catálogo completo, sin paginar (es chico). `activo` por defecto `true`  |
-| GET    | `/api/insumos/:id`               | `catalogo.ver`       | Un insumo                                                               |
-| POST   | `/api/insumos`                   | `catalogo.gestionar` | Alta: `nombre, tipo (MEDICAMENTO / INSUMO), unidadMedida, presentacion` |
-| PATCH  | `/api/insumos/:id`               | `catalogo.gestionar` | Modificación (incluye `activo: true` para reactivar)                    |
-| DELETE | `/api/insumos/:id`               | `catalogo.gestionar` | Baja lógica                                                             |
+| Método | Ruta                             | Permiso              | Descripción                                                                                                  |
+| ------ | -------------------------------- | -------------------- | ------------------------------------------------------------------------------------------------------------ |
+| GET    | `/api/insumos?texto&tipo&activo` | `catalogo.ver`       | Catálogo completo, sin paginar (es chico). `activo` por defecto `true`. Cada uno con `enUso` (D116)          |
+| GET    | `/api/insumos/:id`               | `catalogo.ver`       | Un insumo, con `enUso`: `true` si lo usa alguna prescripción o algún suministro                              |
+| POST   | `/api/insumos`                   | `catalogo.gestionar` | Alta: `nombre, tipo (MEDICAMENTO / INSUMO), unidadMedida, presentacion`                                      |
+| PATCH  | `/api/insumos/:id`               | `catalogo.gestionar` | Modificación (incluye `activo: true` para reactivar). El `tipo` y la `unidadMedida` de uno en uso no cambian |
+| DELETE | `/api/insumos/:id`               | `catalogo.gestionar` | Baja lógica                                                                                                  |
 
-Errores: `409 INSUMO_DUPLICADO` (mismo nombre y presentación).
+Errores: `409 INSUMO_DUPLICADO` (mismo nombre y presentación; el mensaje dice si el que ya
+existe es un medicamento o un insumo y si está dado de baja), `409 INSUMO_EN_USO` (cambiar el
+tipo o la unidad de medida de uno que ya usa una prescripción o un suministro; D116 de
+[suministros.md](suministros.md#decisiones)).
 
 ## Prescripciones — T301, T302, T307 · CU17–CU19
 
 | Método | Ruta                                       | Permiso                    | Descripción                                                                                                             |
 | ------ | ------------------------------------------ | -------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| GET    | `/api/pacientes/:id/prescripciones?estado` | `prescripciones.ver`       | Prescripciones del paciente, vigentes primero, con `proximaToma` y `ultimasAdministraciones`                            |
+| GET    | `/api/pacientes/:id/prescripciones?estado` | `prescripciones.ver`       | Prescripciones del paciente, vigentes primero, con `agendaDesde`, `proximaToma` y `ultimasAdministraciones`             |
 | POST   | `/api/pacientes/:id/prescripciones`        | `prescripciones.gestionar` | Alta: `insumoId, dosis, unidadDosis, frecuenciaHoras, via, fechaInicio, fechaFin?, observaciones?, confirmarDuplicada?` |
-| GET    | `/api/prescripciones/:id`                  | `prescripciones.ver`       | Detalle con `agenda` (tomas de las próximas 24 h)                                                                       |
+| GET    | `/api/prescripciones/:id`                  | `prescripciones.ver`       | Detalle con `agenda`: las tomas de las próximas 24 h, empezando por `proximaToma` y sin las ya dadas                    |
 | PATCH  | `/api/prescripciones/:id`                  | `prescripciones.gestionar` | Modificación de una vigente: dosis, unidad, frecuencia, vía, fin, observaciones + `motivo` obligatorio                  |
 | POST   | `/api/prescripciones/:id/estado`           | `prescripciones.gestionar` | `{ estado, motivo }`: VIGENTE → SUSPENDIDA o FINALIZADA; SUSPENDIDA → VIGENTE o FINALIZADA                              |
 
@@ -106,17 +114,27 @@ Errores: `409 PACIENTE_NO_INTERNADO`, `422 NO_ES_MEDICAMENTO`, `422 MEDICAMENTO_
 vuelve a enviar con `confirmarDuplicada: true` para cargarla igual), `409 PRESCRIPCION_NO_VIGENTE`,
 `409 TRANSICION_INVALIDA`, `422 FECHA_FIN_INVALIDA`.
 
-**Horarios (T302).** La toma _k_ es `fechaInicio + k × frecuenciaHoras` (k ≥ 0) mientras no pase
-`fechaFin`. `proximaToma` es la primera toma desde ahora (incluida la que corresponde justo
-ahora) y solo existe si la prescripción está vigente. Código:
-[`agenda.ts`](../backend/src/modulos/prescripciones/agenda.ts).
+**Horarios (T302 · D112).** La toma _k_ es `agendaDesde + k × frecuenciaHoras` (k ≥ 0) mientras
+no pase `fechaFin`. `agendaDesde` es la fecha de inicio hasta que la prescripción se **reanuda**
+(pasa a ese momento: la próxima toma es ahora) o cambia de **frecuencia** (pasa a la toma de la
+última dosis dada en la agenda vigente, que queda como su toma 0 ya dada; si no hay dosis, o si
+después de esa toma quedó alguna sin dar, a ese momento: D122). Qué tomas ya se dieron sale de la
+toma que guardó cada administración al registrarse (D121 de [suministros.md](suministros.md#decisiones)),
+así que volver a anclar no cambia el historial. `proximaToma` es la primera toma que falta dar desde hace 30 min (una ya dada se
+saltea) y solo existe si la prescripción está vigente. Código:
+[`agenda.ts`](../backend/src/modulos/prescripciones/agenda.ts); decisión D112 en
+[recordatorios.md](recordatorios.md#decisiones). En la ficha, `ultimasAdministraciones` trae
+`tomaProgramada` de cada una.
 
 **Efecto sobre los recordatorios (E5).** Cuando la prescripción deja de estar vigente, o cambian
 su frecuencia o su fin, los recordatorios pendientes se cancelan (el temporizador de E5 los
-volverá a generar con la agenda nueva).
+vuelve a generar con la agenda nueva). Al reanudar o cambiar la frecuencia, además, los vencidos
+de tomas que ya no están en la agenda nueva se cancelan (conservan `vencidoEn`; D122). Al
+reanudar, el temporizador recuerda la toma de ese momento.
 
-Acciones de auditoría: `CREAR`, `MODIFICAR` (con el motivo en `detalle`), `SUSPENDER`,
-`REANUDAR`, `FINALIZAR` (Prescripcion); `CREAR`, `MODIFICAR`, `BAJA` (Insumo).
+Acciones de auditoría: `CREAR`, `MODIFICAR` (con el motivo en `detalle`; si cambió la
+frecuencia, también `agendaDesde`), `SUSPENDER`, `REANUDAR` (con `agendaDesde`), `FINALIZAR`
+(Prescripcion); `CREAR`, `MODIFICAR`, `BAJA` (Insumo).
 
 ## Biometría — T403, T404, T407 · CU07–CU10
 
@@ -140,16 +158,20 @@ hay que registrar el rostro de nuevo). Acciones de auditoría: `REGISTRAR_BIOMET
 
 ## Suministros — T408–T412 · CU20–CU23
 
-| Método | Ruta                                                                  | Permiso                 | Descripción                                                                           |
-| ------ | --------------------------------------------------------------------- | ----------------------- | ------------------------------------------------------------------------------------- |
-| POST   | `/api/suministros/medicamentos`                                       | `suministros.registrar` | `{ pacienteId, prescripcionId, cantidad?, observaciones?, validacionToken }`          |
-| POST   | `/api/suministros/insumos`                                            | `suministros.registrar` | `{ pacienteId, items: [{ insumoId, cantidad }], observaciones?, validacionToken }`    |
-| GET    | `/api/suministros?pacienteId&usuarioId&tipoInsumo&desde&hasta&pagina` | `suministros.ver`       | Historial paginado, lo más reciente primero                                           |
-| GET    | `/api/suministros/responsables`                                       | `suministros.ver`       | Usuarios que registraron suministros (para el filtro)                                 |
-| GET    | `/api/suministros/:id`                                                | `suministros.ver`       | Detalle, con `tomaProgramada` y `corregibleHasta`                                     |
-| PATCH  | `/api/suministros/:id`                                                | `suministros.corregir`  | `{ motivo, cantidad? \| items?, observaciones?, validacionToken }` dentro de las 24 h |
+| Método | Ruta                                                                  | Permiso                 | Descripción                                                                             |
+| ------ | --------------------------------------------------------------------- | ----------------------- | --------------------------------------------------------------------------------------- |
+| POST   | `/api/suministros/medicamentos`                                       | `suministros.registrar` | `{ pacienteId, prescripcionId, cantidad?, observaciones?, validacionToken, otraToma? }` |
+| POST   | `/api/suministros/insumos`                                            | `suministros.registrar` | `{ pacienteId, items: [{ insumoId, cantidad }], observaciones?, validacionToken }`      |
+| GET    | `/api/suministros?pacienteId&usuarioId&tipoInsumo&desde&hasta&pagina` | `suministros.ver`       | Historial paginado, lo más reciente primero                                             |
+| GET    | `/api/suministros/responsables`                                       | `suministros.ver`       | Usuarios que registraron suministros (para el filtro)                                   |
+| GET    | `/api/suministros/:id`                                                | `suministros.ver`       | Detalle, con `tomaProgramada` (guardada al registrar, D121) y `corregibleHasta`         |
+| PATCH  | `/api/suministros/:id`                                                | `suministros.corregir`  | `{ motivo, cantidad? \| items?, observaciones?, validacionToken }` dentro de las 24 h   |
 
 Errores: `403 VALIDACION_FACIAL_REQUERIDA` (falta, vencido, ajeno o ya usado),
+`409 TOMA_YA_DADA` (la toma ya tiene una administración, o hay una dosis de hace menos de media
+frecuencia aunque sea de otra toma o de antes de reanudar: `detalles.fechaHora` y
+`detalles.usuario` de la anterior; se reenvía con `otraToma: true` si corresponde otra, con el
+mismo comprobante facial: D113 y D123 de [suministros.md](suministros.md#decisiones)),
 `409 PACIENTE_NO_INTERNADO`, `422 SIN_PRESCRIPCION_VIGENTE`, `422 INSUMO_NO_DISPONIBLE`,
 `422 FUERA_DE_PLAZO`, `422 CORRECCION_INVALIDA`, `422 SIN_CAMBIOS`. Acciones de auditoría:
 `REGISTRAR`, `CORREGIR` (Suministro). Reglas en [suministros.md](suministros.md).
@@ -172,7 +194,8 @@ Errores: `409 RECORDATORIO_NO_PENDIENTE` (`detalles.estado`), `422 NO_ES_TOMA`. 
 auditoría: `GENERAR`, `VENCER`, `ATENDER`, `NO_ADMINISTRAR`, `CANCELAR` (Recordatorio). Un
 recordatorio que vence genera una notificación `RECORDATORIO_VENCIDO` para cada administrador
 activo (`GET /api/notificaciones`, T508). Los recordatorios de estudios se atienden confirmando
-el estudio (`POST /api/estudios/:id/confirmar`).
+el estudio (`POST /api/estudios/:id/confirmar`). El aviso dice el medicamento o el estudio, la
+hora, el paciente y dónde está ("Sala A – Neurorrehabilitación, cama A-01").
 
 ## Estudios — T504, T509–T513 · CU29–CU31
 
@@ -217,9 +240,9 @@ parámetros en `valorNuevo` y en `detalle`).
 
 ## Auditoría — T604 · CU35
 
-| Método | Ruta                                                                                  | Permiso         | Descripción                                                                                                                                                                                                                                             |
-| ------ | ------------------------------------------------------------------------------------- | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| GET    | `/api/auditoria?desde&hasta&usuarioId&pacienteId&accion&entidad&origen&pagina&tamano` | `auditoria.ver` | De la más reciente a la más vieja; `origen` `personas` (con usuario) o `sistema` (sin usuario), sin él todos (D101); `tamano` 50 por defecto, 100 como mucho (acepta también `porPagina`); usuario, paciente y valores con las claves sensibles ocultas |
-| GET    | `/api/auditoria/opciones`                                                             | `auditoria.ver` | `{ acciones, entidades }` que hay en la base, para armar los filtros                                                                                                                                                                                    |
+| Método | Ruta                                                                                  | Permiso         | Descripción                                                                                                                                                                                                                                                                                                     |
+| ------ | ------------------------------------------------------------------------------------- | --------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| GET    | `/api/auditoria?desde&hasta&usuarioId&pacienteId&accion&entidad&origen&pagina&tamano` | `auditoria.ver` | De la más reciente a la más vieja; `origen` `personas` (con usuario) o `sistema` (sin usuario), sin él todos (D101); `tamano` 50 por defecto, 100 como mucho (acepta también `porPagina`); usuario, paciente, `entidadEtiqueta` (nombre del registro afectado, D114) y valores con las claves sensibles ocultas |
+| GET    | `/api/auditoria/opciones`                                                             | `auditoria.ver` | `{ acciones, entidades }` que hay en la base, para armar los filtros                                                                                                                                                                                                                                            |
 
 Contrato en [reportes.md](reportes.md#auditoría).

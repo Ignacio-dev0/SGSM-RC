@@ -172,6 +172,11 @@ grandes (ver [límites](#límites-conocidos)).
 
 <!-- /medicion:comparacion -->
 
+En la [revisión de octubre](#revisión-de-octubre-d101-d114-d121) la página lejana de la auditoría
+dio 95 ms (p50) y 109 ms (p95) en una corrida con la PC más cargada (todo salió de un 20 a un 50 %
+más lento, también lo que no cambió); las etiquetas que suma D114 cuestan unos 3 ms (p95) medidas
+solas.
+
 ### Qué se cambió y por qué
 
 Los planes se leyeron con `EXPLAIN (ANALYZE, BUFFERS)` y con `auto_explain` sobre las consultas que
@@ -191,6 +196,7 @@ arma Prisma.
    ~240 ms). Ahora el índice es `auditoria(fecha_hora, id)` (el orden exacto de la consulta) y la
    consulta pide primero solo los ids de la página (`Index Only Scan Backward`, `Heap Fetches: 0`)
    y después esas 100 filas: de ~210 a ~76 ms, sin cambiar el contrato (`pagina`, `tamano`).
+   Las etiquetas de los registros (D114) suman unos 3 ms (p95).
    Después, el filtro de origen (personas o sistema) sumó `usuario_id` al final de ese índice para
    seguir sin leer la tabla con el filtro puesto (D101, en [reportes.md](reportes.md)).
 3. **Opciones de los filtros de auditoría (D73).** `findMany({ distinct })` de Prisma no hace
@@ -328,6 +334,69 @@ Volumen: 400.000 suministros, 600.000 entradas de auditoría, 150.002 recordator
 | Temporizador       | Ciclo de recordatorios (110 internados)             |        2000 |       44 |       49 |       258 | Cumple       |
 
 <!-- /medicion:despues -->
+
+#### Revisión de octubre (D101, D114, D121)
+
+Con el filtro de origen de la auditoría (D101), las etiquetas de los registros (D114 de
+[reportes.md](reportes.md)) y la toma guardada de cada administración con su índice (D121 de
+[suministros.md](suministros.md#decisiones)), sobre un volumen recién sembrado y migrado. Esta
+corrida se hizo con la PC más cargada que la de arriba (sincronización de OneDrive y otros
+procesos): lo que no cambió también salió más lento (historial de insumos, página 50: 136 → 211 ms;
+estadísticas de un año: 1.311 → 1.543 ms), así que las diferencias de un 20 a 50 % no son del código.
+Lo que sí es del código: la página lejana de la auditoría suma las etiquetas, que medidas solas
+cuestan 1,3 ms (p50) y 3,1 ms (p95); registrar una administración suma una consulta por la dosis
+reciente (D123), y el ciclo del temporizador bajó (busca las tomas dadas por la toma guardada, solo
+en la ventana). Todo sigue muy por debajo de los límites.
+
+<!-- medicion:revision -->
+
+Medido el 2026-10-08T02:15:32.208Z sobre `sgsm_volumen` (último suministro del volumen: 2026-10-08T02:13:00.000Z).
+20 vueltas por operación más una de calentamiento; API y cliente en el mismo proceso (Node v24.16.0, AMD Ryzen 5 5600GT with Radeon Graphics × 12), PostgreSQL 17.11 en Docker.
+Volumen: 400.000 suministros, 600.000 entradas de auditoría, 150.039 recordatorios (38 pendientes al empezar).
+
+| Grupo              | Operación                                           | Límite (ms) | p50 (ms) | p95 (ms) | Máx. (ms) | p95 ≤ límite |
+| ------------------ | --------------------------------------------------- | ----------: | -------: | -------: | --------: | ------------ |
+| Sesión             | Iniciar sesión (enfermero)                          |        2000 |       83 |       86 |        86 | Cumple       |
+| Al lado de la cama | Buscar paciente por apellido (todos)                |         500 |       19 |       21 |        23 | Cumple       |
+| Al lado de la cama | Buscar paciente por DNI                             |         500 |       16 |       18 |        20 | Cumple       |
+| Al lado de la cama | Buscar paciente por cama                            |         500 |       17 |       19 |        19 | Cumple       |
+| Al lado de la cama | Internados de una sala (tablet)                     |         500 |       17 |       20 |        20 | Cumple       |
+| Al lado de la cama | Ficha del paciente                                  |         500 |       12 |       13 |        14 | Cumple       |
+| Al lado de la cama | Prescripciones del paciente (próxima toma)          |         500 |       20 |       22 |        25 | Cumple       |
+| Al lado de la cama | Prescripción con agenda de 24 h                     |         500 |       13 |       14 |        14 | Cumple       |
+| Al lado de la cama | Panel de recordatorios                              |         500 |       25 |       29 |        29 | Cumple       |
+| Al lado de la cama | Panel de recordatorios de una sala                  |         500 |       22 |       26 |        26 | Cumple       |
+| Registrar          | Validar el rostro                                   |        2000 |       17 |       21 |        21 | Cumple       |
+| Registrar          | Registrar una administración                        |        2000 |       40 |       51 |        51 | Cumple       |
+| Consultas          | Historial del paciente (pestaña de la ficha)        |        2000 |       88 |      127 |       127 | Cumple       |
+| Consultas          | Historial de suministros, sin filtros               |        2000 |       41 |       48 |        48 | Cumple       |
+| Consultas          | Historial de suministros de un paciente             |        2000 |       18 |       20 |        27 | Cumple       |
+| Consultas          | Historial de suministros de un responsable, 30 días |        2000 |       21 |       24 |        24 | Cumple       |
+| Consultas          | Historial de insumos, página 50                     |        2000 |      187 |      211 |       227 | Cumple       |
+| Consultas          | Responsables (filtro del historial)                 |        2000 |      8,8 |      9,4 |       9,8 | Cumple       |
+| Reportes           | Reporte de suministros, 30 días, por paciente       |        2000 |       94 |      111 |       115 | Cumple       |
+| Reportes           | Reporte de suministros, 30 días, por insumo         |        2000 |      115 |      128 |       141 | Cumple       |
+| Reportes           | Reporte de suministros, 30 días, por usuario        |        2000 |       90 |      117 |       122 | Cumple       |
+| Reportes           | Reporte de suministros, 30 días, por dia            |        2000 |      119 |      156 |       178 | Cumple       |
+| Reportes           | Reporte de suministros, 366 días, por paciente      |        2000 |      627 |      672 |       689 | Cumple       |
+| Reportes           | Reporte de suministros, 366 días, por insumo        |        2000 |      968 |     1045 |      1071 | Cumple       |
+| Reportes           | Reporte de suministros, 366 días, por usuario       |        2000 |      652 |      682 |       693 | Cumple       |
+| Reportes           | Reporte de suministros, 366 días, por dia           |        2000 |      888 |      933 |       936 | Cumple       |
+| Reportes           | Estadísticas, 30 días                               |        2000 |      141 |      183 |       194 | Cumple       |
+| Reportes           | Estadísticas, 366 días                              |        2000 |     1431 |     1543 |      1610 | Cumple       |
+| Exportar           | Reporte en PDF, 30 días                             |        2000 |      111 |      126 |       129 | Cumple       |
+| Exportar           | Reporte en Excel, 30 días                           |        2000 |       95 |      106 |       112 | Cumple       |
+| Exportar           | Estadísticas en PDF, 30 días                        |        2000 |      146 |      179 |       188 | Cumple       |
+| Exportar           | Estadísticas en Excel, 30 días                      |        2000 |      147 |      166 |       168 | Cumple       |
+| Auditoría          | Primera página, sin filtros                         |        2000 |       45 |       55 |        63 | Cumple       |
+| Auditoría          | Página lejana (6000 de 100)                         |        2000 |       95 |      109 |       116 | Cumple       |
+| Auditoría          | Acción y entidad (REGISTRAR · Suministro)           |        2000 |      100 |      123 |       132 | Cumple       |
+| Auditoría          | De un paciente                                      |        2000 |       18 |       22 |        25 | Cumple       |
+| Auditoría          | De un usuario, 30 días                              |        2000 |       18 |       20 |        21 | Cumple       |
+| Auditoría          | Opciones de los filtros                             |        2000 |      8,0 |      8,9 |       9,5 | Cumple       |
+| Temporizador       | Ciclo de recordatorios (110 internados)             |        2000 |       24 |       28 |       287 | Cumple       |
+
+<!-- /medicion:revision -->
 
 ## Límites conocidos
 

@@ -51,13 +51,13 @@ solo si no hay ningún usuario Administrador activo: son los datos del **primer 
 que falte se pregunta si hay una terminal; sin terminal, faltar alguna es un error. Se validan con
 las mismas reglas que el alta de usuarios. Detalle en [despliegue.md](despliegue.md) (paso 7).
 
-| Variable                  | Para qué                                                                                                                                                               |
-| ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `INSTALAR_ADMIN_USUARIO`  | Nombre de usuario (3 a 30 letras, números, puntos o guiones; se guarda en minúsculas)                                                                                  |
-| `INSTALAR_ADMIN_NOMBRE`   | Nombre                                                                                                                                                                 |
-| `INSTALAR_ADMIN_APELLIDO` | Apellido                                                                                                                                                               |
-| `INSTALAR_ADMIN_DNI`      | DNI, 7 u 8 dígitos (con o sin puntos)                                                                                                                                  |
-| `INSTALAR_ADMIN_CLAVE`    | Contraseña: al menos 8 caracteres, con letras y números. Nunca se muestra; mejor pasarla sin escribirla en el comando (`-e INSTALAR_ADMIN_CLAVE` toma la de la sesión) |
+| Variable                  | Para qué                                                                                                                                                                                                                                                                               |
+| ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `INSTALAR_ADMIN_USUARIO`  | Nombre de usuario: 3 a 30 caracteres, letras sin tildes ni ñ, números, punto, guion o guion bajo; se guarda en minúsculas                                                                                                                                                              |
+| `INSTALAR_ADMIN_NOMBRE`   | Nombre                                                                                                                                                                                                                                                                                 |
+| `INSTALAR_ADMIN_APELLIDO` | Apellido                                                                                                                                                                                                                                                                               |
+| `INSTALAR_ADMIN_DNI`      | DNI, 7 u 8 dígitos (con o sin puntos)                                                                                                                                                                                                                                                  |
+| `INSTALAR_ADMIN_CLAVE`    | Contraseña: al menos 8 caracteres, con letras y números. Nunca se muestra; mejor pasarla sin escribirla en el comando (`-e INSTALAR_ADMIN_CLAVE` toma la de la sesión). También la usa `--restablecer-clave` ([despliegue.md](despliegue.md#si-el-administrador-olvidó-la-contraseña)) |
 
 No van en `backend/.env` ni en el `.env` del servidor: se pasan solo al correr el instalador.
 

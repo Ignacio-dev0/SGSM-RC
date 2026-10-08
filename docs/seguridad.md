@@ -6,6 +6,10 @@
 
 - Usuario y contraseña. Las contraseñas se guardan con **bcrypt** (costo 10, configurable con
   `BCRYPT_COSTO`); nunca se devuelven ni se guardan en la auditoría.
+- **El usuario no distingue mayúsculas ni espacios alrededor** (D111): los usuarios se guardan en
+  minúsculas y el que se escribe al ingresar se normaliza igual (`" LMendez "` entra como
+  `lmendez`). Al crear un usuario, el mensaje dice exactamente qué acepta: de 3 a 30 caracteres,
+  letras sin tildes ni ñ, números, punto, guion o guion bajo, sin espacios.
 - Si el usuario no existe, está dado de baja o la contraseña es incorrecta, la respuesta es
   siempre la misma (`401 CREDENCIALES_INVALIDAS`, "Usuario o contraseña incorrectos") y se compara
   igual contra un hash señuelo, para no revelar qué usuarios existen.
@@ -80,6 +84,40 @@ administrador; un enfermero jefe los recibe como permiso adicional (CU05). Ver
 
 El frontend oculta las opciones del menú y las pantallas sin permiso, pero eso es solo
 comodidad: **la seguridad real está en el backend**, que valida el permiso en cada endpoint.
+
+**Nadie amplía sus propios privilegios (D110).** Con su propio id, `PATCH /api/usuarios/:id` con
+un `rol` distinto del que tiene, `PUT /api/usuarios/:id/permisos-adicionales` (aunque sea para
+quitar) y `POST /api/usuarios/:id/reactivar` responden `403 CAMBIO_PROPIO` sin tocar nada. Sí puede
+cambiar sus propios datos y su contraseña, y mandar el mismo rol que ya tiene (el formulario lo
+envía entero). Darse de baja a sí mismo ya estaba prohibido (`422 BAJA_PROPIA`).
+
+**Nadie otorga lo que no tiene (D119).** Tampoco por el camino largo (crear una cuenta
+Administrador con una contraseña conocida y entrar con ella, o cambiarle la contraseña a un
+administrador). Quien gestiona usuarios o permisos solo puede:
+
+- crear un usuario, o cambiarle el rol, con un rol cuyos permisos tiene todos;
+- asignar permisos adicionales que él mismo tiene;
+- modificar (datos, contraseña, rol), dar de baja, reactivar o cambiar los permisos de un usuario
+  cuyos permisos tiene todos.
+
+Si no, `403 PRIVILEGIO_AJENO` sin tocar nada. Un administrador tiene todos los permisos, así que
+sigue pudiendo todo; un enfermero jefe con `usuarios.gestionar` gestiona enfermeros, pero no crea
+ni toca a un médico o a un administrador. Los permisos de quien hace el cambio se leen dentro de
+la transacción.
+
+**Siempre queda un administrador activo (D120).** Quitarle el rol Administrador o dar de baja al
+único administrador activo responde `409 ULTIMO_ADMINISTRADOR`. Los cambios de usuarios toman un
+candado de PostgreSQL (`pg_advisory_xact_lock`) al empezar su transacción y van de a uno: dos
+administradores que se quitan el rol (o se dan de baja) uno al otro a la vez no dejan cero; el
+segundo ya no tiene los permisos y recibe `PRIVILEGIO_AJENO`.
+
+**Las descripciones de los permisos** (las muestra la pantalla de permisos de un usuario, desde
+`GET /api/permisos`) están en palabras de quien la usa y con el glosario de
+[PRODUCT.md](../PRODUCT.md): "Crear, buscar, modificar, dar de baja y reactivar usuarios",
+"Internar, modificar, trasladar y dar de alta pacientes". Los códigos de trazabilidad (CU, T)
+quedan como comentarios en el catálogo (D117). En una base que ya existía, las descripciones se
+actualizan al correr el instalador (lo hace `scripts/actualizar.sh`) o `npm run db:sembrar` en
+desarrollo.
 
 ## Auditoría (T104 · RN06 · RNF10)
 
@@ -322,6 +360,24 @@ db:sembrar`) tiene que correr con la misma clave que la API. `CONFIAR_PROXY` pue
 | D60 | Límite por IP en el login: 10 fallidos en 15 minutos con ventana deslizante en memoria, solo cuenta 401 y 423, responde `429 DEMASIADOS_INTENTOS` con `Retry-After`. `trust proxy` en 1 por defecto (`CONFIAR_PROXY`).                                                                     | Frena barridos de usuarios sin molestar el cambio de turno. En memoria como los comprobantes (una instancia). Detrás de nginx, sin confiar en el proxy, todos compartirían una IP.                                                                                                                                              |
 | D61 | Los 500 nunca devuelven mensaje ni traza, en ningún entorno; el detalle va al registro del servidor. Un dato biométrico ilegible responde `500 BIOMETRIA_ILEGIBLE` con un mensaje que dice qué hacer.                                                                                      | No filtrar detalles internos (conexión, consultas) y que la enfermera sepa a quién pedir ayuda.                                                                                                                                                                                                                                 |
 | D62 | No se forzaron actualizaciones de dependencias (`--force` baja de versión mayor); los dos avisos se documentaron como no explotables en nuestro uso.                                                                                                                                       | Prisma se queda en 6 (D1); volver a exceljs 3.4 es bajar de versión mayor sin probarlo con los reportes.                                                                                                                                                                                                                        |
+
+### Decisiones de la revisión
+
+| #    | Decisión                                                                                                                                                                                                                                                                                                          | Por qué                                                                                                                                                                                                                                                                                                                    |
+| ---- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| D110 | Sobre uno mismo, `403 CAMBIO_PROPIO`: cambiarse el rol (si es distinto), los permisos adicionales (cualquier cambio) o reactivarse. Se controla en el servicio, antes de la transacción o con el usuario leído en ella.                                                                                           | Quien tiene `usuarios.gestionar` o `usuarios.permisos` como adicional (un enfermero jefe, por ejemplo) podía hacerse administrador. Así toda ampliación de privilegios la hace otra persona y queda en la auditoría a su nombre. Reactivarse es imposible sin sesión, pero se cierra igual.                                |
+| D111 | El login normaliza el usuario como el alta (`trim` y minúsculas) en el esquema; el mensaje del usuario enumera los caracteres que acepta y dice "sin tildes ni ñ".                                                                                                                                                | En la tablet el teclado pone mayúscula al empezar y a veces un espacio al final: el usuario existía y el ingreso fallaba como credenciales inválidas. El mensaje anterior ("letras") hacía pensar que "peña" era válido.                                                                                                   |
+| D117 | Las descripciones de los permisos son texto de interfaz: verbos de las pantallas y glosario, sin códigos; los códigos van en comentarios de `catalogo-permisos.ts`. Una prueba exige que no haya códigos ni palabras de la columna "No usar" del glosario.                                                        | Las ve el administrador al dar permisos; "(CU01–CU04)" no le dice nada y "Dar de alta usuarios" contradice el glosario ("Nuevo usuario"; "dar de alta" es del paciente).                                                                                                                                                   |
+| D119 | Nadie otorga lo que no tiene: crear o cambiar a un rol, o asignar permisos adicionales, exige tener todos esos permisos; modificar, dar de baja, reactivar o cambiar los permisos de un usuario exige tener todos los suyos. Si no, `403 PRIVILEGIO_AJENO`. Se controla en el servicio, dentro de la transacción. | D110 cerraba "sobre uno mismo", pero quien tenía `usuarios.gestionar` sin ser administrador se hacía administrador en dos pasos (crear una cuenta Administrador y subirse el rol desde ella) o entraba como un administrador cambiándole la contraseña, y la auditoría quedaba a nombre de la cuenta creada para eso.      |
+| D120 | Siempre queda un Administrador activo: quitarle el rol o dar de baja al último responde `409 ULTIMO_ADMINISTRADOR`. Todos los cambios de usuarios toman el candado `pg_advisory_xact_lock(10901)` y leen los permisos de quien los hace ya con el candado.                                                        | Dos administradores que se quitaban el rol uno al otro a la vez dejaban cero (cada uno leía su permiso antes y cambiaba la fila del otro). Un candado de PostgreSQL es más simple que bloquear filas en orden y cubre también la carrera entre crear y modificar; los cambios de usuarios son pocos y de a uno no se nota. |
+| D160 | El formulario de usuario valida el nombre de usuario con la misma regla y el mismo mensaje que el servidor (D111), y una prueba los compara con el esquema del backend; el Ingreso manda el usuario sin espacios alrededor y en minúsculas.                                                                       | Antes el formulario aceptaba cualquier texto y el error llegaba recién del servidor; y el teclado de la tablet empieza en mayúscula.                                                                                                                                                                                       |
+| D167 | En su propia ficha, el **Rol** es un campo de solo lectura que dice "Nadie puede cambiar su propio rol: se lo cambia otro administrador." y el rol no viaja al guardar; sus **Permisos adicionales** se ven sin poder marcarlos ni guardarlos, con el mismo aviso.                                                | El servidor rechaza el cambio propio (D110), pero la pantalla dejaba elegir otro rol y el `403 CAMBIO_PROPIO` aparecía recién al guardar.                                                                                                                                                                                  |
+
+Pruebas: [`usuarios.test.ts`](../backend/src/modulos/usuarios/usuarios.test.ts) ("cambios sobre
+uno mismo", "nadie otorga lo que no tiene", "siempre queda un administrador activo" con las
+carreras de dos administradores, y el mensaje del usuario), [`auth.test.ts`](../backend/src/modulos/auth/auth.test.ts)
+(usuario con mayúsculas y espacios) y
+[`catalogo-permisos.test.ts`](../backend/src/modulos/seguridad/catalogo-permisos.test.ts).
 
 ### Pruebas de T705
 

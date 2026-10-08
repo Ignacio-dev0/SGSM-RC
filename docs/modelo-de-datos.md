@@ -59,8 +59,8 @@ erDiagram
 | `pacientes`           | Datos personales, estado (internado/egresado), ingreso y egreso                                        | T202             |
 | `asignaciones_cama`   | Historial de camas; la activa es la que no tiene `fecha_hasta`                                         | T201, T207       |
 | `insumos`             | Catálogo de medicamentos e insumos no medicinales                                                      | T303             |
-| `prescripciones`      | Indicaciones médicas: dosis, frecuencia, vía, estado                                                   | T301             |
-| `suministros`         | Cada administración de medicamento o movimiento de insumos                                             | T408, T409       |
+| `prescripciones`      | Indicaciones médicas: dosis, frecuencia, vía, estado y `agenda_desde`, el ancla de sus tomas (D112)    | T301             |
+| `suministros`         | Cada administración de medicamento (con la toma a la que se atribuyó, D121) o movimiento de insumos    | T408, T409       |
 | `detalles_suministro` | Insumos y cantidades de cada suministro                                                                | T408, T409       |
 | `datos_biometricos`   | Patrón facial (128 valores) y foto de referencia por usuario, cifrados con AES-256-GCM (T705)          | T403, T705       |
 | `tipos_estudio`       | Catálogo de tipos de estudio                                                                           | T103 (E5)        |
@@ -106,6 +106,31 @@ confirmación con el rostro (D29). Prisma no conoce los índices
 parciales ni los `CHECK`: al crear una migración con `--create-only` hay que revisar que no los
 borre.
 
+## Ancla de la agenda (`prescripciones.agenda_desde`)
+
+`agenda_desde` (`timestamptz`, obligatoria) es la **toma 0** de la agenda vigente: las tomas son
+`agenda_desde + k × frecuencia_horas`. Al crear la prescripción es igual a `fecha_inicio`; al
+reanudarla pasa a ese momento y al cambiarle la frecuencia, a la toma de la última dosis dada (o
+a ese momento si no hay, o si quedó una toma sin dar después: D122). `fecha_inicio` no cambia nunca: sigue siendo cuándo empezó el tratamiento.
+La migración
+[`agenda_desde`](../backend/prisma/migrations/20261008002211_agenda_desde/migration.sql) agrega la
+columna, la completa con `fecha_inicio` en las que ya existían (siguen con su agenda de siempre) y
+recién después la hace obligatoria. Reglas en [recordatorios.md](recordatorios.md#decisiones)
+(D112).
+
+## Toma de cada administración (`suministros.toma_programada`)
+
+`toma_programada` (`timestamptz`, nula en los movimientos de insumos) es la toma de la agenda a la
+que se atribuyó la administración al registrarla: la más cercana de la agenda de ese momento. No
+cambia aunque después la agenda se vuelva a anclar, así que el historial dice siempre para qué
+toma se dio cada dosis; `TOMA_YA_DADA`, la atención del recordatorio, la próxima toma y el
+temporizador la usan para saber qué tomas ya se dieron. La migración
+[`toma_programada`](../backend/prisma/migrations/20261008015654_toma_programada/migration.sql)
+agrega la columna y el índice `suministros(prescripcion_id, toma_programada)` y la completa para
+las administraciones que ya existían con la misma cuenta que hacía la aplicación
+(`tomaMasCercana` desde la fecha de inicio, o desde `agenda_desde` lo dado después del ancla).
+Reglas en [suministros.md](suministros.md#decisiones) (D121).
+
 ## Índices para reportes y auditoría (E6)
 
 Los reportes y las estadísticas filtran los suministros de **todo el hospital** por período
@@ -124,11 +149,16 @@ Los reportes y las estadísticas filtran los suministros de **todo el hospital**
 | Auditoría por entidad                           | `auditoria(entidad, entidad_id)`                                                      |
 | Detalles de un suministro                       | `detalles_suministro(suministro_id)` (T702)                                           |
 | Últimas administraciones de una prescripción    | `suministros(prescripcion_id, fecha_hora)` (T702)                                     |
+| Administración de una toma (D121)               | `suministros(prescripcion_id, toma_programada)`                                       |
+| Si un insumo está en uso (D116)                 | `detalles_suministro(insumo_id)` y `prescripciones(insumo_id)`                        |
 
 Los índices marcados T702 son de la migración
 [`indices_rendimiento`](../backend/prisma/migrations/20261007194806_indices_rendimiento/migration.sql),
 que agregó lo que hacía falta con un año de datos (por qué, en [rendimiento.md](rendimiento.md)).
-`auditoria(fecha_hora, id)` reemplazó al de `fecha_hora` sola.
+`auditoria(fecha_hora, id)` reemplazó al de `fecha_hora` sola. Los de insumo en uso son de la
+migración [`insumos_en_uso`](../backend/prisma/migrations/20261008003811_insumos_en_uso/migration.sql):
+el catálogo pregunta si existe alguna prescripción o algún detalle de cada insumo
+([suministros.md](suministros.md#decisiones), D116).
 
 Los días se agrupan en hora de Argentina en la base (`fecha_hora AT TIME ZONE
 'America/Argentina/Buenos_Aires'`), no en UTC (S18).

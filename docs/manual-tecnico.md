@@ -90,7 +90,10 @@ volumen y cómo volver a medirlo: [rendimiento.md](rendimiento.md).
 ## Decisiones, supuestos y trazabilidad
 
 - Supuestos de dominio S1–S20 y decisiones técnicas D1–D8: [supuestos.md](supuestos.md); las
-  siguientes están junto a cada diseño o módulo (D9–D106, numeradas por documento).
+  siguientes están junto a cada diseño o módulo (D9–D123 y D150–D167, numeradas por documento;
+  las de la revisión de octubre del backend, D110–D123, en seguridad, recordatorios, suministros,
+  reportes y despliegue; las de la interfaz, D150–D167, en suministros, recordatorios, reportes,
+  seguridad, despliegue, componentes y supuestos, que explica por qué empiezan en D150).
 - Qué tarea del plan cubre cada parte, con su código y sus pruebas:
   [trazabilidad.md](trazabilidad.md).
 - Manuales de uso: [manuales/](manuales/).

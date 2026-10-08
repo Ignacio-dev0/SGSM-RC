@@ -190,6 +190,9 @@ tamaño que `ChipEstado` (28 px, 14 px, negrita) y siempre con ícono:
   el chip ya dice "Vencida", y "Atrasada" al lado se leería como un segundo estado.
 - La insignia de la barra y el resumen del panel cuentan como urgentes los mismos que van
   rellenos.
+- **Acciones de la tarjeta**: "No se administró" (`texto`) y Administrar (contorno, al final), a
+  **16 px** entre sí también cuando se apilan, y de 56 px de alto: con guantes no se toca uno por el
+  otro, y "No se administró" no se deshace (D154).
 
 **Aviso de recordatorios nuevos** (solo a quien atiende): en la franja fija bajo la barra (la del
 modo demostración), así no tapa los botones de abajo; los diálogos quedan por encima. Despertador
@@ -280,6 +283,13 @@ larga, para no estorbar al toque.
 - Foco visible: contorno de 3 px en `primary` con 2 px de separación.
 - Con `prefers-reduced-motion` se anulan animaciones y transiciones, **salvo** los círculos y
   barras de carga: quietos no dejan distinguir "cargando" de "colgado".
+
+## Ícono
+
+Cruz blanca sobre `primary` (`#0b5d6b`), en un cuadrado con esquinas redondeadas
+([`public/icono.svg`](frontend/public/icono.svg)); para el acceso directo de Android e iOS, la
+misma cruz más chica sobre el color de borde a borde (`icono-maskable.svg`), así el recorte del
+sistema no la corta. Los PNG salen de los SVG con `frontend/scripts/generar-iconos.mjs` (D159).
 
 ## Temas
 

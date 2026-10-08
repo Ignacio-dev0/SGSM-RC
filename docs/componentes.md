@@ -9,20 +9,21 @@
 Todas las pantallas usan estos componentes en lugar de los de MUI directamente, para que el
 tamaño táctil, los textos y la accesibilidad sean iguales en todo el sistema.
 
-| Componente           | Para qué                                                    | Props principales                                                                                                                                   |
-| -------------------- | ----------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `Boton`              | Cualquier acción                                            | `variante` (`principal`, `secundario`, `peligro`, `peligroConfirmar`, `texto`), `cargando`                                                          |
-| `CampoTexto`         | Entrada de texto con error en línea                         | `etiqueta`, `valor`, `alCambiar`, `error`, `ayuda` (texto, o texto con un contador)                                                                 |
-| `Selector`           | Elegir una opción (usa el selector nativo de la tablet)     | `etiqueta`, `valor`, `opciones`, `alCambiar`, `textoVacio`, `alReintentar`, `errorDeCarga`, `reintentando`                                          |
-| `Tabla`              | Listados con estado vacío, carga y paginación               | `titulo`, `columnas`, `filas`, `claveFila`, `alTocarFila`, `paginacion`, `paginacionArriba`, `tituloVisible`                                        |
-| `ModalConfirmacion`  | Confirmar acciones que modifican o eliminan                 | `abierto`, `titulo`, `mensaje`, `textoConfirmar`, `textoCancelar`, `peligroso`, `pedirMotivo`, `ayudaMotivo`, `maxMotivo`, `confirmarDeshabilitado` |
-| `Alerta`             | Cartel de error, advertencia, éxito o info                  | `tipo`, `titulo`, `alCerrar`, `accion`, `enfocar`                                                                                                   |
-| `ChipEstado`         | Estado de un registro (Vigente, Suspendida, Egresado…)      | `estado` (una de las claves de `ESTADOS_CHIP`)                                                                                                      |
-| `AccionesFormulario` | Botonera al pie de un formulario                            | `children` (los botones; la acción principal al final)                                                                                              |
-| `Cargando`           | Mientras llegan los datos (nunca pantalla en blanco)        | `texto`                                                                                                                                             |
-| `ErrorDeCarga`       | Los datos no llegaron: qué faltó, por qué y Reintentar      | `que` (con artículo), `error`, `alReintentar`                                                                                                       |
-| `IdentidadPaciente`  | Nombre, DNI, edad y cama del paciente sobre el que se actúa | `paciente` (en `paginas/pacientes/`)                                                                                                                |
-| `PlantillaTablet`    | Estructura de toda pantalla autenticada                     | `opciones`, `acciones`, `aviso` (franja fija), `pieDelCajon` (al pie del menú en el teléfono: ahí va el tema, R10)                                  |
+| Componente           | Para qué                                                    | Props principales                                                                                                                                           |
+| -------------------- | ----------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Boton`              | Cualquier acción                                            | `variante` (`principal`, `secundario`, `peligro`, `peligroConfirmar`, `texto`), `cargando`                                                                  |
+| `CampoTexto`         | Entrada de texto con error en línea                         | `etiqueta`, `valor`, `alCambiar`, `error`, `ayuda` (texto, o texto con un contador)                                                                         |
+| `CampoContrasena`    | Contraseña con el botón para mostrarla u ocultarla          | Las de `CampoTexto` (sin `type`): Ingreso y formulario de usuario (F17)                                                                                     |
+| `Selector`           | Elegir una opción (usa el selector nativo de la tablet)     | `etiqueta`, `valor`, `opciones`, `alCambiar`, `ayuda`, `textoVacio`, `alReintentar`, `errorDeCarga`, `reintentando`                                         |
+| `Tabla`              | Listados con estado vacío, carga y paginación               | `titulo`, `columnas`, `filas`, `claveFila`, `alTocarFila`, `paginacion`, `paginacionArriba`, `tituloVisible`                                                |
+| `ModalConfirmacion`  | Confirmar acciones que modifican o eliminan                 | `abierto`, `titulo`, `mensaje`, `textoConfirmar`, `textoCancelar`, `peligroso`, `pedirMotivo`, `ayudaMotivo`, `maxMotivo`, `confirmarDeshabilitado`         |
+| `Alerta`             | Cartel de error, advertencia, éxito o info                  | `tipo`, `titulo`, `alCerrar`, `accion`, `enfocar`                                                                                                           |
+| `ChipEstado`         | Estado de un registro (Vigente, Suspendida, Egresado…)      | `estado` (una de las claves de `ESTADOS_CHIP`)                                                                                                              |
+| `AccionesFormulario` | Botonera al pie de un formulario                            | `children` (los botones; la acción principal al final)                                                                                                      |
+| `Cargando`           | Mientras llegan los datos (nunca pantalla en blanco)        | `texto`                                                                                                                                                     |
+| `ErrorDeCarga`       | Los datos no llegaron: qué faltó, por qué y Reintentar      | `que` (con artículo), `error`, `alReintentar`                                                                                                               |
+| `IdentidadPaciente`  | Nombre, DNI, edad y cama del paciente sobre el que se actúa | `paciente` (en `paginas/pacientes/`)                                                                                                                        |
+| `PlantillaTablet`    | Estructura de toda pantalla autenticada                     | `opciones` (con `exacta`: se resalta solo en su ruta, F10), `resaltada` (D161), `acciones`, `aviso` (franja fija), `pieDelCajon` (tema en el teléfono, R10) |
 
 ## Reglas de uso
 
@@ -84,6 +85,36 @@ tamaño táctil, los textos y la accesibilidad sean iguales en todo el sistema.
   principal.
 - `Alerta` usa `role="alert"` para errores y advertencias (interrumpe al lector de pantalla) y
   `role="status"` para éxito e información.
+
+## Revisión de la interfaz (F1–F20)
+
+- **Un campo que no se puede cambiar es de solo lectura, no deshabilitado, y dice por qué** (F16 ·
+  D165 · D167): `CampoTexto` con `slotProps={{ htmlInput: { readOnly: true } }}` (un `Selector`
+  se reemplaza por un `CampoTexto` con la etiqueta de la opción) y la razón en `ayuda` ("Ya se usó
+  en prescripciones o registros: no se puede cambiar"). Así se llega con Tab, el lector de
+  pantalla lee la razón como descripción del campo y la ayuda no queda en el gris de lo
+  deshabilitado.
+- **Validación facial que falla tres veces** (F4): `pedirValidacion(operacion, detalle, noSeRegistro)`
+  recibe la primera oración del aviso final, que dice qué NO quedó registrado ("No se registró la
+  administración."). Le sigue siempre "Los tres intentos fallidos quedaron registrados y se avisó al
+  administrador.". Sin ella dice "No se registró la operación.".
+- **Ver la contraseña** (F17): `CampoContrasena` en lugar de un `CampoTexto` con `type="password"`.
+- **La opción del menú que corresponde** (F10): una opción con `exacta` se resalta solo en su ruta;
+  así Suministros (el historial) no se resalta en Administrar medicamento ni en Registrar insumos.
+  **D161**: en esas dos pantallas se resalta la sección desde la que se trabaja, la misma a la que
+  lleva "Volver" (`rutaResaltada` en [`navegacion/menu.tsx`](../frontend/src/navegacion/menu.tsx),
+  que `Disposicion` pasa como `resaltada`): Recordatorios con `desde=recordatorios`, Pacientes con
+  un paciente elegido, ninguna sin paciente (se llegó desde Inicio o el historial). La sección
+  lleva `aria-current="true"`; la opción de la pantalla misma, `aria-current="page"`.
+- **La cama nunca se parte** (F3): todo texto que la nombra (diálogos con motivo, avisos de
+  administración, traslado, internación y reingreso, lo que se ve junto a la cámara, el valor
+  `cama` de la auditoría y de las modificaciones del paciente) usa `formatearCama`, `nombreConCama`
+  o `laCama` ("la cama A‑01 (Sala A – …)"). Las opciones de un `Selector` siguen con el guion
+  común.
+- **Las pruebas pueden mirar la caché**: `renderizarApp` devuelve también el `cliente` de
+  TanStack Query, para comprobar que un cambio deja invalidadas las consultas de otras pantallas
+  que no están a la vista (por ejemplo, las prescripciones y el historial del paciente al
+  reanudar).
 
 ## Paginación de `Tabla` (E6-10)
 
