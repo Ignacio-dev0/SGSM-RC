@@ -50,7 +50,7 @@ describe('acciones de la tarjeta, al alcance con guantes (F9)', () => {
 });
 
 describe('observaciones de la prescripción en la tarjeta (F7)', () => {
-  const tarjetaCon = async (observaciones: string | null | undefined) => {
+  const tarjetaCon = async (observaciones: string | null) => {
     const r = recordatorio();
     simularRecordatorios([{ ...r, prescripcion: { ...r.prescripcion!, observaciones } }]);
     renderizarApp('/recordatorios', ENFERMERO);
@@ -64,7 +64,7 @@ describe('observaciones de la prescripción en la tarjeta (F7)', () => {
     expect(tarjeta).toHaveTextContent('Observaciones: Solo si la temperatura supera 38 °C');
   });
 
-  it('sin observaciones (o un servidor que no las manda) no muestra nada', async () => {
+  it('sin observaciones no muestra nada', async () => {
     expect(await tarjetaCon(null)).not.toHaveTextContent(/Observaciones/);
   });
 });

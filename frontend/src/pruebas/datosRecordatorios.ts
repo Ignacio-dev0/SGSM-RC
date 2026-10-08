@@ -30,6 +30,7 @@ export const recordatorio = (extra: Partial<Recordatorio> = {}): Recordatorio =>
     unidadDosis: 'mg',
     via: 'ORAL',
     frecuenciaHoras: 8,
+    observaciones: null,
   },
   estudio: null,
   atendidoEn: null,
@@ -78,6 +79,7 @@ export const RECORDATORIOS: Recordatorio[] = [
       unidadDosis: 'mg',
       via: 'ORAL',
       frecuenciaHoras: 12,
+      observaciones: null,
     },
   }),
   recordatorio(),
@@ -95,6 +97,7 @@ export const RECORDATORIOS: Recordatorio[] = [
       unidadDosis: 'mg',
       via: 'INTRAVENOSA',
       frecuenciaHoras: 12,
+      observaciones: null,
     },
   }),
   recordatorio({
@@ -110,6 +113,7 @@ export const RECORDATORIOS: Recordatorio[] = [
       unidadDosis: 'mg',
       via: 'ORAL',
       frecuenciaHoras: 24,
+      observaciones: null,
     },
   }),
 ];

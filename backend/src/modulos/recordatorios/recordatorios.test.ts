@@ -93,6 +93,10 @@ describe('API de recordatorios (T506 · T507 · S12–S14)', () => {
 
     it('cada recordatorio trae lo que necesita la tarjeta y "Administrar"', async () => {
       const r = await recordar({ prioridad: 'ALTA', fechaHoraObjetivo: enMin(4) });
+      await prisma.prescripcion.update({
+        where: { id: prescripcionId },
+        data: { observaciones: 'Si fiebre' },
+      });
 
       const res = await enfermera.agente.get('/api/recordatorios');
 
@@ -120,6 +124,8 @@ describe('API de recordatorios (T506 · T507 · S12–S14)', () => {
           unidadDosis: 'mg',
           via: 'ORAL',
           frecuenciaHoras: 8,
+          // Las de la prescripción, para la tarjeta (F7).
+          observaciones: 'Si fiebre',
         },
         estudio: null,
         atendidoEn: null,
@@ -127,6 +133,14 @@ describe('API de recordatorios (T506 · T507 · S12–S14)', () => {
         suministroId: null,
         motivoNoAdministrado: null,
       });
+    });
+
+    it('sin observaciones en la prescripción, las manda en null', async () => {
+      await recordar();
+
+      const res = await enfermera.agente.get('/api/recordatorios');
+
+      expect(res.body.data[0].prescripcion).toMatchObject({ observaciones: null });
     });
 
     it('no muestra los de pacientes egresados (D19)', async () => {

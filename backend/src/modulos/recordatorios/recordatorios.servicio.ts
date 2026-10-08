@@ -59,6 +59,8 @@ export function aDtoRecordatorio(r: RecordatorioCompleto) {
           unidadDosis: p.unidadDosis,
           via: p.via,
           frecuenciaHoras: p.frecuenciaHoras,
+          // "Si fiebre": la tarjeta las muestra junto a la dosis (F7).
+          observaciones: p.observaciones,
         }
       : null,
     estudio: e
