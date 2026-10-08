@@ -64,7 +64,8 @@ async function preguntarCampo(
   ]);
 }
 
-async function preguntarContrasena(terminal: Preguntador, consola: Consola) {
+/** La contraseña sin eco y dos veces, con las reglas del alta (también al restablecerla, D118). */
+export async function preguntarContrasena(terminal: Preguntador, consola: Consola) {
   for (let intento = 0; intento < INTENTOS; intento++) {
     const valor = await terminal.preguntarOculto('Contraseña (no se muestra al escribirla): ');
     const mensaje = problema('contrasena', valor);

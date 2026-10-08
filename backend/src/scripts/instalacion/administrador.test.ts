@@ -110,7 +110,7 @@ describe('datos del primer administrador', () => {
     expect(datos.contrasena).toBe(CLAVE);
     expect(consola.lineas).toEqual([
       'No hay ningún administrador activo: se va a crear el primero.',
-      '  El usuario debe tener entre 3 y 30 letras, números, puntos o guiones, sin espacios',
+      '  El usuario debe tener de 3 a 30 caracteres: letras sin tildes ni ñ, números, punto (.), guion (-) o guion bajo (_), sin espacios',
       '  La contraseña debe tener al menos un número',
       '  Las contraseñas no coinciden',
     ]);

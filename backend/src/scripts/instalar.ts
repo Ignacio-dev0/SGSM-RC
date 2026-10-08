@@ -1,5 +1,6 @@
 // Instalador para la primera puesta en marcha (T803 · docs/despliegue.md, paso 7): datos base,
 // primer administrador y, si se indican, salas, catálogo y personal desde CSV. Idempotente.
+// Con --restablecer-clave USUARIO, solo la contraseña de un administrador que la olvidó (D118).
 // Uso: npm run instalar -w backend -- [opciones] (en Docker: node dist/scripts/instalar.js).
 import { prisma } from '../db';
 import { ejecutarInstalador } from './instalacion/instalador';

@@ -23,6 +23,7 @@ import {
   validarSalas,
   type Validacion,
 } from './filas';
+import { restablecerClave } from './restablecer';
 import type { Preguntador } from './terminal';
 
 /**
@@ -42,6 +43,9 @@ ninguno activo. Se puede correr las veces que haga falta: solo agrega lo que fal
   --personal ARCHIVO       usuarios (columnas: usuario, nombre, apellido, dni, rol y email, opcional)
   --credenciales ARCHIVO   dónde escribir las contraseñas temporales del personal
                            (por defecto, credenciales-iniciales.csv junto al de --personal)
+  --restablecer-clave USUARIO
+                           solo eso: contraseña nueva para un Administrador activo que la
+                           olvidó (de INSTALAR_ADMIN_CLAVE o preguntada) y desbloquea su cuenta
   --ayuda                  muestra esta ayuda
 
 Primer administrador: INSTALAR_ADMIN_USUARIO, INSTALAR_ADMIN_NOMBRE, INSTALAR_ADMIN_APELLIDO,
@@ -66,16 +70,20 @@ interface Opciones {
   catalogo?: string;
   personal?: string;
   credenciales?: string;
+  restablecerClave?: string;
   ayuda?: boolean;
 }
 
 class ErrorDeUso extends Error {}
+
+const FALTA_USUARIO = 'Falta el usuario: --restablecer-clave USUARIO';
 
 const OPCIONES = {
   salas: { type: 'string' },
   catalogo: { type: 'string' },
   personal: { type: 'string' },
   credenciales: { type: 'string' },
+  'restablecer-clave': { type: 'string' },
   ayuda: { type: 'boolean', short: 'h' },
   help: { type: 'boolean' },
 } as const;
@@ -86,10 +94,22 @@ function leerOpciones(args: string[]): Opciones {
     if (values.credenciales && !values.personal) {
       throw new ErrorDeUso('--credenciales solo sirve con --personal');
     }
-    return { ...values, ayuda: values.ayuda || values.help };
+    const { 'restablecer-clave': restablecerClave, ...resto } = values;
+    if (restablecerClave !== undefined) {
+      if (restablecerClave.trim() === '') throw new ErrorDeUso(FALTA_USUARIO);
+      if (resto.salas || resto.catalogo || resto.personal) {
+        throw new ErrorDeUso(
+          '--restablecer-clave va sola: no se combina con --salas, --catalogo ni --personal',
+        );
+      }
+    }
+    return { ...resto, restablecerClave, ayuda: values.ayuda || values.help };
   } catch (e) {
     if (e instanceof ErrorDeUso) throw e;
     const { code, message } = e as NodeJS.ErrnoException;
+    if (code === 'ERR_PARSE_ARGS_INVALID_OPTION_VALUE' && message.includes('restablecer-clave')) {
+      throw new ErrorDeUso(FALTA_USUARIO);
+    }
     const dato = /'([^']+)'/.exec(message)?.[1] ?? message;
     if (code === 'ERR_PARSE_ARGS_UNKNOWN_OPTION')
       throw new ErrorDeUso(`Opción desconocida: ${dato}`);
@@ -261,7 +281,10 @@ export async function ejecutarInstalador(
     return 0;
   }
   try {
-    for (const linea of await instalar(opciones, entorno)) consola.info(linea);
+    const lineas = opciones.restablecerClave
+      ? await restablecerClave(opciones.restablecerClave, { ...entorno, db: entorno.db ?? prisma })
+      : await instalar(opciones, entorno);
+    for (const linea of lineas) consola.info(linea);
     return 0;
   } catch (e) {
     if (e instanceof Error && e.message === 'Instalación cancelada') {

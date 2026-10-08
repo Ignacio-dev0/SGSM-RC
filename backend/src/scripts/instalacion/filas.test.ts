@@ -141,7 +141,7 @@ describe('filas de personal.csv (usuario,nombre,apellido,dni,rol,email)', () => 
         `${ENCABEZADO}\njuan perez,Juan,Pérez,30111222,Médico,\nana,A,Díaz,3011,Enfermera,ana@\n`,
       ).errores,
     ).toEqual([
-      'Fila 2, usuario: El usuario debe tener entre 3 y 30 letras, números, puntos o guiones, sin espacios (dice "juan perez")',
+      'Fila 2, usuario: El usuario debe tener de 3 a 30 caracteres: letras sin tildes ni ñ, números, punto (.), guion (-) o guion bajo (_), sin espacios (dice "juan perez")',
       'Fila 3, nombre: Ingrese el nombre (dice "A")',
       'Fila 3, dni: El DNI debe tener 7 u 8 dígitos, sin puntos (dice "3011")',
       'Fila 3, email: El email no es válido (dice "ana@")',
