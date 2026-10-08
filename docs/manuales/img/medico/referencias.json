@@ -1,0 +1,830 @@
+[
+  {
+    "archivo": "img/medico/00-ingresar.png",
+    "muestra": "Pantalla Ingresar, con los campos vacíos",
+    "tamano": {
+      "w": 768,
+      "h": 416
+    },
+    "marcadores": [
+      {
+        "n": 1,
+        "que": "Campo Usuario"
+      },
+      {
+        "n": 2,
+        "que": "Campo Contraseña"
+      },
+      {
+        "n": 3,
+        "que": "Ojo: muestra u oculta la contraseña"
+      },
+      {
+        "n": 4,
+        "que": "Recordar mi usuario en esta tablet"
+      },
+      {
+        "n": 5,
+        "que": "Botón Ingresar"
+      }
+    ]
+  },
+  {
+    "archivo": "img/medico/01-inicio.png",
+    "muestra": "Inicio del médico: las tareas del día, el menú lateral y la insignia de recordatorios",
+    "tamano": {
+      "w": 768,
+      "h": 703
+    },
+    "marcadores": [
+      {
+        "n": 1,
+        "que": "Tarea Buscar paciente"
+      },
+      {
+        "n": 2,
+        "que": "Tarea Internar paciente"
+      },
+      {
+        "n": 3,
+        "que": "Tarea Ver reportes"
+      },
+      {
+        "n": 4,
+        "que": "Insignia de recordatorios en la barra: el reloj con un número (cuántos hay para atender)"
+      },
+      {
+        "n": 5,
+        "que": "Menú lateral (Inicio, Recordatorios, Pacientes, Suministros, Reportes)"
+      },
+      {
+        "n": 6,
+        "que": "Tarea Ver lo que se registró (la misma pantalla que Suministros en el menú)"
+      },
+      {
+        "n": 7,
+        "que": "Botón Tema de la pantalla (claro, oscuro o igual que el dispositivo)"
+      },
+      {
+        "n": 8,
+        "que": "Campana de Notificaciones"
+      }
+    ]
+  },
+  {
+    "archivo": "img/medico/02-buscar-paciente.png",
+    "muestra": "Pacientes: búsqueda por apellido, DNI o cama, con los filtros de sala y estado",
+    "tamano": {
+      "w": 768,
+      "h": 530
+    },
+    "marcadores": [
+      {
+        "n": 1,
+        "que": "Campo Buscar por apellido, DNI o cama"
+      },
+      {
+        "n": 2,
+        "que": "Filtro Sala"
+      },
+      {
+        "n": 3,
+        "que": "Filtro Estado (Internados, Egresados, Todos)"
+      },
+      {
+        "n": 4,
+        "que": "Fila del paciente: se toca para abrir su ficha"
+      },
+      {
+        "n": 5,
+        "que": "Botón Internar paciente"
+      }
+    ]
+  },
+  {
+    "archivo": "img/medico/03-internar-datos.png",
+    "muestra": "Internar paciente: datos personales de un paciente nuevo (ficticio), sin guardar",
+    "tamano": {
+      "w": 768,
+      "h": 666
+    },
+    "marcadores": [
+      {
+        "n": 1,
+        "que": "Campo DNI (7 u 8 dígitos, sin puntos)"
+      },
+      {
+        "n": 2,
+        "que": "Campo Nombre"
+      },
+      {
+        "n": 3,
+        "que": "Campo Apellido"
+      },
+      {
+        "n": 4,
+        "que": "Campo Fecha de nacimiento"
+      },
+      {
+        "n": 5,
+        "que": "Selector Sexo"
+      }
+    ]
+  },
+  {
+    "archivo": "img/medico/04-internar-cama.png",
+    "muestra": "Internar paciente: datos clínicos, elección de la cama libre y botón Internar (sin tocarlo)",
+    "tamano": {
+      "w": 768,
+      "h": 630
+    },
+    "marcadores": [
+      {
+        "n": 1,
+        "que": "Datos clínicos y de contacto (opcionales): Diagnóstico, Observaciones, Contacto y Teléfono de emergencia"
+      },
+      {
+        "n": 2,
+        "que": "Selector Cama: solo ofrece camas libres"
+      },
+      {
+        "n": 3,
+        "que": "Botón Internar"
+      },
+      {
+        "n": 4,
+        "que": "Botón Cancelar"
+      }
+    ]
+  },
+  {
+    "archivo": "img/medico/05-reingreso-aviso.png",
+    "muestra": "Internar con el DNI de una paciente que ya estuvo internada (ficticia): aviso con Registrar reingreso, sin tocarlo",
+    "tamano": {
+      "w": 768,
+      "h": 518
+    },
+    "marcadores": [
+      {
+        "n": 1,
+        "que": "Aviso «El paciente ya estuvo internado»"
+      },
+      {
+        "n": 2,
+        "que": "Botón Registrar reingreso"
+      },
+      {
+        "n": 3,
+        "que": "El DNI que se escribió (el de la paciente egresada)"
+      }
+    ]
+  },
+  {
+    "archivo": "img/medico/06-ficha-paciente.png",
+    "muestra": "Ficha del paciente (Olmedo): identificación, acciones, pestañas y sus prescripciones",
+    "tamano": {
+      "w": 768,
+      "h": 1024
+    },
+    "marcadores": [
+      {
+        "n": 1,
+        "que": "Nombre, DNI, edad y cama del paciente"
+      },
+      {
+        "n": 2,
+        "que": "Botón Trasladar (cambiar de cama)"
+      },
+      {
+        "n": 3,
+        "que": "Botón Dar de alta"
+      },
+      {
+        "n": 4,
+        "que": "Pestañas Datos, Prescripciones, Estudios, Historial"
+      },
+      {
+        "n": 5,
+        "que": "Botón Nueva prescripción"
+      },
+      {
+        "n": 6,
+        "que": "Tarjeta de una prescripción: se toca para ver el detalle"
+      }
+    ]
+  },
+  {
+    "archivo": "img/medico/07-trasladar.png",
+    "muestra": "Diálogo Trasladar de cama con la cama nueva elegida, sin confirmar",
+    "tamano": {
+      "w": 768,
+      "h": 358
+    },
+    "marcadores": [
+      {
+        "n": 1,
+        "que": "Paciente y cama actual (queda libre al trasladar)"
+      },
+      {
+        "n": 2,
+        "que": "Selector Cama nueva (solo camas libres)"
+      },
+      {
+        "n": 3,
+        "que": "Botón Trasladar"
+      },
+      {
+        "n": 4,
+        "que": "Botón Cancelar"
+      }
+    ]
+  },
+  {
+    "archivo": "img/medico/08-dar-de-alta.png",
+    "muestra": "Diálogo Dar de alta al paciente con fecha y motivo, sin confirmar",
+    "tamano": {
+      "w": 768,
+      "h": 538
+    },
+    "marcadores": [
+      {
+        "n": 1,
+        "que": "A quién se da de alta, qué pasa (cama, prescripciones, estudios) y cómo se reingresa"
+      },
+      {
+        "n": 2,
+        "que": "Campo Fecha y hora de egreso (viene con la hora actual)"
+      },
+      {
+        "n": 3,
+        "que": "Campo Motivo del egreso (obligatorio)"
+      },
+      {
+        "n": 4,
+        "que": "Botón Dar de alta"
+      },
+      {
+        "n": 5,
+        "que": "Botón Cancelar"
+      }
+    ]
+  },
+  {
+    "archivo": "img/medico/09-prescripcion-formulario.png",
+    "muestra": "Nueva prescripción (Arrieta): medicamento, dosis, unidad, frecuencia y vía",
+    "tamano": {
+      "w": 768,
+      "h": 759
+    },
+    "marcadores": [
+      {
+        "n": 1,
+        "que": "A quién se le indica: nombre, DNI, edad y cama"
+      },
+      {
+        "n": 2,
+        "que": "Selector Medicamento (catálogo)"
+      },
+      {
+        "n": 3,
+        "que": "Campo Dosis"
+      },
+      {
+        "n": 4,
+        "que": "Campo Unidad (se completa con la del medicamento)"
+      },
+      {
+        "n": 5,
+        "que": "Selector Frecuencia"
+      },
+      {
+        "n": 6,
+        "que": "Selector Vía"
+      }
+    ]
+  },
+  {
+    "archivo": "img/medico/10-prescripcion-tomas.png",
+    "muestra": "Nueva prescripción: inicio, fin opcional, primeras tomas calculadas y Guardar prescripción (sin tocarlo)",
+    "tamano": {
+      "w": 768,
+      "h": 472
+    },
+    "marcadores": [
+      {
+        "n": 1,
+        "que": "Campo Inicio (primera toma)"
+      },
+      {
+        "n": 2,
+        "que": "Campo Fin (opcional)"
+      },
+      {
+        "n": 3,
+        "que": "Primeras tomas, en 24 h, para revisar antes de guardar"
+      },
+      {
+        "n": 4,
+        "que": "Botón Guardar prescripción"
+      },
+      {
+        "n": 5,
+        "que": "Botón Cancelar"
+      }
+    ]
+  },
+  {
+    "archivo": "img/medico/11-prescripcion-duplicada.png",
+    "muestra": "Aviso de posible prescripción duplicada (Ketorolac a Olmedo, que ya lo tiene vigente), sin tocar Cargar igual",
+    "tamano": {
+      "w": 768,
+      "h": 563
+    },
+    "marcadores": [
+      {
+        "n": 1,
+        "que": "Aviso «Posible prescripción duplicada» con la que ya está vigente"
+      },
+      {
+        "n": 2,
+        "que": "Botón Cargar igual"
+      },
+      {
+        "n": 3,
+        "que": "Selector Medicamento (para corregir)"
+      }
+    ]
+  },
+  {
+    "archivo": "img/medico/12-prescripcion-detalle.png",
+    "muestra": "Detalle de una prescripción (Enalapril de Villafañe) con la dosis cambiada de 10 a 20 mg, antes de guardar",
+    "tamano": {
+      "w": 768,
+      "h": 1024
+    },
+    "marcadores": [
+      {
+        "n": 1,
+        "que": "Botón Suspender"
+      },
+      {
+        "n": 2,
+        "que": "Botón Finalizar"
+      },
+      {
+        "n": 3,
+        "que": "Campo Dosis (cambiada de 10 a 20)"
+      },
+      {
+        "n": 4,
+        "que": "Selector Frecuencia"
+      },
+      {
+        "n": 5,
+        "que": "Botón Guardar cambios"
+      }
+    ]
+  },
+  {
+    "archivo": "img/medico/13-prescripcion-guardar-cambios.png",
+    "muestra": "Diálogo Guardar cambios en la prescripción: antes y después, y motivo, sin confirmar",
+    "tamano": {
+      "w": 768,
+      "h": 503
+    },
+    "marcadores": [
+      {
+        "n": 1,
+        "que": "Tabla Antes / Después de lo que cambia"
+      },
+      {
+        "n": 2,
+        "que": "Campo Motivo del cambio (obligatorio)"
+      },
+      {
+        "n": 3,
+        "que": "Botón Guardar"
+      },
+      {
+        "n": 4,
+        "que": "Botón Cancelar"
+      }
+    ]
+  },
+  {
+    "archivo": "img/medico/14-prescripcion-suspender.png",
+    "muestra": "Diálogo Suspender la prescripción con su motivo, sin confirmar (se puede reanudar)",
+    "tamano": {
+      "w": 768,
+      "h": 406
+    },
+    "marcadores": [
+      {
+        "n": 1,
+        "que": "Qué se suspende y que se puede reanudar después"
+      },
+      {
+        "n": 2,
+        "que": "Campo Motivo (obligatorio)"
+      },
+      {
+        "n": 3,
+        "que": "Botón Suspender"
+      },
+      {
+        "n": 4,
+        "que": "Botón Cancelar"
+      }
+    ]
+  },
+  {
+    "archivo": "img/medico/15-prescripcion-finalizar.png",
+    "muestra": "Diálogo Finalizar la prescripción con su motivo, sin confirmar (no se puede reanudar)",
+    "tamano": {
+      "w": 768,
+      "h": 380
+    },
+    "marcadores": [
+      {
+        "n": 1,
+        "que": "Qué se finaliza y que no se puede reanudar"
+      },
+      {
+        "n": 2,
+        "que": "Campo Motivo (obligatorio)"
+      },
+      {
+        "n": 3,
+        "que": "Botón Finalizar"
+      },
+      {
+        "n": 4,
+        "que": "Botón Cancelar"
+      }
+    ]
+  },
+  {
+    "archivo": "img/medico/16-estudios-pestana.png",
+    "muestra": "Pestaña Estudios de la ficha (Olmedo): el estudio programado con sus acciones",
+    "tamano": {
+      "w": 768,
+      "h": 767
+    },
+    "marcadores": [
+      {
+        "n": 1,
+        "que": "Pestaña Estudios"
+      },
+      {
+        "n": 2,
+        "que": "Botón Programar estudio"
+      },
+      {
+        "n": 3,
+        "que": "Tarjeta del estudio: fecha y hora, preparación y quién lo programó"
+      },
+      {
+        "n": 4,
+        "que": "Botón Cancelar estudio"
+      },
+      {
+        "n": 5,
+        "que": "Botón Reprogramar"
+      }
+    ]
+  },
+  {
+    "archivo": "img/medico/17-programar-estudio.png",
+    "muestra": "Diálogo Programar estudio lleno (tomografía para mañana a las 10:00), sin confirmar",
+    "tamano": {
+      "w": 768,
+      "h": 672
+    },
+    "marcadores": [
+      {
+        "n": 1,
+        "que": "Selector Tipo de estudio"
+      },
+      {
+        "n": 2,
+        "que": "Campo Fecha y hora"
+      },
+      {
+        "n": 3,
+        "que": "Campo Nombre del estudio (se completa con el tipo)"
+      },
+      {
+        "n": 4,
+        "que": "Campo Preparación (la del tipo; se puede cambiar o borrar)"
+      },
+      {
+        "n": 5,
+        "que": "Botón Programar estudio"
+      }
+    ]
+  },
+  {
+    "archivo": "img/medico/18-reprogramar-estudio.png",
+    "muestra": "Diálogo Reprogramar estudio con la hora nueva (mañana 08:00), sin confirmar",
+    "tamano": {
+      "w": 768,
+      "h": 416
+    },
+    "marcadores": [
+      {
+        "n": 1,
+        "que": "Para cuándo está programado ahora"
+      },
+      {
+        "n": 2,
+        "que": "Campo Nueva fecha y hora"
+      },
+      {
+        "n": 3,
+        "que": "Botón Reprogramar"
+      },
+      {
+        "n": 4,
+        "que": "Botón Cancelar"
+      }
+    ]
+  },
+  {
+    "archivo": "img/medico/19-cancelar-estudio.png",
+    "muestra": "Diálogo Cancelar el estudio con su motivo, sin confirmar (no se puede deshacer)",
+    "tamano": {
+      "w": 768,
+      "h": 465
+    },
+    "marcadores": [
+      {
+        "n": 1,
+        "que": "Qué estudio se cancela, de quién, y que no se puede deshacer"
+      },
+      {
+        "n": 2,
+        "que": "Campo Motivo de la cancelación (obligatorio)"
+      },
+      {
+        "n": 3,
+        "que": "Botón Cancelar estudio"
+      },
+      {
+        "n": 4,
+        "que": "Botón Volver (no cancela nada)"
+      }
+    ]
+  },
+  {
+    "archivo": "img/medico/20-recordatorios.png",
+    "muestra": "Recordatorios: tomas y estudios de la próxima media hora, de lo más urgente a lo menos (solo lectura para el médico)",
+    "tamano": {
+      "w": 768,
+      "h": 584
+    },
+    "marcadores": [
+      {
+        "n": 1,
+        "que": "Insignia de recordatorios (a un toque desde cualquier pantalla)"
+      },
+      {
+        "n": 2,
+        "que": "Cuántos hay, cuántos urgentes y la hora de actualización"
+      },
+      {
+        "n": 3,
+        "que": "Filtro Tipo (tomas o estudios)"
+      },
+      {
+        "n": 4,
+        "que": "Filtro Sala"
+      },
+      {
+        "n": 5,
+        "que": "Tarjeta de un recordatorio: hora, prioridad, paciente, cama y qué toca"
+      }
+    ]
+  },
+  {
+    "archivo": "img/medico/21-reportes-filtros.png",
+    "muestra": "Reportes, pestaña Suministros: período y filtros (por defecto, los últimos 7 días)",
+    "tamano": {
+      "w": 768,
+      "h": 568
+    },
+    "marcadores": [
+      {
+        "n": 1,
+        "que": "Pestañas Suministros y Estadísticas"
+      },
+      {
+        "n": 2,
+        "que": "Atajos de período: Hoy, 7 días, 30 días"
+      },
+      {
+        "n": 3,
+        "que": "Campos Desde y Hasta (otro período)"
+      },
+      {
+        "n": 4,
+        "que": "Filtros Sala y Tipo (medicamentos o insumos)"
+      },
+      {
+        "n": 5,
+        "que": "Selector Agrupar por (paciente, insumo, personal o día)"
+      }
+    ]
+  },
+  {
+    "archivo": "img/medico/22-reportes-resultado.png",
+    "muestra": "Reportes: resumen del período, la nota para pedir el archivo y la tabla agrupada por paciente",
+    "tamano": {
+      "w": 768,
+      "h": 507
+    },
+    "marcadores": [
+      {
+        "n": 1,
+        "que": "Qué período, salas y tipos se están viendo"
+      },
+      {
+        "n": 2,
+        "que": "Nota: el médico no descarga; el archivo (PDF o Excel) se le pide a un administrador"
+      },
+      {
+        "n": 3,
+        "que": "Enlace Ver cada unidad por separado"
+      },
+      {
+        "n": 4,
+        "que": "Tabla del reporte, con el total al pie"
+      }
+    ]
+  },
+  {
+    "archivo": "img/medico/23-reportes-estadisticas.png",
+    "muestra": "Reportes, pestaña Estadísticas: el mismo período y los indicadores (suministros, pacientes, recordatorios atendidos)",
+    "tamano": {
+      "w": 768,
+      "h": 952
+    },
+    "marcadores": [
+      {
+        "n": 1,
+        "que": "Pestaña Estadísticas"
+      },
+      {
+        "n": 2,
+        "que": "El mismo período y filtros que en Suministros"
+      },
+      {
+        "n": 3,
+        "que": "Indicadores del período"
+      },
+      {
+        "n": 4,
+        "que": "Cómo se cuentan los recordatorios atendidos y a tiempo"
+      }
+    ]
+  },
+  {
+    "archivo": "img/medico/24-reportes-grafico.png",
+    "muestra": "Reportes, pestaña Estadísticas: un gráfico (los más usados del período) con su botón Ver como tabla",
+    "tamano": {
+      "w": 768,
+      "h": 751
+    },
+    "marcadores": [
+      {
+        "n": 1,
+        "que": "Gráfico con su título y qué muestra"
+      },
+      {
+        "n": 2,
+        "que": "Botón Ver como tabla (los mismos números, para leerlos exactos)"
+      }
+    ]
+  },
+  {
+    "archivo": "img/medico/25-telefono-inicio.png",
+    "muestra": "Inicio en el teléfono: el menú se abre con el botón de la barra",
+    "tamano": {
+      "w": 375,
+      "h": 339
+    },
+    "marcadores": [
+      {
+        "n": 1,
+        "que": "Botón Abrir el menú"
+      },
+      {
+        "n": 2,
+        "que": "Insignia de recordatorios"
+      },
+      {
+        "n": 3,
+        "que": "Tarea Buscar paciente"
+      },
+      {
+        "n": 4,
+        "que": "Botón Salir (la flecha, sin texto)"
+      }
+    ]
+  },
+  {
+    "archivo": "img/medico/26-telefono-menu.png",
+    "muestra": "Menú en cajón del teléfono, con el tema de la pantalla al pie",
+    "tamano": {
+      "w": 375,
+      "h": 812
+    },
+    "marcadores": [
+      {
+        "n": 1,
+        "que": "Opción Recordatorios"
+      },
+      {
+        "n": 2,
+        "que": "Opción Pacientes"
+      },
+      {
+        "n": 3,
+        "que": "Opción Reportes"
+      },
+      {
+        "n": 4,
+        "que": "Tema de la pantalla (claro u oscuro)"
+      }
+    ]
+  },
+  {
+    "archivo": "img/medico/27-telefono-ficha.png",
+    "muestra": "Ficha del paciente en el teléfono: las acciones pasan debajo del nombre",
+    "tamano": {
+      "w": 375,
+      "h": 812
+    },
+    "marcadores": [
+      {
+        "n": 1,
+        "que": "Nombre, DNI, edad y cama"
+      },
+      {
+        "n": 2,
+        "que": "Botón Trasladar"
+      },
+      {
+        "n": 3,
+        "que": "Botón Dar de alta"
+      },
+      {
+        "n": 4,
+        "que": "Pestañas de la ficha"
+      }
+    ]
+  },
+  {
+    "archivo": "img/medico/28-prescripcion-suspendida.png",
+    "muestra": "Ficha de Arrieta con Mostrar: Todas, donde aparece la prescripción suspendida (Ibuprofeno)",
+    "tamano": {
+      "w": 768,
+      "h": 711
+    },
+    "marcadores": [
+      {
+        "n": 1,
+        "que": "Selector Mostrar (en Todas)"
+      },
+      {
+        "n": 2,
+        "que": "Tarjeta de la prescripción suspendida"
+      }
+    ]
+  },
+  {
+    "archivo": "img/medico/29-prescripcion-reanudar.png",
+    "muestra": "Diálogo Reanudar la prescripción con su motivo, sin confirmar",
+    "tamano": {
+      "w": 768,
+      "h": 380
+    },
+    "marcadores": [
+      {
+        "n": 1,
+        "que": "Qué se reanuda"
+      },
+      {
+        "n": 2,
+        "que": "Campo Motivo (obligatorio)"
+      },
+      {
+        "n": 3,
+        "que": "Botón Reanudar"
+      },
+      {
+        "n": 4,
+        "que": "Botón Cancelar"
+      }
+    ]
+  }
+]
