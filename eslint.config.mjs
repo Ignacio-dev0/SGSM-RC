@@ -46,5 +46,12 @@ export default tseslint.config(
     files: ['**/*.{js,mjs,cjs}'],
     languageOptions: { globals: { ...globals.node } },
   },
+  {
+    // Scripts de los manuales: corren en Node, mandan código al navegador (page.evaluate) e
+    // informan su avance por la consola.
+    files: ['docs/manuales/herramientas/**/*.mjs'],
+    languageOptions: { globals: { ...globals.node, ...globals.browser } },
+    rules: { 'no-console': 'off' },
+  },
   prettier,
 );

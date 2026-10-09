@@ -5,7 +5,6 @@
 // cada control justo antes de la captura y se quitan enseguida.
 
 // Las funciones taparEnPagina, destaparEnPagina y dibujarEnPagina corren dentro de la página.
-/* global document, window, NodeFilter, getComputedStyle */
 
 import { writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
