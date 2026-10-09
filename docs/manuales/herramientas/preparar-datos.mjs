@@ -57,9 +57,30 @@ const PACIENTES = [
       observaciones: `Paciente ficticio (${MARCA})`,
     },
     medicamentos: [
-      { nombre: 'Ketorolac', dosis: 30, unidadDosis: 'mg', frecuenciaHoras: 8, via: 'INTRAVENOSA', obs: 'Dolor posoperatorio; diluir en 100 ml' },
-      { nombre: 'Omeprazol', dosis: 20, unidadDosis: 'mg', frecuenciaHoras: 24, via: 'ORAL', obs: 'En ayunas' },
-      { nombre: 'Enoxaparina', dosis: 40, unidadDosis: 'mg', frecuenciaHoras: 24, via: 'SUBCUTANEA', obs: 'Profilaxis antitrombótica' },
+      {
+        nombre: 'Ketorolac',
+        dosis: 30,
+        unidadDosis: 'mg',
+        frecuenciaHoras: 8,
+        via: 'INTRAVENOSA',
+        obs: 'Dolor posoperatorio; diluir en 100 ml',
+      },
+      {
+        nombre: 'Omeprazol',
+        dosis: 20,
+        unidadDosis: 'mg',
+        frecuenciaHoras: 24,
+        via: 'ORAL',
+        obs: 'En ayunas',
+      },
+      {
+        nombre: 'Enoxaparina',
+        dosis: 40,
+        unidadDosis: 'mg',
+        frecuenciaHoras: 24,
+        via: 'SUBCUTANEA',
+        obs: 'Profilaxis antitrombótica',
+      },
     ],
   },
   {
@@ -81,9 +102,30 @@ const PACIENTES = [
       observaciones: `Paciente ficticia (${MARCA})`,
     },
     medicamentos: [
-      { nombre: 'Ceftriaxona', dosis: 1, unidadDosis: 'g', frecuenciaHoras: 24, via: 'INTRAVENOSA', obs: 'Pasar en 30 minutos' },
-      { nombre: 'Paracetamol', dosis: 500, unidadDosis: 'mg', frecuenciaHoras: 6, via: 'ORAL', obs: 'Fiebre o dolor' },
-      { nombre: 'Enalapril', dosis: 10, unidadDosis: 'mg', frecuenciaHoras: 12, via: 'ORAL', obs: 'Controlar la tensión arterial antes de dar' },
+      {
+        nombre: 'Ceftriaxona',
+        dosis: 1,
+        unidadDosis: 'g',
+        frecuenciaHoras: 24,
+        via: 'INTRAVENOSA',
+        obs: 'Pasar en 30 minutos',
+      },
+      {
+        nombre: 'Paracetamol',
+        dosis: 500,
+        unidadDosis: 'mg',
+        frecuenciaHoras: 6,
+        via: 'ORAL',
+        obs: 'Fiebre o dolor',
+      },
+      {
+        nombre: 'Enalapril',
+        dosis: 10,
+        unidadDosis: 'mg',
+        frecuenciaHoras: 12,
+        via: 'ORAL',
+        obs: 'Controlar la tensión arterial antes de dar',
+      },
     ],
   },
   {
@@ -105,8 +147,22 @@ const PACIENTES = [
       observaciones: `Paciente ficticio (${MARCA})`,
     },
     medicamentos: [
-      { nombre: 'Baclofeno', dosis: 10, unidadDosis: 'mg', frecuenciaHoras: 8, via: 'ORAL', obs: 'Espasticidad' },
-      { nombre: 'Clonazepam', dosis: 0.5, unidadDosis: 'mg', frecuenciaHoras: 12, via: 'ORAL', obs: 'Ansiedad e insomnio' },
+      {
+        nombre: 'Baclofeno',
+        dosis: 10,
+        unidadDosis: 'mg',
+        frecuenciaHoras: 8,
+        via: 'ORAL',
+        obs: 'Espasticidad',
+      },
+      {
+        nombre: 'Clonazepam',
+        dosis: 0.5,
+        unidadDosis: 'mg',
+        frecuenciaHoras: 12,
+        via: 'ORAL',
+        obs: 'Ansiedad e insomnio',
+      },
     ],
   },
 ];
@@ -144,7 +200,12 @@ const INSUMOS = {
   obs: 'Curación de la herida quirúrgica',
 };
 
-const VIAS = { ORAL: 'oral', INTRAVENOSA: 'intravenosa', SUBCUTANEA: 'subcutánea', INTRAMUSCULAR: 'intramuscular' };
+const VIAS = {
+  ORAL: 'oral',
+  INTRAVENOSA: 'intravenosa',
+  SUBCUTANEA: 'subcutánea',
+  INTRAMUSCULAR: 'intramuscular',
+};
 const numero = (n) => String(n).replace('.', ',');
 
 const conMarca = (texto) => `${texto} (${MARCA})`;
@@ -168,11 +229,7 @@ const fechaHora = (fecha) =>
     minute: '2-digit',
     hourCycle: 'h23',
   }).format(new Date(fecha));
-const normalizar = (t) =>
-  t
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
-    .toLowerCase();
+const normalizar = (t) => t.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 const redondear5 = (ms, modo = 'arriba') =>
   (modo === 'arriba' ? Math.ceil : Math.round)(ms / (5 * MINUTO)) * 5 * MINUTO;
 
@@ -192,7 +249,9 @@ function credenciales(rol) {
 
 class ErrorApi extends Error {
   constructor(metodo, ruta, status, cuerpo) {
-    super(`${metodo} ${ruta} → ${status} ${cuerpo?.error?.codigo ?? ''} ${cuerpo?.error?.mensaje ?? ''}`);
+    super(
+      `${metodo} ${ruta} → ${status} ${cuerpo?.error?.codigo ?? ''} ${cuerpo?.error?.mensaje ?? ''}`,
+    );
     this.status = status;
     this.codigo = cuerpo?.error?.codigo;
     this.detalles = cuerpo?.error?.detalles;
@@ -206,7 +265,8 @@ async function sesion(rol) {
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ nombreUsuario: usuario, contrasena: clave }),
   });
-  if (!r.ok) throw new ErrorApi('POST', '/api/auth/login', r.status, await r.json().catch(() => null));
+  if (!r.ok)
+    throw new ErrorApi('POST', '/api/auth/login', r.status, await r.json().catch(() => null));
   const cookie = r.headers
     .getSetCookie()
     .map((c) => c.split(';')[0])
@@ -283,7 +343,9 @@ async function internar(medico, p, camas) {
   const { data: encontrados } = await medico.get(`/api/pacientes?dni=${p.datos.dni}&porPagina=5`);
   const existente = encontrados.find((x) => x.dni === p.datos.dni);
   if (existente?.estado === 'INTERNADO') {
-    resumen.pacientes.push(`${existente.apellido}, ${existente.nombre} · cama ${existente.cama?.numero} (ya estaba)`);
+    resumen.pacientes.push(
+      `${existente.apellido}, ${existente.nombre} · cama ${existente.cama?.numero} (ya estaba)`,
+    );
     return existente;
   }
   const libres = camas.filter((c) => !c.ocupada && c.habilitada !== false);
@@ -301,8 +363,14 @@ async function internar(medico, p, camas) {
       camaId: cama.id,
     }));
   } else {
-    const fechaIngreso = new Date(redondear5(ahora - p.horasInternado * HORA, 'cerca')).toISOString();
-    ({ data: paciente } = await medico.post('/api/pacientes', { ...p.datos, camaId: cama.id, fechaIngreso }));
+    const fechaIngreso = new Date(
+      redondear5(ahora - p.horasInternado * HORA, 'cerca'),
+    ).toISOString();
+    ({ data: paciente } = await medico.post('/api/pacientes', {
+      ...p.datos,
+      camaId: cama.id,
+      fechaIngreso,
+    }));
   }
   resumen.pacientes.push(
     `${paciente.apellido}, ${paciente.nombre} · cama ${paciente.cama?.numero ?? cama.numero} (${cama.sala.nombre})${existente ? ' (reingreso)' : ''}`,
@@ -312,7 +380,9 @@ async function internar(medico, p, camas) {
 
 async function noAdministrarVencidos(enfermero, prescripcionId) {
   const { data } = await enfermero.get('/api/recordatorios?tipo=MEDICAMENTO');
-  for (const r of data.filter((x) => x.prescripcion?.id === prescripcionId && x.estado === 'VENCIDO')) {
+  for (const r of data.filter(
+    (x) => x.prescripcion?.id === prescripcionId && x.estado === 'VENCIDO',
+  )) {
     await enfermero.post(`/api/recordatorios/${r.id}/no-administrar`, {
       motivo: conMarca('Se renovó el horario de las tomas'),
     });
@@ -320,19 +390,25 @@ async function noAdministrarVencidos(enfermero, prescripcionId) {
 }
 
 async function indicar(medico, enfermero, paciente, plan, catalogo, indice) {
-  const insumo = catalogo.find((i) => i.tipo === 'MEDICAMENTO' && normalizar(i.nombre).startsWith(normalizar(plan.nombre)));
+  const insumo = catalogo.find(
+    (i) => i.tipo === 'MEDICAMENTO' && normalizar(i.nombre).startsWith(normalizar(plan.nombre)),
+  );
   if (!insumo) {
     resumen.avisos.push(`No está ${plan.nombre} en el catálogo: no se indicó`);
     return null;
   }
-  const { data: vigentes } = await medico.get(`/api/pacientes/${paciente.id}/prescripciones?estado=VIGENTE`);
+  const { data: vigentes } = await medico.get(
+    `/api/pacientes/${paciente.id}/prescripciones?estado=VIGENTE`,
+  );
   const mias = vigentes.filter((x) => x.medicamento.id === insumo.id && esMio(x.observaciones));
   const etiqueta = `${paciente.apellido}: ${insumo.nombre} ${numero(plan.dosis)} ${plan.unidadDosis} ${VIAS[plan.via] ?? plan.via.toLowerCase()} cada ${plan.frecuenciaHoras} h`;
 
   // Sigue sirviendo si la primera toma todavía no llegó (faltan 5 min o más).
   const vigente = mias.find((x) => new Date(x.fechaInicio).getTime() >= ahora + 5 * MINUTO);
   if (vigente) {
-    resumen.prescripciones.push(`${etiqueta} · primera toma ${hora(vigente.fechaInicio)} (ya estaba)`);
+    resumen.prescripciones.push(
+      `${etiqueta} · primera toma ${hora(vigente.fechaInicio)} (ya estaba)`,
+    );
     return vigente;
   }
   // La anterior ya pasó: se cierra y se vuelve a indicar con el horario de ahora.
@@ -379,7 +455,8 @@ async function programar(medico, paciente, plan, tipos) {
     resumen.avisos.push(`No existe el tipo de estudio ${plan.tipo}: no se programó`);
     return;
   }
-  const objetivo = plan.cuando === 'pronto' ? redondear5(ahora + 20 * MINUTO, 'cerca') : mananaTemprano();
+  const objetivo =
+    plan.cuando === 'pronto' ? redondear5(ahora + 20 * MINUTO, 'cerca') : mananaTemprano();
   const sirve = (f) =>
     plan.cuando === 'pronto'
       ? f >= ahora + 5 * MINUTO && f <= ahora + 40 * MINUTO
@@ -408,20 +485,32 @@ async function programar(medico, paciente, plan, tipos) {
 
 async function registrarEnfermeria(enfermero, pacientes, catalogo) {
   const paciente = pacientes[INSUMOS.paciente];
-  const { data: hechos } = await enfermero.get(`/api/suministros?pacienteId=${paciente.id}&porPagina=100`);
+  const { data: hechos } = await enfermero.get(
+    `/api/suministros?pacienteId=${paciente.id}&porPagina=100`,
+  );
   const mios = hechos.filter((s) => esMio(s.observaciones));
 
   for (const plan of ADMINISTRACIONES) {
     const p = pacientes[plan.paciente];
-    const ya = mios.find((s) => s.tipo === 'MEDICAMENTO' && s.prescripcion?.medicamento.startsWith(plan.medicamento));
+    const ya = mios.find(
+      (s) => s.tipo === 'MEDICAMENTO' && s.prescripcion?.medicamento.startsWith(plan.medicamento),
+    );
     if (ya) {
-      resumen.suministros.push(`Administración de ${ya.prescripcion.medicamento} a ${p.apellido} · ${hora(ya.fechaHora)} (ya estaba)`);
+      resumen.suministros.push(
+        `Administración de ${ya.prescripcion.medicamento} a ${p.apellido} · ${hora(ya.fechaHora)} (ya estaba)`,
+      );
       continue;
     }
-    const { data: vigentes } = await enfermero.get(`/api/pacientes/${p.id}/prescripciones?estado=VIGENTE`);
-    const prescripcion = vigentes.find((x) => x.medicamento.nombre.startsWith(plan.medicamento) && esMio(x.observaciones));
+    const { data: vigentes } = await enfermero.get(
+      `/api/pacientes/${p.id}/prescripciones?estado=VIGENTE`,
+    );
+    const prescripcion = vigentes.find(
+      (x) => x.medicamento.nombre.startsWith(plan.medicamento) && esMio(x.observaciones),
+    );
     if (!prescripcion) {
-      resumen.avisos.push(`No hay prescripción vigente de ${plan.medicamento} para ${p.apellido}: no se administró`);
+      resumen.avisos.push(
+        `No hay prescripción vigente de ${plan.medicamento} para ${p.apellido}: no se administró`,
+      );
       continue;
     }
     const validacionToken = await confirmarConRostro(enfermero, 'Administrar medicamento');
@@ -431,7 +520,9 @@ async function registrarEnfermeria(enfermero, pacientes, catalogo) {
       observaciones: conMarca(plan.obs),
       validacionToken,
     });
-    resumen.suministros.push(`Administración de ${prescripcion.medicamento.nombre} a ${p.apellido} · ${hora(data.fechaHora)}`);
+    resumen.suministros.push(
+      `Administración de ${prescripcion.medicamento.nombre} a ${p.apellido} · ${hora(data.fechaHora)}`,
+    );
   }
 
   if (mios.some((s) => s.tipo === 'INSUMOS')) {
@@ -440,7 +531,9 @@ async function registrarEnfermeria(enfermero, pacientes, catalogo) {
   }
   const items = [];
   for (const it of INSUMOS.items) {
-    const insumo = catalogo.find((i) => i.tipo === 'INSUMO' && normalizar(i.nombre).startsWith(normalizar(it.nombre)));
+    const insumo = catalogo.find(
+      (i) => i.tipo === 'INSUMO' && normalizar(i.nombre).startsWith(normalizar(it.nombre)),
+    );
     if (insumo) items.push({ insumoId: insumo.id, cantidad: it.cantidad, nombre: insumo.nombre });
     else resumen.avisos.push(`No está el insumo ${it.nombre} en el catálogo`);
   }
